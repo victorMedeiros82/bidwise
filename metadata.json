@@ -1,0 +1,6 @@
+{
+  "name": "BidWise",
+  "description": "Sistema completo para gestão de investimentos em leilões de imóveis, custos, reformas e análise de risco para corretores e investidores.",
+  "requestFramePermissions": ["camera"],
+  "majorCapabilities": []
+}

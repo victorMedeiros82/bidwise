@@ -1,0 +1,177 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Default deny
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // --- Helpers ---
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isOwner(data) {
+      return isSignedIn() && data.createdBy == request.auth.uid;
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    // --- Validation Blueprints ---
+
+    function isValidLeilao(data) {
+      return data.processo is string && data.processo.size() <= 200 &&
+             data.comarca is string && data.comarca.size() <= 200 &&
+             data.tipo in ['Judicial', 'Extrajudicial'] &&
+             data.data_leilao is string &&
+             (!('valor_avaliacao' in data) || data.valor_avaliacao is number) &&
+             (!('valor_minimo' in data) || data.valor_minimo is number) &&
+             data.createdBy == request.auth.uid &&
+             data.createdAt == request.time;
+    }
+
+    function isValidImovel(data) {
+      return (!('id_leilao' in data) || (data.id_leilao is string && isValidId(data.id_leilao))) &&
+             data.origem in ['Leilão', 'Compra Direta', 'Outro'] &&
+             data.matricula is string && data.matricula.size() <= 100 &&
+             data.endereco is string && data.endereco.size() <= 500 &&
+             data.area_m2 is number &&
+             data.tipo_imovel in ['Apartamento', 'Casa', 'Terreno', 'Sala Comercial', 'Galpão', 'Outro'] &&
+             data.situacao_juridica in ['Alienação Fiduciária', 'Inventário', 'Execução Fiscal', 'Penhora', 'Outro'] &&
+             data.estado_conservacao in ['Ótimo', 'Bom', 'Regular', 'Ruim', 'Demolido'] &&
+             (!('analise_risco' in data) || data.analise_risco is string) &&
+             data.createdBy == request.auth.uid &&
+             data.createdAt == request.time;
+    }
+
+    function isValidCustoAquisicao(data) {
+      return data.id_imovel is string && isValidId(data.id_imovel) &&
+             data.tipo_custo is string && data.tipo_custo.size() <= 200 &&
+             data.valor is number &&
+             (!('fileUrl' in data) || data.fileUrl is string) &&
+             data.createdBy == request.auth.uid &&
+             data.createdAt == request.time;
+    }
+
+    function isValidCustoReforma(data) {
+      return data.id_imovel is string && isValidId(data.id_imovel) &&
+             data.descricao_etapa is string && data.descricao_etapa.size() <= 500 &&
+             data.orcamento is number &&
+             (!('valor_real' in data) || data.valor_real is number) &&
+             (!('prazo_execucao' in data) || data.prazo_execucao is string) &&
+             (!('data_conclusao' in data) || data.data_conclusao is string) &&
+             (!('fileUrl' in data) || data.fileUrl is string) &&
+             data.createdBy == request.auth.uid &&
+             data.createdAt == request.time;
+    }
+
+    function isValidHolding(data) {
+      return data.id_imovel is string && isValidId(data.id_imovel) &&
+             data.tipo_despesa is string && data.tipo_despesa.size() <= 200 &&
+             data.valor_mensal is number &&
+             (!('fileUrl' in data) || data.fileUrl is string) &&
+             data.createdBy == request.auth.uid &&
+             data.createdAt == request.time;
+    }
+
+    function isValidFaturamento(data) {
+      return data.id_imovel is string && isValidId(data.id_imovel) &&
+             data.tipo in ['Venda', 'Locação'] &&
+             data.valor is number &&
+             data.createdBy == request.auth.uid &&
+             data.createdAt == request.time;
+    }
+
+    function isValidDocumento(data) {
+      return data.id_imovel is string && isValidId(data.id_imovel) &&
+             data.tipo_doc is string && data.tipo_doc.size() <= 200 &&
+             data.status in ['Pendente', 'Recebido', 'Protocolado', 'Registrado', 'Cancelado'] &&
+             (!('fileUrl' in data) || data.fileUrl is string) &&
+             data.createdBy == request.auth.uid &&
+             data.createdAt == request.time;
+    }
+
+    // --- Collection Matches ---
+
+    match /leiloes/{leilaoId} {
+      allow read: if isSignedIn() && isOwner(existing());
+      allow create: if isSignedIn() && isValidLeilao(incoming());
+      allow update: if isSignedIn() && isOwner(existing()) && 
+                    incoming().createdBy == existing().createdBy &&
+                    incoming().createdAt == existing().createdAt &&
+                    incoming().updatedAt == request.time;
+      allow delete: if isSignedIn() && isOwner(existing());
+    }
+
+    match /imoveis/{imovelId} {
+      allow read: if isSignedIn();
+      allow create: if isSignedIn() && isValidImovel(incoming());
+      allow update: if isSignedIn() && isOwner(existing()) && 
+                    isValidImovel(incoming()) &&
+                    incoming().createdBy == existing().createdBy &&
+                    incoming().createdAt == existing().createdAt &&
+                    incoming().updatedAt == request.time;
+      allow delete: if isSignedIn() && isOwner(existing());
+    }
+
+    match /custos_aquisicao/{custoId} {
+      allow read: if isSignedIn() && isOwner(existing());
+      allow create: if isSignedIn() && isValidCustoAquisicao(incoming());
+      allow update: if isSignedIn() && isOwner(existing()) && 
+                    incoming().createdBy == existing().createdBy &&
+                    incoming().createdAt == existing().createdAt &&
+                    incoming().updatedAt == request.time;
+      allow delete: if isSignedIn() && isOwner(existing());
+    }
+
+    match /custos_reforma/{reformaId} {
+      allow read: if isSignedIn() && isOwner(existing());
+      allow create: if isSignedIn() && isValidCustoReforma(incoming());
+      allow update: if isSignedIn() && isOwner(existing()) && 
+                    incoming().createdBy == existing().createdBy &&
+                    incoming().createdAt == existing().createdAt &&
+                    incoming().updatedAt == request.time;
+      allow delete: if isSignedIn() && isOwner(existing());
+    }
+
+    match /holding/{holdingId} {
+      allow read: if isSignedIn() && isOwner(existing());
+      allow create: if isSignedIn() && isValidHolding(incoming());
+      allow update: if isSignedIn() && isOwner(existing()) && 
+                    incoming().createdBy == existing().createdBy &&
+                    incoming().createdAt == existing().createdAt &&
+                    incoming().updatedAt == request.time;
+      allow delete: if isSignedIn() && isOwner(existing());
+    }
+
+    match /faturamento/{faturamentoId} {
+      allow read: if isSignedIn() && isOwner(existing());
+      allow create: if isSignedIn() && isValidFaturamento(incoming());
+      allow update: if isSignedIn() && isOwner(existing()) && 
+                    incoming().createdBy == existing().createdBy &&
+                    incoming().createdAt == existing().createdAt &&
+                    incoming().updatedAt == request.time;
+      allow delete: if isSignedIn() && isOwner(existing());
+    }
+
+    match /documentos/{docId} {
+      allow read: if isSignedIn() && isOwner(existing());
+      allow create: if isSignedIn() && isValidDocumento(incoming());
+      allow update: if isSignedIn() && isOwner(existing()) && 
+                    incoming().createdBy == existing().createdBy &&
+                    incoming().createdAt == existing().createdAt &&
+                    incoming().updatedAt == request.time;
+      allow delete: if isSignedIn() && isOwner(existing());
+    }
+  }
+}

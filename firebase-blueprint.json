@@ -1,0 +1,155 @@
+{
+  "entities": {
+    "leilao": {
+      "title": "Leilão",
+      "description": "Dados do processo de leilão",
+      "type": "object",
+      "properties": {
+        "processo": { "type": "string", "description": "Número do Processo" },
+        "comarca": { "type": "string", "description": "Comarca / Vara" },
+        "tipo": { "type": "string", "enum": ["Judicial", "Extrajudicial"], "description": "Tipo de leilão" },
+        "data_leilao": { "type": "string", "format": "date-time", "description": "Data do Leilão" },
+        "link_edital": { "type": "string", "description": "Link do Edital" },
+        "valor_avaliacao": { "type": "number", "description": "Valor de Avaliação" },
+        "valor_minimo": { "type": "number", "description": "Valor Mínimo de Lance" },
+        "forma_arrematacao": { "type": "string", "enum": ["Presencial", "Online", "Híbrido"], "description": "Forma de arrematação" },
+        "condicoes_pagamento": { "type": "string", "description": "Condições de Pagamento" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" },
+        "createdBy": { "type": "string" }
+      },
+      "required": ["processo", "comarca", "tipo", "data_leilao"]
+    },
+    "imovel": {
+      "title": "Imóvel",
+      "description": "Dados do imóvel arrematado ou em análise",
+      "type": "object",
+      "properties": {
+        "id_leilao": { "type": "string", "description": "ID do Leilão (FK)" },
+        "origem": { "type": "string", "enum": ["Leilão", "Compra Direta", "Outro"], "description": "Origem do imóvel" },
+        "matricula": { "type": "string", "description": "Matrícula RGI" },
+        "endereco": { "type": "string", "description": "Endereço Completo" },
+        "area_m2": { "type": "number", "description": "Área (m²)" },
+        "tipo_imovel": { "type": "string", "enum": ["Apartamento", "Casa", "Terreno", "Sala Comercial", "Galpão", "Outro"], "description": "Tipo de Imóvel" },
+        "situacao_juridica": { "type": "string", "enum": ["Alienação Fiduciária", "Inventário", "Execução Fiscal", "Penhora", "Outro"], "description": "Situação Jurídica" },
+        "estado_conservacao": { "type": "string", "enum": ["Ótimo", "Bom", "Regular", "Ruim", "Demolido"], "description": "Estado de Conservação" },
+        "analise_risco": { "type": "string", "description": "Relatório de análise de risco gerado por IA" },
+        "status_arrematacao": { "type": "string", "enum": ["Análise", "Arrematado", "Perdido", "Cancelado"] },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" },
+        "createdBy": { "type": "string" }
+      },
+      "required": ["origem", "matricula", "endereco", "area_m2"]
+    },
+    "custo_aquisicao": {
+      "title": "Custo de Aquisição",
+      "description": "Custos detalhados da aquisição do imóvel",
+      "type": "object",
+      "properties": {
+        "id_imovel": { "type": "string" },
+        "tipo_custo": { "type": "string", "description": "Tipo de Custo (Ex: ITBI, Registro, Escritura)" },
+        "valor": { "type": "number", "description": "Valor (R$)" },
+        "data_vencimento": { "type": "string", "format": "date-time" },
+        "status_pagamento": { "type": "string", "enum": ["Pago", "Pendente", "Vencido", "Cancelado"] },
+        "fileUrl": { "type": "string", "description": "Link da Nota Fiscal / Comprovante" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "createdBy": { "type": "string" }
+      },
+      "required": ["id_imovel", "tipo_custo", "valor"]
+    },
+    "custo_reforma": {
+      "title": "Custo de Reforma",
+      "description": "Custos de obra e reformas",
+      "type": "object",
+      "properties": {
+        "id_imovel": { "type": "string" },
+        "descricao_etapa": { "type": "string", "description": "Descrição da Etapa" },
+        "orcamento": { "type": "number", "description": "Orçamento (R$)" },
+        "valor_real": { "type": "number", "description": "Valor Real Gasto (R$)" },
+        "prazo_execucao": { "type": "string", "description": "Prazo de Execução Estimado" },
+        "data_conclusao": { "type": "string", "description": "Data de Conclusão Real" },
+        "fileUrl": { "type": "string", "description": "Link da Nota Fiscal / Comprovante" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "createdBy": { "type": "string" }
+      },
+      "required": ["id_imovel", "descricao_etapa", "orcamento"]
+    },
+    "holding": {
+      "title": "Holding / Despesa Mensal",
+      "description": "Custos fixos mensais do imóvel",
+      "type": "object",
+      "properties": {
+        "id_imovel": { "type": "string" },
+        "tipo_despesa": { "type": "string", "description": "Tipo de Despesa (Condomínio, IPTU, Energia)" },
+        "valor_mensal": { "type": "number", "description": "Valor Mensal (R$)" },
+        "competencia": { "type": "string", "description": "Competência (mês/ano)" },
+        "fileUrl": { "type": "string", "description": "Link da Nota Fiscal / Comprovante" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "createdBy": { "type": "string" }
+      },
+      "required": ["id_imovel", "tipo_despesa", "valor_mensal"]
+    },
+    "faturamento": {
+      "title": "Faturamento",
+      "description": "Dados de venda ou locação",
+      "type": "object",
+      "properties": {
+        "id_imovel": { "type": "string" },
+        "tipo": { "type": "string", "enum": ["Venda", "Locação"], "description": "Tipo de operação" },
+        "valor": { "type": "number", "description": "Valor (R$)" },
+        "data_operacao": { "type": "string", "format": "date-time" },
+        "custo_corretagem": { "type": "number", "description": "Custo de Corretagem (R$)" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "createdBy": { "type": "string" }
+      },
+      "required": ["id_imovel", "tipo", "valor"]
+    },
+    "documento": {
+      "title": "Documento",
+      "description": "Documentos do imóvel",
+      "type": "object",
+      "properties": {
+        "id_imovel": { "type": "string" },
+        "tipo_doc": { "type": "string", "description": "Tipo de Documento" },
+        "status": { "type": "string", "enum": ["Pendente", "Recebido", "Protocolado", "Registrado", "Cancelado"] },
+        "data_recebimento": { "type": "string", "format": "date-time" },
+        "data_vencimento": { "type": "string", "format": "date-time" },
+        "responsavel": { "type": "string", "description": "Responsável" },
+        "fileUrl": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "createdBy": { "type": "string" }
+      },
+      "required": ["id_imovel", "tipo_doc", "status"]
+    }
+  },
+  "firestore": {
+    "leiloes": {
+      "schema": "leilao",
+      "description": "Lista de leilões monitorados"
+    },
+    "imoveis": {
+      "schema": "imovel",
+      "description": "Lista de imóveis vinculados a leilões"
+    },
+    "custos_aquisicao": {
+      "schema": "custo_aquisicao",
+      "description": "Custos de aquisição por imóvel"
+    },
+    "custos_reforma": {
+      "schema": "custo_reforma",
+      "description": "Custos de reforma por imóvel"
+    },
+    "holding": {
+      "schema": "holding",
+      "description": "Despesas recorrentes do imóvel"
+    },
+    "faturamento": {
+      "schema": "faturamento",
+      "description": "Operações de saída (venda/locação)"
+    },
+    "documentos": {
+      "schema": "documento",
+      "description": "Repositório de documentos por imóvel"
+    }
+  }
+}
