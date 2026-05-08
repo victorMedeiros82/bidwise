@@ -109,7 +109,7 @@ export default function Properties() {
       <div className="flex justify-between items-center">
         <div>
           <h1 className="text-2xl md:text-3xl font-bold text-slate-900 dark:text-white tracking-tight">Imóveis</h1>
-          <p className="text-slate-500 dark:text-slate-400 text-sm md:text-base">Gestão de catálogo e ativos arrematados</p>
+          <p className="text-slate-600 dark:text-slate-400 text-sm md:text-base">Gestão de catálogo e ativos arrematados</p>
         </div>
         <button
           onClick={handleOpenModal}
@@ -122,11 +122,11 @@ export default function Properties() {
 
       <div className="bg-white dark:bg-slate-900 p-4 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm space-y-4">
         <div className="flex items-center gap-3">
-          <Search className="text-slate-400 dark:text-slate-500" size={18} />
+          <Search className="text-slate-500 dark:text-slate-500" size={18} />
           <input
             type="text"
             placeholder="Buscar ativos por endereço ou matrícula..."
-            className="flex-1 bg-transparent border-none focus:ring-0 text-sm placeholder:text-slate-400 dark:placeholder:text-slate-600 font-medium dark:text-slate-200"
+            className="flex-1 bg-transparent border-none focus:ring-0 text-sm placeholder:text-slate-500 dark:placeholder:text-slate-600 font-medium dark:text-slate-200"
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
           />
@@ -134,7 +134,7 @@ export default function Properties() {
         
         <div className="flex flex-wrap items-center gap-4 pt-4 border-t border-slate-100 dark:border-slate-800">
           <div className="flex flex-col gap-1.5 min-w-[140px]">
-            <label className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest px-1">Categoria</label>
+            <label className="text-[10px] font-bold text-slate-500 dark:text-slate-500 uppercase tracking-widest px-1">Categoria</label>
             <select 
               value={filterType}
               onChange={(e) => setFilterType(e.target.value as any)}
@@ -148,7 +148,7 @@ export default function Properties() {
           </div>
 
           <div className="flex flex-col gap-1.5 min-w-[140px]">
-            <label className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest px-1">Origem</label>
+            <label className="text-[10px] font-bold text-slate-500 dark:text-slate-500 uppercase tracking-widest px-1">Origem</label>
             <select 
               value={filterOrigem}
               onChange={(e) => setFilterOrigem(e.target.value as any)}
@@ -162,7 +162,7 @@ export default function Properties() {
           </div>
 
           <div className="flex flex-col gap-1.5 min-w-[140px]">
-            <label className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest px-1">Status</label>
+            <label className="text-[10px] font-bold text-slate-500 dark:text-slate-500 uppercase tracking-widest px-1">Status</label>
             <select 
               value={filterStatus}
               onChange={(e) => setFilterStatus(e.target.value as any)}
@@ -176,9 +176,9 @@ export default function Properties() {
           </div>
 
           <div className="flex flex-col gap-1.5 flex-1 min-w-[200px]">
-            <label className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest px-1">Localidade (Cidade/UF)</label>
+            <label className="text-[10px] font-bold text-slate-500 dark:text-slate-500 uppercase tracking-widest px-1">Localidade (Cidade/UF)</label>
             <div className="relative">
-              <MapPin size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 dark:text-slate-600" />
+              <MapPin size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500 dark:text-slate-600" />
               <input
                 type="text"
                 placeholder="Ex: São Paulo, SP..."
@@ -209,10 +209,10 @@ export default function Properties() {
           <table className="w-full text-left border-collapse min-w-[600px]">
             <thead>
               <tr className="bg-slate-50/50 dark:bg-slate-800/50 border-b border-slate-100 dark:border-slate-800">
-                <th className="px-6 py-4 text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest">Ativo</th>
-                <th className="px-6 py-4 text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest text-center">Status</th>
-                <th className="px-6 py-4 text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest">Categoria</th>
-                <th className="px-6 py-4 text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest text-right">Controle</th>
+                <th className="px-6 py-4 text-[10px] font-bold text-slate-500 dark:text-slate-500 uppercase tracking-widest">Ativo</th>
+                <th className="px-6 py-4 text-[10px] font-bold text-slate-500 dark:text-slate-500 uppercase tracking-widest text-center">Status</th>
+                <th className="px-6 py-4 text-[10px] font-bold text-slate-500 dark:text-slate-500 uppercase tracking-widest">Categoria</th>
+                <th className="px-6 py-4 text-[10px] font-bold text-slate-500 dark:text-slate-500 uppercase tracking-widest text-right">Controle</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-50 dark:divide-slate-800">
@@ -221,11 +221,11 @@ export default function Properties() {
                   <td className="px-6 py-5">
                     <div className="flex items-center gap-4">
                       <div className="w-10 h-10 bg-slate-100 dark:bg-slate-800 rounded-lg flex items-center justify-center shrink-0 group-hover:bg-blue-50 dark:group-hover:bg-blue-900/30 transition-colors">
-                        <Building2 className="text-slate-400 dark:text-slate-600 group-hover:text-blue-500 dark:group-hover:text-blue-400" size={20} />
+                        <Building2 className="text-slate-500 dark:text-slate-600 group-hover:text-blue-500 dark:group-hover:text-blue-400" size={20} />
                       </div>
                       <div>
                         <p className="font-bold text-slate-800 dark:text-slate-200 truncate max-w-sm leading-tight">{imovel.endereco}</p>
-                        <p className="text-[10px] text-slate-400 dark:text-slate-500 flex items-center gap-1 font-bold mt-0.5 uppercase tracking-tighter">
+                        <p className="text-[10px] text-slate-600 dark:text-slate-500 flex items-center gap-1 font-bold mt-0.5 uppercase tracking-tighter">
                           {imovel.cidade && imovel.estado ? `${imovel.cidade} - ${imovel.estado} • ` : ''}
                           Matrícula: {imovel.matricula} • {imovel.area_m2}m²
                         </p>
@@ -262,7 +262,7 @@ export default function Properties() {
           </table>
         </div>
         {filteredProperties.length === 0 && (
-          <div className="p-12 text-center text-slate-400 font-medium text-sm">
+          <div className="p-12 text-center text-slate-500 font-medium text-sm">
             Nenhum ativo imobiliário registrado.
           </div>
         )}
@@ -305,7 +305,7 @@ export default function Properties() {
                             "flex-1 py-2 px-3 rounded-xl border text-xs font-bold uppercase tracking-wider transition-all",
                             formData.origem === origem 
                               ? "bg-blue-600 border-blue-600 text-white shadow-md shadow-blue-200 dark:shadow-none" 
-                              : "bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-800 text-slate-500 dark:text-slate-400 hover:border-blue-400"
+                              : "bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-400 hover:border-blue-400"
                           )}
                         >
                           {origem}

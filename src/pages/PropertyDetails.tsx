@@ -106,10 +106,10 @@ export default function PropertyDetails() {
         ) : meta.isPDF ? (
           <div className="flex flex-col items-center gap-1">
             <FileIcon size={20} className="text-rose-500" />
-            <span className="text-[8px] font-black text-slate-400 uppercase">PDF</span>
+            <span className="text-[8px] font-black text-slate-500 uppercase">PDF</span>
           </div>
         ) : (
-          <FileIcon size={20} className="text-slate-400" />
+          <FileIcon size={20} className="text-slate-500" />
         )}
         <div className="absolute inset-0 bg-slate-900/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
           <a 
@@ -168,7 +168,7 @@ export default function PropertyDetails() {
     }
   };
 
-  if (!imovel) return <div className="p-8 text-center text-gray-500">Imóvel não encontrado.</div>;
+  if (!imovel) return <div className="p-8 text-center text-slate-600">Imóvel não encontrado.</div>;
 
   return (
     <motion.div
@@ -178,7 +178,7 @@ export default function PropertyDetails() {
     >
       <button 
         onClick={() => navigate('/properties')}
-        className="flex items-center gap-2 text-slate-400 dark:text-slate-500 hover:text-slate-900 dark:hover:text-white transition-colors font-bold text-xs uppercase tracking-widest mt-4 md:mt-0"
+        className="flex items-center gap-2 text-slate-500 dark:text-slate-500 hover:text-slate-900 dark:hover:text-white transition-colors font-bold text-xs uppercase tracking-widest mt-4 md:mt-0"
       >
         <ChevronLeft size={16} />
         Voltar à Gestão
@@ -186,15 +186,15 @@ export default function PropertyDetails() {
 
       <div className="bg-white dark:bg-slate-900 p-6 md:p-8 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm flex flex-col md:flex-row gap-6 md:gap-8">
         <div className="w-16 h-16 md:w-20 md:h-20 bg-white dark:bg-slate-800 border border-slate-100 dark:border-slate-700 rounded-2xl flex items-center justify-center shrink-0 shadow-inner">
-          <Building2 className="text-slate-400 dark:text-slate-600" size={32} />
+          <Building2 className="text-slate-500 dark:text-slate-600" size={32} />
         </div>
         <div className="flex-1">
           <div className="flex flex-col md:flex-row justify-between items-start mb-3 gap-4">
             <div>
-              <p className="text-[10px] text-slate-400 dark:text-slate-500 font-bold uppercase tracking-widest mb-1">Detalhes do Ativo</p>
+              <p className="text-[10px] text-slate-500 dark:text-slate-500 font-bold uppercase tracking-widest mb-1">Detalhes do Ativo</p>
               <h1 className="text-xl md:text-2xl font-bold text-slate-900 dark:text-white leading-tight">{imovel.endereco}</h1>
               {(imovel.bairro || imovel.cidade || imovel.estado) && (
-                <p className="text-sm font-medium text-slate-500 dark:text-slate-400 mt-1">
+                <p className="text-sm font-medium text-slate-600 dark:text-slate-400 mt-1">
                   {imovel.bairro ? `${imovel.bairro}, ` : ''}
                   {imovel.cidade ? `${imovel.cidade} - ` : ''}
                   {imovel.estado ? imovel.estado : ''}
@@ -209,19 +209,19 @@ export default function PropertyDetails() {
               {imovel.status_arrematacao}
             </span>
           </div>
-          <div className="flex flex-wrap gap-4 md:gap-6 text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-tighter">
+          <div className="flex flex-wrap gap-4 md:gap-6 text-[10px] font-bold text-slate-500 dark:text-slate-500 uppercase tracking-tighter">
             <div className="flex items-center gap-1.5">
-              <ClipboardCheck size={14} className="text-slate-300 dark:text-slate-700" />
+              <ClipboardCheck size={14} className="text-slate-500 dark:text-slate-700" />
               {imovel.tipo_imovel}
             </div>
             <div className="flex items-center gap-1.5">
-              <Gavel size={14} className="text-slate-300 dark:text-slate-700" />
+              <Gavel size={14} className="text-slate-500 dark:text-slate-700" />
               {imovel.origem === OrigemImovel.Leilao 
                 ? `Leilão: ${leilao?.processo || (imovel.id_leilao ? 'Processando...' : 'N/A')}` 
                 : imovel.origem}
             </div>
             <div className="flex items-center gap-1.5">
-              <ShieldAlert size={14} className="text-slate-300 dark:text-slate-700" />
+              <ShieldAlert size={14} className="text-slate-500 dark:text-slate-700" />
               {imovel.situacao_juridica}
             </div>
           </div>
@@ -239,7 +239,7 @@ export default function PropertyDetails() {
             onClick={() => setActiveTab(tab.id as any)}
             className={cn(
               "relative flex items-center gap-2 px-3 md:px-5 py-2 rounded-md text-[10px] font-bold uppercase tracking-wider transition-all",
-              activeTab === tab.id ? "text-blue-600 dark:text-blue-400" : "text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-300"
+              activeTab === tab.id ? "text-blue-600 dark:text-blue-400" : "text-slate-600 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-300"
             )}
           >
             {activeTab === tab.id && (
@@ -271,11 +271,11 @@ export default function PropertyDetails() {
             {!imovel.analise_risco && !analyzing ? (
               <div className="bg-white dark:bg-slate-900 p-8 md:p-12 rounded-xl border border-slate-200 dark:border-slate-800 text-center space-y-6 shadow-sm border-dashed">
                 <div className="w-16 h-16 bg-white dark:bg-slate-800 rounded-full flex items-center justify-center mx-auto border border-slate-100 dark:border-slate-700">
-                  <ShieldAlert className="text-slate-300 dark:text-slate-700" size={32} />
+                  <ShieldAlert className="text-slate-500 dark:text-slate-700" size={32} />
                 </div>
                 <div className="max-w-md mx-auto">
                   <h3 className="text-xl font-bold text-slate-900 dark:text-white mb-2">Relatório de Inteligência Crítica</h3>
-                  <p className="text-sm text-slate-500 dark:text-slate-400 font-medium">Avalie riscos jurídicos e viabilidade financeira com nossa rede neural especializada.</p>
+                  <p className="text-sm text-slate-600 dark:text-slate-400 font-medium">Avalie riscos jurídicos e viabilidade financeira com nossa rede neural especializada.</p>
                 </div>
                 <button
                   onClick={handleGenerateAnalysis}
@@ -289,14 +289,14 @@ export default function PropertyDetails() {
               <div className="bg-white dark:bg-slate-900 p-12 rounded-xl border border-slate-200 dark:border-slate-800 text-center shadow-sm">
                 <Loader2 className="animate-spin text-blue-600 mx-auto mb-4" size={40} />
                 <h3 className="text-lg font-bold text-slate-900 dark:text-white mb-1">Mapeando Matrículas e Editais...</h3>
-                <p className="text-xs text-slate-500 dark:text-slate-400 font-bold uppercase tracking-widest">Aguarde a geração do relatório</p>
+                <p className="text-xs text-slate-600 dark:text-slate-400 font-bold uppercase tracking-widest">Aguarde a geração do relatório</p>
               </div>
             ) : (
               <div className="bg-white dark:bg-slate-900 p-6 md:p-8 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm prose dark:prose-invert prose-slate max-w-none">
                 <div className="flex justify-between items-center mb-8 not-prose">
                   <div className="flex items-center gap-3">
                     <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-                    <h3 className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest">
+                    <h3 className="text-[10px] font-bold text-slate-500 dark:text-slate-500 uppercase tracking-widest">
                       Análise de Decisão Estratégica
                     </h3>
                   </div>
@@ -405,7 +405,7 @@ export default function PropertyDetails() {
               {/* Custos de Aquisição */}
             <div className="space-y-6">
               <div className="flex justify-between items-center">
-                <h3 className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest">Custos de Aquisição</h3>
+                <h3 className="text-[10px] font-bold text-slate-500 dark:text-slate-500 uppercase tracking-widest">Custos de Aquisição</h3>
                 <button 
                   onClick={() => setShowAddAquisicao(!showAddAquisicao)}
                   className="p-1.5 bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 rounded-md hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors"
@@ -423,7 +423,7 @@ export default function PropertyDetails() {
                     <div className="grid grid-cols-1 gap-4">
                       <div className="grid grid-cols-2 gap-4">
                         <div>
-                          <label className="block text-[9px] font-bold text-slate-500 dark:text-slate-400 uppercase mb-1.5">Tipo de Custo</label>
+                          <label className="block text-[9px] font-bold text-slate-600 dark:text-slate-400 uppercase mb-1.5">Tipo de Custo</label>
                           <select 
                             id="aq-tipo" 
                             onChange={(e) => {
@@ -456,7 +456,7 @@ export default function PropertyDetails() {
                           </div>
                         </div>
                         <div>
-                          <label className="block text-[9px] font-bold text-slate-500 dark:text-slate-400 uppercase mb-1.5">Valor (R$)</label>
+                          <label className="block text-[9px] font-bold text-slate-600 dark:text-slate-400 uppercase mb-1.5">Valor (R$)</label>
                           <CurrencyInput
                             intlConfig={{ locale: 'pt-BR', currency: 'BRL' }}
                             decimalSeparator=","
@@ -480,7 +480,7 @@ export default function PropertyDetails() {
                       <div className="flex justify-end gap-3">
                         <button 
                           onClick={() => { setShowAddAquisicao(false); setAquisicaoValor(0); setAquisicaoFileUrl(''); }}
-                          className="px-3 py-1.5 text-[9px] font-bold text-slate-400 uppercase tracking-widest"
+                          className="px-3 py-1.5 text-[9px] font-bold text-slate-500 uppercase tracking-widest"
                         >
                           Cancelar
                         </button>
@@ -517,7 +517,7 @@ export default function PropertyDetails() {
                   <div key={c.id} className="p-4 flex justify-between items-center hover:bg-slate-50/50 dark:hover:bg-slate-800/50 transition-colors">
                     <div>
                       <p className="text-sm font-bold text-slate-800 dark:text-slate-200">{c.tipo_custo}</p>
-                      <p className="text-[10px] font-bold uppercase tracking-tighter text-slate-400 dark:text-slate-500">{c.status_pagamento}</p>
+                      <p className="text-[10px] font-bold uppercase tracking-tighter text-slate-500 dark:text-slate-500">{c.status_pagamento}</p>
                     </div>
                     <div className="flex items-center gap-4">
                       {c.fileUrl && (
@@ -525,9 +525,9 @@ export default function PropertyDetails() {
                       )}
                       <div className="text-right">
                         <p className="text-sm font-bold text-slate-900 dark:text-slate-100 leading-none">R$ {c.valor.toLocaleString('pt-BR')}</p>
-                        <p className="text-[8px] text-slate-400 dark:text-slate-600 font-bold uppercase tracking-tighter mt-1">Valor do Custo</p>
+                        <p className="text-[8px] text-slate-500 dark:text-slate-600 font-bold uppercase tracking-tighter mt-1">Valor do Custo</p>
                       </div>
-                      <button onClick={() => removeCustoAquisicao(c.id!)} className="text-slate-300 dark:text-slate-700 hover:text-rose-500 transition-colors">
+                      <button onClick={() => removeCustoAquisicao(c.id!)} className="text-slate-500 dark:text-slate-700 hover:text-rose-500 transition-colors">
                         <Trash2 size={16} />
                       </button>
                     </div>
@@ -540,7 +540,7 @@ export default function PropertyDetails() {
             <div className="space-y-6 lg:col-span-2">
               <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
                 <div className="flex flex-wrap items-center gap-3">
-                  <h3 className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest">Cronograma & Custos de Reforma</h3>
+                  <h3 className="text-[10px] font-bold text-slate-500 dark:text-slate-500 uppercase tracking-widest">Cronograma & Custos de Reforma</h3>
                   <button 
                     onClick={() => setShowAddReforma(!showAddReforma)}
                     className={cn(
@@ -577,7 +577,7 @@ export default function PropertyDetails() {
                   >
                     <div className="grid grid-cols-1 md:grid-cols-5 gap-4 items-start">
                       <div className="md:col-span-2">
-                        <label className="block text-[9px] font-bold text-slate-500 dark:text-slate-400 uppercase mb-1.5">Descrição da Etapa</label>
+                        <label className="block text-[9px] font-bold text-slate-600 dark:text-slate-400 uppercase mb-1.5">Descrição da Etapa</label>
                         <input 
                           type="text" 
                           id="reforma-desc"
@@ -590,7 +590,7 @@ export default function PropertyDetails() {
                         {formErrors.desc && <p className="text-[8px] text-rose-500 font-bold mt-1 uppercase tracking-tighter">{formErrors.desc}</p>}
                       </div>
                       <div>
-                        <label className="block text-[9px] font-bold text-slate-500 dark:text-slate-400 uppercase mb-1.5">Orçamento (R$)</label>
+                        <label className="block text-[9px] font-bold text-slate-600 dark:text-slate-400 uppercase mb-1.5">Orçamento (R$)</label>
                         <CurrencyInput
                           intlConfig={{ locale: 'pt-BR', currency: 'BRL' }}
                           decimalSeparator=","
@@ -607,7 +607,7 @@ export default function PropertyDetails() {
                         {formErrors.orc && <p className="text-[8px] text-rose-500 font-bold mt-1 uppercase tracking-tighter">{formErrors.orc}</p>}
                       </div>
                       <div>
-                        <label className="block text-[9px] font-bold text-slate-500 dark:text-slate-400 uppercase mb-1.5">Valor Real (R$)</label>
+                        <label className="block text-[9px] font-bold text-slate-600 dark:text-slate-400 uppercase mb-1.5">Valor Real (R$)</label>
                         <CurrencyInput
                           intlConfig={{ locale: 'pt-BR', currency: 'BRL' }}
                           decimalSeparator=","
@@ -631,7 +631,7 @@ export default function PropertyDetails() {
                       </div>
                       <div className="grid grid-cols-2 gap-4 md:col-span-1">
                         <div>
-                          <label className="block text-[9px] font-bold text-slate-500 dark:text-slate-400 uppercase mb-1.5 text-nowrap">Prazo Est.</label>
+                          <label className="block text-[9px] font-bold text-slate-600 dark:text-slate-400 uppercase mb-1.5 text-nowrap">Prazo Est.</label>
                           <input 
                             type="date" 
                             id="reforma-prazo"
@@ -642,7 +642,7 @@ export default function PropertyDetails() {
                           />
                         </div>
                         <div>
-                          <label className="block text-[9px] font-bold text-slate-500 dark:text-slate-400 uppercase mb-1.5 text-nowrap">Conclusão</label>
+                          <label className="block text-[9px] font-bold text-slate-600 dark:text-slate-400 uppercase mb-1.5 text-nowrap">Conclusão</label>
                           <input 
                             type="date" 
                             id="reforma-conclusao"
@@ -722,7 +722,7 @@ export default function PropertyDetails() {
 
                 <div className="divide-y divide-slate-50 dark:divide-slate-800">
                   {filteredCustosReforma.length === 0 ? (
-                    <div className="p-8 text-center text-slate-400 dark:text-slate-600 text-[10px] font-bold uppercase tracking-widest">
+                    <div className="p-8 text-center text-slate-500 dark:text-slate-600 text-[10px] font-bold uppercase tracking-widest">
                       Nenhuma etapa de reforma registrada
                     </div>
                   ) : (
@@ -753,7 +753,7 @@ export default function PropertyDetails() {
                              <p className="text-[9px] font-bold uppercase tracking-tighter text-slate-400 dark:text-slate-500">
                                 Conclusão: <span className={cn(
                                   "font-bold",
-                                  r.data_conclusao ? "text-slate-800 dark:text-slate-200" : "text-slate-300 dark:text-slate-700"
+                                  r.data_conclusao ? "text-slate-800 dark:text-slate-200" : "text-slate-400 dark:text-slate-700"
                                 )}>
                                   {r.data_conclusao ? new Date(r.data_conclusao).toLocaleDateString('pt-BR') : 'Pendente'}
                                 </span>
@@ -784,9 +784,9 @@ export default function PropertyDetails() {
                             )}>
                               {r.orcamento > 0 ? ((((r.valor_real || 0) / r.orcamento) - 1) * 100).toFixed(1) + '%' : '0%'}
                             </p>
-                            <p className="text-[8px] text-slate-400 dark:text-slate-600 font-bold uppercase tracking-tighter">Variação</p>
+                            <p className="text-[8px] text-slate-500 dark:text-slate-600 font-bold uppercase tracking-tighter">Variação</p>
                           </div>
-                          <button onClick={() => removeCustoReforma(r.id!)} className="text-slate-300 dark:text-slate-700 hover:text-rose-500 transition-colors">
+                          <button onClick={() => removeCustoReforma(r.id!)} className="text-slate-500 dark:text-slate-700 hover:text-rose-500 transition-colors">
                             <Trash2 size={16} />
                           </button>
                         </div>
@@ -801,7 +801,7 @@ export default function PropertyDetails() {
             {/* Holding / Mensalidades */}
             <div className="space-y-6">
               <div className="flex justify-between items-center">
-                <h3 className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest">Holding (Manutenção)</h3>
+                <h3 className="text-[10px] font-bold text-slate-500 dark:text-slate-500 uppercase tracking-widest">Holding (Manutenção)</h3>
                 <button 
                   onClick={() => setShowAddHolding(!showAddHolding)}
                   className="p-1.5 bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 rounded-md hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors"
@@ -819,7 +819,7 @@ export default function PropertyDetails() {
                     <div className="grid grid-cols-1 gap-4">
                       <div className="grid grid-cols-2 gap-4">
                         <div>
-                          <label className="block text-[9px] font-bold text-slate-500 dark:text-slate-400 uppercase mb-1.5">Despesa</label>
+                          <label className="block text-[9px] font-bold text-slate-600 dark:text-slate-400 uppercase mb-1.5">Despesa</label>
                           <input 
                             type="text" 
                             id="hold-tipo" 
@@ -852,7 +852,7 @@ export default function PropertyDetails() {
                       <div className="flex justify-end gap-3">
                         <button 
                           onClick={() => { setShowAddHolding(false); setHoldingValor(0); setHoldingFileUrl(''); }}
-                          className="px-3 py-1.5 text-[9px] font-bold text-slate-400 uppercase tracking-widest"
+                          className="px-3 py-1.5 text-[9px] font-bold text-slate-500 uppercase tracking-widest"
                         >
                           Cancelar
                         </button>
@@ -883,7 +883,7 @@ export default function PropertyDetails() {
                   <div key={h.id} className="p-4 flex justify-between items-center hover:bg-slate-50/50 dark:hover:bg-slate-800/50 transition-colors">
                     <div>
                       <p className="text-sm font-bold text-slate-800 dark:text-slate-200">{h.tipo_despesa}</p>
-                      <p className="text-[10px] font-bold uppercase tracking-tighter text-slate-400 dark:text-slate-500">{h.competencia}</p>
+                      <p className="text-[10px] font-bold uppercase tracking-tighter text-slate-500 dark:text-slate-500">{h.competencia}</p>
                     </div>
                     <div className="flex items-center gap-4">
                       {h.fileUrl && (
@@ -891,9 +891,9 @@ export default function PropertyDetails() {
                       )}
                       <div className="text-right">
                         <p className="text-sm font-bold text-slate-900 dark:text-slate-100 leading-none">R$ {h.valor_mensal.toLocaleString('pt-BR')}</p>
-                        <p className="text-[8px] text-slate-400 dark:text-slate-600 font-bold uppercase tracking-tighter mt-1">Gasto Mensal</p>
+                        <p className="text-[8px] text-slate-500 dark:text-slate-600 font-bold uppercase tracking-tighter mt-1">Gasto Mensal</p>
                       </div>
-                      <button onClick={() => removeHolding(h.id!)} className="text-slate-300 dark:text-slate-700 hover:text-rose-500 transition-colors">
+                      <button onClick={() => removeHolding(h.id!)} className="text-slate-500 dark:text-slate-700 hover:text-rose-500 transition-colors">
                         <Trash2 size={16} />
                       </button>
                     </div>
@@ -905,7 +905,7 @@ export default function PropertyDetails() {
             {/* Faturamento */}
             <div className="space-y-6">
               <div className="flex justify-between items-center">
-                <h3 className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest">Faturamento Realizado</h3>
+                <h3 className="text-[10px] font-bold text-slate-500 dark:text-slate-500 uppercase tracking-widest">Faturamento Realizado</h3>
                 <button 
                   onClick={() => setShowAddFaturamento(!showAddFaturamento)}
                   className="p-1.5 bg-emerald-50 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400 rounded-md hover:bg-emerald-100 dark:hover:bg-emerald-800 transition-colors"
@@ -923,7 +923,7 @@ export default function PropertyDetails() {
                   >
                     <div className="grid grid-cols-1 md:grid-cols-4 gap-4 items-start">
                       <div>
-                        <label className="block text-[9px] font-bold text-slate-500 dark:text-slate-400 uppercase mb-1.5">Tipo</label>
+                        <label className="block text-[9px] font-bold text-slate-600 dark:text-slate-400 uppercase mb-1.5">Tipo</label>
                         <select 
                           id="fat-tipo"
                           className="w-full px-3 py-2 bg-white dark:bg-slate-800 dark:text-slate-200 border border-slate-200 dark:border-slate-700 rounded-lg text-xs outline-none focus:ring-1 focus:ring-emerald-500 shadow-sm"
@@ -933,7 +933,7 @@ export default function PropertyDetails() {
                         </select>
                       </div>
                       <div>
-                        <label className="block text-[9px] font-bold text-slate-500 dark:text-slate-400 uppercase mb-1.5">Valor Bruto (R$)</label>
+                        <label className="block text-[9px] font-bold text-slate-600 dark:text-slate-400 uppercase mb-1.5">Valor Bruto (R$)</label>
                         <CurrencyInput
                           intlConfig={{ locale: 'pt-BR', currency: 'BRL' }}
                           decimalSeparator=","
@@ -950,7 +950,7 @@ export default function PropertyDetails() {
                         {formErrors.fatValor && <p className="text-[8px] text-rose-500 font-bold mt-1 uppercase tracking-tighter">{formErrors.fatValor}</p>}
                       </div>
                       <div>
-                        <label className="block text-[9px] font-bold text-slate-500 dark:text-slate-400 uppercase mb-1.5">Corretagem (R$)</label>
+                        <label className="block text-[9px] font-bold text-slate-600 dark:text-slate-400 uppercase mb-1.5">Corretagem (R$)</label>
                         <CurrencyInput
                           intlConfig={{ locale: 'pt-BR', currency: 'BRL' }}
                           decimalSeparator=","
@@ -963,7 +963,7 @@ export default function PropertyDetails() {
                         />
                       </div>
                       <div>
-                        <label className="block text-[9px] font-bold text-slate-500 dark:text-slate-400 uppercase mb-1.5">Data</label>
+                        <label className="block text-[9px] font-bold text-slate-600 dark:text-slate-400 uppercase mb-1.5">Data</label>
                         <input 
                           type="date" 
                           id="fat-data"
@@ -978,7 +978,7 @@ export default function PropertyDetails() {
                             setFatValor(0);
                             setFatComissao(0);
                           }}
-                          className="px-4 py-2 text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest hover:text-slate-600 dark:hover:text-slate-300 transition-colors"
+                          className="px-4 py-2 text-[10px] font-bold text-slate-500 dark:text-slate-500 uppercase tracking-widest hover:text-slate-600 dark:hover:text-slate-300 transition-colors"
                         >
                           Cancelar
                         </button>
@@ -1021,7 +1021,7 @@ export default function PropertyDetails() {
                 )}
 
                 {filteredFaturamento.length === 0 ? (
-                  <div className="p-8 text-center text-slate-400 dark:text-slate-600 text-[10px] font-bold uppercase tracking-widest">
+                  <div className="p-8 text-center text-slate-500 dark:text-slate-600 text-[10px] font-bold uppercase tracking-widest">
                     Nenhum faturamento registrado
                   </div>
                 ) : (
@@ -1035,8 +1035,8 @@ export default function PropertyDetails() {
                       <div>
                         <p className="text-sm font-bold text-slate-800 dark:text-slate-200 leading-tight">{f.tipo}</p>
                         <div className="flex items-center gap-1 mt-0.5">
-                          <Calendar size={10} className="text-slate-300 dark:text-slate-600" />
-                          <p className="text-[10px] text-slate-400 dark:text-slate-500 font-bold uppercase tracking-tighter">{f.data_operacao || 'Pendente'}</p>
+                          <Calendar size={10} className="text-slate-500 dark:text-slate-600" />
+                          <p className="text-[10px] text-slate-500 dark:text-slate-500 font-bold uppercase tracking-tighter">{f.data_operacao || 'Pendente'}</p>
                         </div>
                       </div>
                     </div>
@@ -1045,7 +1045,7 @@ export default function PropertyDetails() {
                         <p className="text-sm font-bold text-emerald-600 dark:text-emerald-400 leading-none">R$ {f.valor.toLocaleString('pt-BR')}</p>
                         {f.custo_corretagem && <p className="text-[10px] text-rose-400 dark:text-rose-500 font-bold uppercase mt-1">- R$ {f.custo_corretagem.toLocaleString('pt-BR')} Comissão</p>}
                       </div>
-                      <button onClick={() => removeFaturamento(f.id!)} className="text-slate-300 dark:text-slate-700 hover:text-rose-500 transition-colors">
+                      <button onClick={() => removeFaturamento(f.id!)} className="text-slate-500 dark:text-slate-700 hover:text-rose-500 transition-colors">
                         <Trash2 size={16} />
                       </button>
                     </div>
@@ -1068,7 +1068,7 @@ export default function PropertyDetails() {
               className="space-y-6"
             >
             <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-              <h3 className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest">Repositório de Documentos</h3>
+              <h3 className="text-[10px] font-bold text-slate-500 dark:text-slate-500 uppercase tracking-widest">Repositório de Documentos</h3>
               <button 
                 onClick={() => addDocumento({ id_imovel: id!, tipo_doc: 'Escritura', status: StatusDoc.Pendente })}
                 className="btn-primary flex items-center gap-2 text-[10px] tracking-widest w-full md:w-auto justify-center"
@@ -1087,10 +1087,10 @@ export default function PropertyDetails() {
                       </div>
                       <div className="flex-1 min-w-0">
                         <p className="text-sm font-bold text-slate-900 dark:text-white truncate leading-tight">{doc.tipo_doc}</p>
-                        <p className="text-[8px] text-slate-400 font-black uppercase tracking-widest mt-0.5">ID: {doc.id?.slice(-6)}</p>
+                        <p className="text-[8px] text-slate-500 font-black uppercase tracking-widest mt-0.5">ID: {doc.id?.slice(-6)}</p>
                       </div>
                     </div>
-                    <button onClick={() => removeDocumento(doc.id!)} className="text-slate-200 dark:text-slate-800 hover:text-rose-500 transition-colors">
+                    <button onClick={() => removeDocumento(doc.id!)} className="text-slate-500 dark:text-slate-800 hover:text-rose-500 transition-colors">
                       <Trash2 size={16} />
                     </button>
                   </div>
@@ -1099,7 +1099,7 @@ export default function PropertyDetails() {
                     {doc.fileUrl ? (
                       <FileThumbnail url={doc.fileUrl} className="w-full h-full border-0 rounded-none shadow-none" />
                     ) : (
-                      <div className="flex flex-col items-center gap-2 text-slate-300 dark:text-slate-700">
+                      <div className="flex flex-col items-center gap-2 text-slate-500 dark:text-slate-700">
                         <ImageIcon size={32} strokeWidth={1} />
                         <span className="text-[10px] font-bold uppercase tracking-widest">Sem visualização</span>
                       </div>
@@ -1124,7 +1124,7 @@ export default function PropertyDetails() {
                           href={doc.fileUrl} 
                           target="_blank" 
                           rel="noopener noreferrer"
-                          className="p-1.5 text-slate-400 hover:text-blue-500 transition-colors"
+                          className="p-1.5 text-slate-500 hover:text-blue-500 transition-colors"
                           title="Visualizar"
                         >
                           <Eye size={16} />
@@ -1132,7 +1132,7 @@ export default function PropertyDetails() {
                         <a 
                           href={doc.fileUrl} 
                           download={`${doc.tipo_doc}.png`}
-                          className="p-1.5 text-slate-400 hover:text-emerald-500 transition-colors"
+                          className="p-1.5 text-slate-500 hover:text-emerald-500 transition-colors"
                           title="Download"
                         >
                           <Download size={16} />

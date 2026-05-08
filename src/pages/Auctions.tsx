@@ -92,7 +92,7 @@ export default function Auctions() {
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div>
           <h1 className="text-2xl md:text-3xl font-bold text-slate-900 dark:text-white tracking-tight">Leilões</h1>
-          <p className="text-slate-500 dark:text-slate-400 text-sm">Monitoramento e editais de processos ativos</p>
+          <p className="text-slate-600 dark:text-slate-400 text-sm">Monitoramento e editais de processos ativos</p>
         </div>
         <button
           onClick={() => handleOpenModal()}
@@ -104,11 +104,11 @@ export default function Auctions() {
       </div>
 
       <div className="bg-white dark:bg-slate-900 p-4 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm flex items-center gap-3">
-        <Search className="text-slate-400 dark:text-slate-500" size={18} />
+        <Search className="text-slate-500 dark:text-slate-500" size={18} />
         <input
           type="text"
           placeholder="Buscar editais..."
-          className="flex-1 bg-transparent border-none focus:ring-0 text-sm placeholder:text-slate-400 dark:placeholder:text-slate-600 font-medium dark:text-slate-200"
+          className="flex-1 bg-transparent border-none focus:ring-0 text-sm placeholder:text-slate-500 dark:placeholder:text-slate-600 font-medium dark:text-slate-200"
           value={searchTerm}
           onChange={(e) => setSearchTerm(e.target.value)}
         />
@@ -129,21 +129,21 @@ export default function Auctions() {
                 {leilao.tipo}
               </span>
               <div className="flex gap-2 md:opacity-0 group-hover:opacity-100 transition-opacity">
-                <button onClick={() => handleOpenModal(leilao)} className="p-1.5 text-slate-300 dark:text-slate-700 hover:text-blue-500 transition-colors">
+                <button onClick={() => handleOpenModal(leilao)} className="p-1.5 text-slate-500 dark:text-slate-700 hover:text-blue-500 transition-colors">
                   <Edit size={16} />
                 </button>
-                <button onClick={() => remove(leilao.id!)} className="p-1.5 text-slate-300 dark:text-slate-700 hover:text-rose-500 transition-colors">
+                <button onClick={() => remove(leilao.id!)} className="p-1.5 text-slate-500 dark:text-slate-700 hover:text-rose-500 transition-colors">
                   <Trash2 size={16} />
                 </button>
               </div>
             </div>
             
             <h3 className="font-bold text-slate-900 dark:text-white mb-1 leading-tight">{leilao.processo}</h3>
-            <p className="text-xs text-slate-500 dark:text-slate-400 font-medium mb-4">{leilao.comarca}</p>
+            <p className="text-xs text-slate-600 dark:text-slate-400 font-medium mb-4">{leilao.comarca}</p>
             
             <div className="space-y-2.5">
               <div className="flex items-center gap-2 text-xs text-slate-600 dark:text-slate-400 font-medium">
-                <Calendar size={14} className="text-slate-400 dark:text-slate-600 shrink-0" />
+                <Calendar size={14} className="text-slate-500 dark:text-slate-600 shrink-0" />
                 <span>{new Date(leilao.data_leilao).toLocaleDateString('pt-BR')}</span>
               </div>
               {leilao.link_edital && (
@@ -158,7 +158,7 @@ export default function Auctions() {
 
             <div className="mt-6 pt-5 border-t border-slate-50 dark:border-slate-800 flex justify-between items-end">
               <div>
-                <p className="text-[10px] uppercase tracking-widest text-slate-400 dark:text-slate-500 font-bold mb-1">Lance Mínimo</p>
+                <p className="text-[10px] uppercase tracking-widest text-slate-500 dark:text-slate-500 font-bold mb-1">Lance Mínimo</p>
                 <div className="flex items-baseline gap-2">
                   <p className="text-lg font-black text-slate-900 dark:text-white">R$ {leilao.valor_minimo?.toLocaleString('pt-BR')}</p>
                   {leilao.valor_avaliacao && leilao.valor_minimo && (
@@ -169,8 +169,8 @@ export default function Auctions() {
                 </div>
               </div>
               <div className="text-right">
-                <p className="text-[10px] uppercase tracking-widest text-slate-400 dark:text-slate-500 font-bold mb-1">Avaliação</p>
-                <p className="text-slate-500 dark:text-slate-400 text-xs font-bold font-mono">R$ {leilao.valor_avaliacao?.toLocaleString('pt-BR')}</p>
+                <p className="text-[10px] uppercase tracking-widest text-slate-500 dark:text-slate-500 font-bold mb-1">Avaliação</p>
+                <p className="text-slate-600 dark:text-slate-400 text-xs font-bold font-mono">R$ {leilao.valor_avaliacao?.toLocaleString('pt-BR')}</p>
               </div>
             </div>
           </motion.div>
@@ -205,7 +205,7 @@ export default function Auctions() {
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div className="md:col-span-2">
-                    <label className="block text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest mb-1.5 ml-1">Número do Processo</label>
+                    <label className="block text-[10px] font-bold text-slate-500 dark:text-slate-500 uppercase tracking-widest mb-1.5 ml-1">Número do Processo</label>
                     <input
                       type="text"
                       placeholder="0000000-00.0000.0.00.0000"
@@ -220,7 +220,7 @@ export default function Auctions() {
                   </div>
 
                   <div>
-                    <label className="block text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest mb-1.5 ml-1">Comarca / Vara</label>
+                    <label className="block text-[10px] font-bold text-slate-500 dark:text-slate-500 uppercase tracking-widest mb-1.5 ml-1">Comarca / Vara</label>
                     <input
                       type="text"
                       className={cn(
@@ -234,7 +234,7 @@ export default function Auctions() {
                   </div>
 
                   <div>
-                    <label className="block text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest mb-1.5 ml-1">Data do Leilão</label>
+                    <label className="block text-[10px] font-bold text-slate-500 dark:text-slate-500 uppercase tracking-widest mb-1.5 ml-1">Data do Leilão</label>
                     <input
                       type="datetime-local"
                       className={cn(
@@ -248,7 +248,7 @@ export default function Auctions() {
                   </div>
 
                   <div>
-                    <label className="block text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest mb-1.5 ml-1">Tipo de Leilão</label>
+                    <label className="block text-[10px] font-bold text-slate-500 dark:text-slate-500 uppercase tracking-widest mb-1.5 ml-1">Tipo de Leilão</label>
                     <select
                       className="w-full px-4 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl focus:ring-1 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all text-sm font-medium dark:text-slate-200"
                       value={formData.tipo}
@@ -260,7 +260,7 @@ export default function Auctions() {
                   </div>
 
                   <div>
-                    <label className="block text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest mb-1.5 ml-1">Forma de Arrematação</label>
+                    <label className="block text-[10px] font-bold text-slate-500 dark:text-slate-500 uppercase tracking-widest mb-1.5 ml-1">Forma de Arrematação</label>
                     <select
                       className="w-full px-4 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl focus:ring-1 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all text-sm font-medium dark:text-slate-200"
                       value={formData.forma_arrematacao}
@@ -278,15 +278,15 @@ export default function Auctions() {
                     </div>
 
                     <div className="relative z-10">
-                      <label className="flex items-center gap-1.5 text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest mb-1.5 group/label relative ml-1">
+                      <label className="flex items-center gap-1.5 text-[10px] font-bold text-slate-500 dark:text-slate-500 uppercase tracking-widest mb-1.5 group/label relative ml-1">
                         Valor Avaliação
-                        <Info size={12} className="text-slate-300 dark:text-slate-700 cursor-help" />
+                        <Info size={12} className="text-slate-500 dark:text-slate-700 cursor-help" />
                         <div className="absolute bottom-full left-0 mb-2 w-48 p-2 bg-slate-900 text-white text-[9px] font-medium leading-tight rounded-lg opacity-0 invisible group-hover/label:visible group-hover/label:opacity-100 transition-all z-20 shadow-xl pointer-events-none">
                           O valor de mercado estimado do imóvel, definido por perito ou avaliação oficial do edital.
                         </div>
                       </label>
                       <div className="relative">
-                        <span className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 dark:text-slate-600 text-xs font-bold border-r border-slate-200 dark:border-slate-700 pr-3">R$</span>
+                        <span className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500 dark:text-slate-600 text-xs font-bold border-r border-slate-200 dark:border-slate-700 pr-3">R$</span>
                         <CurrencyInput
                           intlConfig={{ locale: 'pt-BR', currency: 'BRL' }}
                           decimalSeparator=","
@@ -306,9 +306,9 @@ export default function Auctions() {
 
                     <div className="relative z-10">
                       <div className="flex justify-between items-center mb-1.5 px-1">
-                        <label className="flex items-center gap-1.5 text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest group/label relative">
+                        <label className="flex items-center gap-1.5 text-[10px] font-bold text-slate-500 dark:text-slate-500 uppercase tracking-widest group/label relative">
                           Lance Mínimo
-                          <Info size={12} className="text-slate-300 dark:text-slate-700 cursor-help" />
+                          <Info size={12} className="text-slate-500 dark:text-slate-700 cursor-help" />
                           <div className="absolute bottom-full left-0 mb-2 w-48 p-2 bg-slate-900 text-white text-[9px] font-medium leading-tight rounded-lg opacity-0 invisible group-hover/label:visible group-hover/label:opacity-100 transition-all z-20 shadow-xl pointer-events-none">
                             O menor valor aceito para arrematação. Geralmente entre 50% e 70% da avaliação em 2º leilão.
                           </div>
@@ -328,7 +328,7 @@ export default function Auctions() {
                         </div>
                       </div>
                       <div className="relative">
-                        <span className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 dark:text-slate-600 text-xs font-bold border-r border-slate-200 dark:border-slate-700 pr-3">R$</span>
+                        <span className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500 dark:text-slate-600 text-xs font-bold border-r border-slate-200 dark:border-slate-700 pr-3">R$</span>
                         <CurrencyInput
                           intlConfig={{ locale: 'pt-BR', currency: 'BRL' }}
                           decimalSeparator=","
@@ -348,19 +348,19 @@ export default function Auctions() {
 
                     {formData.valor_avaliacao && formData.valor_minimo && (
                       <div className="md:col-span-2 pt-2 border-t border-slate-200 dark:border-slate-800 mt-2 flex items-center justify-between">
-                        <span className="text-[9px] font-bold text-slate-400 dark:text-slate-600 uppercase tracking-widest">Cálculo de Desconto</span>
+                        <span className="text-[9px] font-bold text-slate-500 dark:text-slate-600 uppercase tracking-widest">Cálculo de Desconto</span>
                         <div className="flex items-center gap-2">
                           <span className="text-xs font-black text-emerald-500">
                              {Math.round((formData.valor_minimo / formData.valor_avaliacao) * 100)}%
                           </span>
-                          <span className="text-[9px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-tighter">do valor total de avaliação</span>
+                          <span className="text-[9px] font-bold text-slate-600 dark:text-slate-500 uppercase tracking-tighter">do valor total de avaliação</span>
                         </div>
                       </div>
                     )}
                   </div>
 
                   <div className="md:col-span-2">
-                    <label className="block text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest mb-1.5 ml-1">Link do Edital</label>
+                    <label className="block text-[10px] font-bold text-slate-500 dark:text-slate-500 uppercase tracking-widest mb-1.5 ml-1">Link do Edital</label>
                     <input
                       type="text"
                       placeholder="https://..."

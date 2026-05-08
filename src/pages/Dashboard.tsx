@@ -71,7 +71,7 @@ export default function Dashboard() {
             transition={{ delay: idx * 0.1 }}
             className="stat-card"
           >
-            <p className="text-[10px] text-slate-500 dark:text-slate-400 font-bold uppercase tracking-widest">{stat.label}</p>
+            <p className="text-[10px] text-slate-600 dark:text-slate-400 font-bold uppercase tracking-widest">{stat.label}</p>
             <div className="flex items-end justify-between mt-2">
               <p className="text-2xl font-bold text-slate-900 dark:text-white">{stat.value}</p>
               <stat.icon className={cn("w-5 h-5", stat.textColor)} />
@@ -133,7 +133,7 @@ export default function Dashboard() {
                         <span className="text-[9px] font-bold text-blue-600 dark:text-blue-400 uppercase tracking-widest px-1.5 py-0.5 bg-blue-50 dark:bg-blue-950/40 rounded">
                           {new Date(a.data_leilao).toLocaleDateString('pt-BR')}
                         </span>
-                        <span className="text-[9px] font-bold text-slate-400 dark:text-slate-500">
+                        <span className="text-[9px] font-bold text-slate-500 dark:text-slate-500">
                           {new Date(a.data_leilao).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
                         </span>
                       </div>
@@ -141,8 +141,8 @@ export default function Dashboard() {
                         {property?.endereco || 'Endereço Indisponível'}
                       </p>
                       <div className="flex items-center gap-2 mt-2">
-                        <Gavel size={12} className="text-slate-400 dark:text-slate-500" />
-                        <p className="text-[9px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-tighter">
+                        <Gavel size={12} className="text-slate-500 dark:text-slate-500" />
+                        <p className="text-[9px] font-bold text-slate-600 dark:text-slate-400 uppercase tracking-tighter">
                           Lance Mínimo: <span className="text-slate-700 dark:text-slate-300">R$ {a.valor_minimo?.toLocaleString('pt-BR') || '0,00'}</span>
                         </p>
                       </div>
@@ -162,7 +162,7 @@ export default function Dashboard() {
                 <div className="w-12 h-12 bg-slate-50 dark:bg-slate-800 rounded-full flex items-center justify-center mb-3">
                   <CheckCircle2 className="text-slate-300 dark:text-slate-600" size={24} />
                 </div>
-                <p className="text-xs text-slate-400 font-medium tracking-tight">Sem leilões iminentes.</p>
+                <p className="text-xs text-slate-500 font-medium tracking-tight">Sem leilões iminentes.</p>
               </div>
             )}
           </div>

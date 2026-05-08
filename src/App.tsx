@@ -73,7 +73,7 @@ function Sidebar({ isOpen, onClose, darkMode, onToggleDarkMode }: { isOpen: bool
             <div className="w-8 h-8 bg-blue-600 rounded-lg shrink-0 shadow-sm" />
             <span className="font-bold text-xl tracking-tight text-slate-800 dark:text-white">PROP-MAESTRO</span>
           </Link>
-          <button onClick={onClose} className="lg:hidden text-slate-400 hover:text-slate-600 p-2 -mr-2">
+          <button onClick={onClose} className="lg:hidden text-slate-500 hover:text-slate-700 p-2 -mr-2">
             <CloseIcon size={20} />
           </button>
         </div>
@@ -122,17 +122,17 @@ function Sidebar({ isOpen, onClose, darkMode, onToggleDarkMode }: { isOpen: bool
               {auth.currentUser?.photoURL ? (
                 <img src={auth.currentUser.photoURL} alt="Avatar" className="w-full h-full object-cover" />
               ) : (
-                <UserIcon className="w-5 h-5 text-slate-400 dark:text-slate-500" />
+                <UserIcon className="w-5 h-5 text-slate-500 dark:text-slate-500" />
               )}
             </div>
             <div className="overflow-hidden">
               <p className="text-sm font-bold text-slate-800 dark:text-slate-100 truncate">{auth.currentUser?.displayName || 'Usuário'}</p>
-              <p className="text-[10px] text-slate-500 dark:text-slate-400 uppercase tracking-wider font-semibold">Broker Manager</p>
+              <p className="text-[10px] text-slate-600 dark:text-slate-400 uppercase tracking-wider font-semibold">Broker Manager</p>
             </div>
           </div>
           <button
             onClick={() => auth.signOut()}
-            className="flex items-center gap-2 text-xs font-bold text-slate-400 hover:text-rose-500 transition-colors"
+            className="flex items-center gap-2 text-xs font-bold text-slate-500 hover:text-rose-500 transition-colors"
           >
             <LogOut className="w-4 h-4" />
             Sair do Sistema
@@ -203,14 +203,14 @@ function LoginPage() {
         </div>
         
         <h1 className="text-3xl font-bold mb-2 text-slate-900 dark:text-white tracking-tight">PropMaestro</h1>
-        <p className="text-sm text-slate-500 dark:text-slate-400 mb-10 font-medium">
+        <p className="text-sm text-slate-600 dark:text-slate-400 mb-10 font-medium">
           {isLogin ? 'Bem-vindo de volta ao seu centro de gestão.' : 'Crie sua conta de broker autorizado.'}
         </p>
 
         <form onSubmit={handleSubmit} className="space-y-4 text-left">
           {!isLogin && (
             <div className="relative group">
-              <UserIcon className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400 group-focus-within:text-blue-500 transition-colors" />
+              <UserIcon className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-500 group-focus-within:text-blue-500 transition-colors" />
               <input
                 type="text"
                 placeholder="Nome Completo"
@@ -223,7 +223,7 @@ function LoginPage() {
           )}
 
           <div className="relative group">
-            <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400 group-focus-within:text-blue-500 transition-colors" />
+            <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-500 group-focus-within:text-blue-500 transition-colors" />
             <input
               type="email"
               placeholder="seu@email.com"
@@ -235,7 +235,7 @@ function LoginPage() {
           </div>
 
           <div className="relative group">
-            <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400 group-focus-within:text-blue-500 transition-colors" />
+            <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-500 group-focus-within:text-blue-500 transition-colors" />
             <input
               type="password"
               placeholder="Sua senha"
@@ -265,7 +265,7 @@ function LoginPage() {
           </button>
         </form>
 
-        <div className="my-8 flex items-center gap-4 text-slate-400">
+        <div className="my-8 flex items-center gap-4 text-slate-500">
           <div className="h-px flex-1 bg-slate-100 dark:bg-slate-800" />
           <span className="text-[10px] font-bold uppercase tracking-widest">ou</span>
           <div className="h-px flex-1 bg-slate-100 dark:bg-slate-800" />
@@ -285,13 +285,13 @@ function LoginPage() {
             setIsLogin(!isLogin);
             setError('');
           }}
-          className="mt-8 text-xs font-bold text-slate-400 hover:text-blue-500 transition-colors uppercase tracking-widest"
+          className="mt-8 text-xs font-bold text-slate-500 hover:text-blue-500 transition-colors uppercase tracking-widest"
         >
           {isLogin ? 'Não tem conta? Cadastre-se' : 'Já tem conta? Faça Login'}
         </button>
 
         <div className="mt-10 pt-8 border-t border-slate-50 dark:border-slate-800">
-          <p className="text-[10px] text-slate-400 dark:text-slate-500 font-bold uppercase tracking-[0.2em]">
+          <p className="text-[10px] text-slate-500 dark:text-slate-500 font-bold uppercase tracking-[0.2em]">
             Acesso restrito para brokers autorizados
           </p>
         </div>
@@ -354,7 +354,7 @@ export default function App() {
                      window.location.pathname === '/auctions' ? 'Monitoramento de Leilões' : 
                      window.location.pathname === '/properties' ? 'Gestão de Imóveis' : 'Detalhes do Ativo'}
                   </h2>
-                  <p className="text-[10px] text-slate-500 dark:text-slate-400 font-medium hidden sm:block">BEM-VINDO AO PROP-MAESTRO CENTRAL</p>
+                  <p className="text-[10px] text-slate-600 dark:text-slate-400 font-medium hidden sm:block">BEM-VINDO AO PROP-MAESTRO CENTRAL</p>
                 </div>
               </div>
               <div className="flex items-center gap-2 md:gap-4">
