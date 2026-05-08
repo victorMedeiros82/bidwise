@@ -209,7 +209,7 @@ export default function App() {
   if (loading) return <LoadingScreen />;
 
   return (
-    <BrowserRouter>
+    <BrowserRouter basename={import.meta.env.BASE_URL}>
       {user ? (
         <div className="flex min-h-screen bg-white dark:bg-slate-950 transition-colors duration-300">
           <Sidebar 
