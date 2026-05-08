@@ -11,7 +11,7 @@
 import { useEffect, useState } from 'react';
 import { BrowserRouter, Routes, Route, Navigate, Link, useLocation } from 'react-router-dom';
 import { onAuthStateChanged, User } from 'firebase/auth';
-import { auth, signInWithGoogle } from './lib/firebase';
+import { auth, signInWithGoogle, signInWithEmailAndPassword, createUserWithEmailAndPassword, updateProfile } from './lib/firebase';
 import { 
   BarChart3, 
   Gavel, 
@@ -26,7 +26,11 @@ import {
   Menu,
   Moon,
   Sun,
-  X as CloseIcon
+  X as CloseIcon,
+  Mail,
+  Lock,
+  User as UserIcon,
+  Loader2
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { cn } from './lib/utils';
@@ -65,11 +69,11 @@ function Sidebar({ isOpen, onClose, darkMode, onToggleDarkMode }: { isOpen: bool
         !isOpen && "-translate-x-full"
       )}>
         <div className="px-6 mb-8 flex items-center justify-between">
-          <div className="flex items-center gap-3">
+          <Link to="/" onClick={onClose} className="flex items-center gap-3 active:scale-95 transition-transform">
             <div className="w-8 h-8 bg-blue-600 rounded-lg shrink-0 shadow-sm" />
             <span className="font-bold text-xl tracking-tight text-slate-800 dark:text-white">PROP-MAESTRO</span>
-          </div>
-          <button onClick={onClose} className="lg:hidden text-slate-400 hover:text-slate-600">
+          </Link>
+          <button onClick={onClose} className="lg:hidden text-slate-400 hover:text-slate-600 p-2 -mr-2">
             <CloseIcon size={20} />
           </button>
         </div>
@@ -79,9 +83,7 @@ function Sidebar({ isOpen, onClose, darkMode, onToggleDarkMode }: { isOpen: bool
             <Link
               key={item.path}
               to={item.path}
-              onClick={() => {
-                if (window.innerWidth < 1024) onClose();
-              }}
+              onClick={onClose}
               className={cn(
                 "sidebar-link",
                 location.pathname === item.path && "active"
@@ -116,9 +118,11 @@ function Sidebar({ isOpen, onClose, darkMode, onToggleDarkMode }: { isOpen: bool
           </button>
 
           <div className="flex items-center gap-3 mb-6">
-            <div className="w-10 h-10 rounded-full bg-slate-200 dark:bg-slate-700 overflow-hidden border border-white dark:border-slate-600 shadow-sm shrink-0">
-              {auth.currentUser?.photoURL && (
+            <div className="w-10 h-10 rounded-full bg-slate-200 dark:bg-slate-700 overflow-hidden border border-white dark:border-slate-600 shadow-sm shrink-0 flex items-center justify-center">
+              {auth.currentUser?.photoURL ? (
                 <img src={auth.currentUser.photoURL} alt="Avatar" className="w-full h-full object-cover" />
+              ) : (
+                <UserIcon className="w-5 h-5 text-slate-400 dark:text-slate-500" />
               )}
             </div>
             <div className="overflow-hidden">
@@ -152,24 +156,141 @@ function LoadingScreen() {
 }
 
 function LoginPage() {
+  const [isLogin, setIsLogin] = useState(true);
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [name, setName] = useState('');
+  const [error, setError] = useState('');
+  const [loading, setLoading] = useState(false);
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError('');
+    setLoading(true);
+
+    try {
+      if (isLogin) {
+        await signInWithEmailAndPassword(auth, email, password);
+      } else {
+        const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+        await updateProfile(userCredential.user, { displayName: name });
+      }
+    } catch (err: any) {
+      console.error(err);
+      if (err.code === 'auth/user-not-found' || err.code === 'auth/wrong-password' || err.code === 'auth/invalid-credential') {
+        setError('E-mail ou senha incorretos.');
+      } else if (err.code === 'auth/email-already-in-use') {
+        setError('Este e-mail já está em uso.');
+      } else if (err.code === 'auth/weak-password') {
+        setError('A senha deve ter pelo menos 6 caracteres.');
+      } else {
+        setError('Ocorreu um erro ao tentar acessar o sistema.');
+      }
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
-    <div className="h-screen w-screen flex items-center justify-center bg-white dark:bg-slate-950 p-6 transition-colors duration-300">
-      <div className="max-w-md w-full bg-white dark:bg-slate-900 rounded-3xl shadow-2xl p-10 text-center border border-slate-100 dark:border-slate-800">
-        <div className="w-20 h-20 bg-blue-600 rounded-2xl flex items-center justify-center mx-auto mb-8 shadow-xl shadow-blue-500/30">
+    <div className="min-h-screen w-screen flex items-center justify-center bg-slate-50 dark:bg-slate-950 p-6 transition-colors duration-300">
+      <div className="max-w-md w-full bg-white dark:bg-slate-900 rounded-[2.5rem] shadow-2xl p-8 md:p-12 text-center border border-slate-100 dark:border-slate-800 relative overflow-hidden">
+        {/* Abstract Background Element */}
+        <div className="absolute -top-10 -right-10 w-40 h-40 bg-blue-600/5 rounded-full blur-3xl pointer-events-none" />
+        <div className="absolute -bottom-10 -left-10 w-40 h-40 bg-blue-600/5 rounded-full blur-3xl pointer-events-none" />
+
+        <div className="w-20 h-20 bg-gradient-to-br from-blue-600 to-indigo-700 rounded-3xl flex items-center justify-center mx-auto mb-8 shadow-xl shadow-blue-500/30">
           <Gavel className="w-10 h-10 text-white" />
         </div>
-        <h1 className="text-3xl md:text-4xl font-bold mb-3 text-slate-900 dark:text-white tracking-tight">PropMaestro</h1>
-        <p className="text-slate-500 dark:text-slate-400 mb-10 font-medium">Gestão inteligente para investimentos em leilões de imóveis.</p>
         
+        <h1 className="text-3xl font-bold mb-2 text-slate-900 dark:text-white tracking-tight">PropMaestro</h1>
+        <p className="text-sm text-slate-500 dark:text-slate-400 mb-10 font-medium">
+          {isLogin ? 'Bem-vindo de volta ao seu centro de gestão.' : 'Crie sua conta de broker autorizado.'}
+        </p>
+
+        <form onSubmit={handleSubmit} className="space-y-4 text-left">
+          {!isLogin && (
+            <div className="relative group">
+              <UserIcon className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400 group-focus-within:text-blue-500 transition-colors" />
+              <input
+                type="text"
+                placeholder="Nome Completo"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                required
+                className="w-full pl-12 pr-4 py-4 bg-slate-50 dark:bg-slate-800/50 border border-slate-100 dark:border-slate-700 rounded-2xl text-slate-900 dark:text-white outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all font-medium"
+              />
+            </div>
+          )}
+
+          <div className="relative group">
+            <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400 group-focus-within:text-blue-500 transition-colors" />
+            <input
+              type="email"
+              placeholder="seu@email.com"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              required
+              className="w-full pl-12 pr-4 py-4 bg-slate-50 dark:bg-slate-800/50 border border-slate-100 dark:border-slate-700 rounded-2xl text-slate-900 dark:text-white outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all font-medium"
+            />
+          </div>
+
+          <div className="relative group">
+            <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400 group-focus-within:text-blue-500 transition-colors" />
+            <input
+              type="password"
+              placeholder="Sua senha"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              required
+              className="w-full pl-12 pr-4 py-4 bg-slate-50 dark:bg-slate-800/50 border border-slate-100 dark:border-slate-700 rounded-2xl text-slate-900 dark:text-white outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all font-medium"
+            />
+          </div>
+
+          {error && (
+            <motion.p 
+              initial={{ opacity: 0, y: -10 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="text-xs font-bold text-rose-500 bg-rose-50 dark:bg-rose-900/20 p-4 rounded-xl border border-rose-100 dark:border-rose-900/30"
+            >
+              {error}
+            </motion.p>
+          )}
+
+          <button
+            type="submit"
+            disabled={loading}
+            className="w-full bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 text-white py-4 rounded-2xl font-bold transition-all shadow-lg shadow-blue-500/25 active:scale-[0.98] flex items-center justify-center gap-2"
+          >
+            {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : (isLogin ? 'Entrar no Sistema' : 'Criar minha Conta')}
+          </button>
+        </form>
+
+        <div className="my-8 flex items-center gap-4 text-slate-400">
+          <div className="h-px flex-1 bg-slate-100 dark:bg-slate-800" />
+          <span className="text-[10px] font-bold uppercase tracking-widest">ou</span>
+          <div className="h-px flex-1 bg-slate-100 dark:bg-slate-800" />
+        </div>
+
         <button
           onClick={signInWithGoogle}
+          disabled={loading}
           className="w-full flex items-center justify-center gap-3 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 px-6 py-4 rounded-2xl font-bold text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700 transition-all active:scale-[0.98] shadow-sm group"
         >
-          <img src="https://www.google.com/favicon.ico" alt="Google" className="w-5 h-5 grayscale group-hover:grayscale-0 transition-all" />
-          Entrar com Google
+          <img src="https://www.google.com/favicon.ico" alt="Google" className="w-5 h-5 grayscale group-hover:grayscale-0 transition-all font-medium" />
+          Acessar com Google
         </button>
         
-        <div className="mt-12 pt-8 border-t border-slate-50 dark:border-slate-800">
+        <button
+          onClick={() => {
+            setIsLogin(!isLogin);
+            setError('');
+          }}
+          className="mt-8 text-xs font-bold text-slate-400 hover:text-blue-500 transition-colors uppercase tracking-widest"
+        >
+          {isLogin ? 'Não tem conta? Cadastre-se' : 'Já tem conta? Faça Login'}
+        </button>
+
+        <div className="mt-10 pt-8 border-t border-slate-50 dark:border-slate-800">
           <p className="text-[10px] text-slate-400 dark:text-slate-500 font-bold uppercase tracking-[0.2em]">
             Acesso restrito para brokers autorizados
           </p>
