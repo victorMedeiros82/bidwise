@@ -84,8 +84,8 @@ export default function Dashboard() {
         ))}
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <div className="lg:col-span-2 bg-white dark:bg-slate-900 p-6 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm h-[400px]">
+      <div className="grid grid-cols-1 gap-6">
+        <div className="bg-white dark:bg-slate-900 p-6 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm h-[400px]">
           <h3 className="font-bold text-slate-800 dark:text-slate-100 mb-6 flex items-center gap-2">
             <TrendingUp size={18} className="text-blue-600" />
             Distribuição de Ativos
@@ -108,68 +108,6 @@ export default function Dashboard() {
               <Tooltip />
             </PieChart>
           </ResponsiveContainer>
-        </div>
-
-        <div className="bg-white dark:bg-slate-900 p-6 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm h-[400px] flex flex-col">
-          <h3 className="font-bold text-slate-800 dark:text-slate-100 mb-4 flex items-center gap-2">
-            <AlertTriangle size={18} className="text-amber-500" />
-            Alertas & Oportunidades
-          </h3>
-          <div className="flex-1 overflow-y-auto space-y-3 pr-2 scrollbar-thin scrollbar-thumb-slate-200 dark:scrollbar-thumb-slate-800">
-            {auctionsNext7Days.length > 0 ? (
-              <>
-                <div className="p-3 bg-rose-50 dark:bg-rose-950/20 rounded-lg border border-rose-100 dark:border-rose-900/30 flex items-center gap-3 mb-2">
-                  <AlertTriangle className="text-rose-600 dark:text-rose-400 shrink-0" size={16} />
-                  <p className="text-[10px] text-rose-800 dark:text-rose-300 font-bold uppercase tracking-wider">
-                    {auctionsNext7Days.length} Leilões nos próximos 7 dias
-                  </p>
-                </div>
-                {auctionsNext7Days.map(a => {
-                  return (
-                    <motion.div 
-                      key={a.id}
-                      initial={{ opacity: 0, x: -10 }}
-                      animate={{ opacity: 1, x: 0 }}
-                      className="p-3 bg-white dark:bg-slate-800/50 rounded-lg border border-slate-100 dark:border-slate-800 hover:border-blue-200 dark:hover:border-blue-900/50 transition-colors shadow-sm cursor-pointer"
-                      onClick={() => navigate(`/properties/${a.id}`)}
-                    >
-                      <div className="flex justify-between items-start mb-1">
-                        <span className="text-[9px] font-bold text-blue-600 dark:text-blue-400 uppercase tracking-widest px-1.5 py-0.5 bg-blue-50 dark:bg-blue-950/40 rounded">
-                          {new Date(a.data_leilao!).toLocaleDateString('pt-BR')}
-                        </span>
-                        <span className="text-[9px] font-bold text-slate-500 dark:text-slate-500">
-                          {new Date(a.data_leilao!).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
-                        </span>
-                      </div>
-                      <p className="text-xs font-bold text-slate-700 dark:text-slate-200 truncate">
-                        {a.endereco}
-                      </p>
-                      <div className="flex items-center gap-2 mt-2">
-                        <Gavel size={12} className="text-slate-500 dark:text-slate-500" />
-                        <p className="text-[9px] font-bold text-slate-600 dark:text-slate-400 uppercase tracking-tighter">
-                          Lance Mínimo: <span className="text-slate-700 dark:text-slate-300">R$ {a.valor_minimo?.toLocaleString('pt-BR') || '0,00'}</span>
-                        </p>
-                      </div>
-                    </motion.div>
-                  );
-                })}
-              </>
-            ) : upcomingAuctionsCount > 0 ? (
-              <div className="p-4 bg-amber-50 dark:bg-amber-900/20 rounded-lg border border-amber-100 dark:border-amber-900/30 flex gap-3">
-                <Gavel className="text-amber-600 dark:text-amber-400 shrink-0" size={18} />
-                <p className="text-xs text-amber-800 dark:text-amber-300 font-medium">
-                  <strong>{upcomingAuctionsCount}</strong> leilões programados futuramente. Verifique a agenda.
-                </p>
-              </div>
-            ) : (
-              <div className="flex flex-col items-center justify-center h-full text-center py-8">
-                <div className="w-12 h-12 bg-slate-50 dark:bg-slate-800 rounded-full flex items-center justify-center mb-3">
-                  <CheckCircle2 className="text-slate-300 dark:text-slate-600" size={24} />
-                </div>
-                <p className="text-xs text-slate-500 font-medium tracking-tight">Sem leilões iminentes.</p>
-              </div>
-            )}
-          </div>
         </div>
       </div>
     </motion.div>

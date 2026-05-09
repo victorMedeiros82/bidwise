@@ -38,7 +38,8 @@ export enum StatusArrematacao {
   Analise = 'Análise',
   Arrematado = 'Arrematado',
   Perdido = 'Perdido',
-  Cancelado = 'Cancelado'
+  Cancelado = 'Cancelado',
+  Reprovado = 'Reprovado'
 }
 
 export enum StatusPagamento {

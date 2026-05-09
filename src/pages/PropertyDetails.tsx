@@ -23,7 +23,13 @@ import {
   Download,
   Image as ImageIcon,
   File as FileIcon,
-  Eye
+  Eye,
+  MapPin,
+  Zap,
+  RefreshCw,
+  ShieldCheck,
+  FolderOpen,
+  ArrowDownCircle
 } from 'lucide-react';
 import { useFirestore } from '../hooks/useFirestore';
 import { 
@@ -69,6 +75,7 @@ export default function PropertyDetails() {
   // Local state for monetary inputs
   const [reformaOrc, setReformaOrc] = useState<number | undefined>(0);
   const [reformaReal, setReformaReal] = useState<number | undefined>(0);
+  const [reformaDescricao, setReformaDescricao] = useState('');
   const [fatValor, setFatValor] = useState<number | undefined>(0);
   const [fatComissao, setFatComissao] = useState<number | undefined>(0);
   const [aquisicaoValor, setAquisicaoValor] = useState<number | undefined>(0);
@@ -182,141 +189,143 @@ export default function PropertyDetails() {
         Voltar à Gestão
       </button>
 
-      <div className="bg-white dark:bg-slate-900 p-6 md:p-8 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm flex flex-col md:flex-row gap-6 md:gap-8">
-        <div className="w-16 h-16 md:w-20 md:h-20 bg-white dark:bg-slate-800 border border-slate-100 dark:border-slate-700 rounded-2xl flex items-center justify-center shrink-0 shadow-inner">
-          <Building2 className="text-slate-500 dark:text-slate-600" size={32} />
+      <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 py-4 md:py-8 border-b border-slate-100 dark:border-slate-800 mb-8">
+        <div className="flex items-start gap-6">
+          <div className="w-16 h-16 md:w-20 md:h-20 bg-slate-900 dark:bg-white rounded-[2rem] flex items-center justify-center shrink-0 shadow-2xl shadow-slate-200 dark:shadow-none">
+            <Building2 className="text-white dark:text-slate-900" size={32} strokeWidth={2.5} />
+          </div>
+          <div className="flex-1">
+            <p className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-[0.2em] mb-1.5 flex items-center gap-2">
+              <span className="w-1.5 h-1.5 rounded-full bg-blue-500 shadow-sm shadow-blue-500/50" />
+              Gestão de Ativo Operacional
+            </p>
+            <h1 className="text-2xl md:text-4xl font-black text-slate-900 dark:text-white tracking-tighter leading-none mb-2">
+              {imovel.endereco}
+            </h1>
+            <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-[11px] font-bold text-slate-500 dark:text-slate-400">
+              <span className="flex items-center gap-1.5">
+                <MapPin size={12} className="text-slate-300" />
+                {imovel.bairro || 'Bairro N/A'} • {imovel.cidade}/{imovel.estado}
+              </span>
+              <span className="w-1 h-1 rounded-full bg-slate-200" />
+              <span className="flex items-center gap-1.5 text-nowrap">
+                <ClipboardCheck size={12} className="text-slate-300" />
+                {imovel.tipo_imovel}
+              </span>
+              <span className="w-1 h-1 rounded-full bg-slate-200" />
+              <span className="flex items-center gap-1.5 text-nowrap">
+                <ShieldAlert size={12} className="text-slate-300" />
+                {imovel.situacao_juridica}
+              </span>
+            </div>
+          </div>
         </div>
-        <div className="flex-1">
-          <div className="flex flex-col md:flex-row justify-between items-start mb-3 gap-4">
-            <div>
-              <p className="text-[10px] text-slate-500 dark:text-slate-500 font-bold uppercase tracking-widest mb-1">Detalhes do Ativo</p>
-              <h1 className="text-xl md:text-2xl font-bold text-slate-900 dark:text-white leading-tight">{imovel.endereco}</h1>
-              {(imovel.bairro || imovel.cidade || imovel.estado) && (
-                <p className="text-sm font-medium text-slate-600 dark:text-slate-400 mt-1">
-                  {imovel.bairro ? `${imovel.bairro}, ` : ''}
-                  {imovel.cidade ? `${imovel.cidade} - ` : ''}
-                  {imovel.estado ? imovel.estado : ''}
-                  {imovel.cep ? ` • CEP: ${imovel.cep}` : ''}
-                </p>
-              )}
-            </div>
-            <span className={cn(
-              "px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-widest",
-              imovel.status_arrematacao === 'Arrematado' ? "bg-emerald-100 dark:bg-emerald-900/40 text-emerald-700 dark:text-emerald-400" : "bg-amber-100 dark:bg-amber-900/40 text-amber-700 dark:text-amber-400"
-            )}>
-              {imovel.status_arrematacao}
-            </span>
-          </div>
-          <div className="flex flex-wrap gap-4 md:gap-6 text-[10px] font-bold text-slate-500 dark:text-slate-500 uppercase tracking-tighter">
-            <div className="flex items-center gap-1.5">
-              <ClipboardCheck size={14} className="text-slate-500 dark:text-slate-700" />
-              {imovel.tipo_imovel}
-            </div>
-            <div className="flex items-center gap-1.5">
-              <Gavel size={14} className="text-slate-500 dark:text-slate-700" />
-              {imovel.origem === OrigemImovel.Leilao 
-                ? `Leilão: ${imovel.processo || 'N/A'}` 
-                : imovel.origem}
-            </div>
-            <div className="flex items-center gap-1.5">
-              <ShieldAlert size={14} className="text-slate-500 dark:text-slate-700" />
-              {imovel.situacao_juridica}
-            </div>
-          </div>
+
+        <div className={cn(
+          "px-6 py-3 rounded-2xl text-[10px] font-black uppercase tracking-widest shadow-sm border md:self-start",
+          imovel.status_arrematacao === 'Arrematado' 
+            ? "bg-emerald-50 border-emerald-100 text-emerald-600" 
+            : "bg-amber-50 border-amber-100 text-amber-600"
+        )}>
+          {imovel.status_arrematacao}
         </div>
       </div>
 
       {imovel.origem === OrigemImovel.Leilao && imovel.processo && (
         <motion.div 
-          initial={{ opacity: 0, y: -10 }}
+          initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
-          className="bg-white dark:bg-slate-900 p-6 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm relative overflow-hidden group"
+          className="bg-slate-50 dark:bg-slate-900 p-8 rounded-[2.5rem] border border-slate-200/60 dark:border-slate-800 shadow-sm relative overflow-hidden group mb-8"
         >
-          <div className="absolute top-0 right-0 p-8 opacity-5 pointer-events-none group-hover:scale-110 transition-transform duration-500">
-            <Gavel size={120} />
+          <div className="absolute -top-12 -right-12 p-8 opacity-[0.03] pointer-events-none group-hover:scale-110 transition-transform duration-700">
+            <Gavel size={240} strokeWidth={1} />
           </div>
           
-          <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6 relative z-10">
-            <div className="space-y-4 flex-1">
+          <div className="flex flex-col md:flex-row justify-between md:items-center gap-8 relative z-10">
+            <div className="space-y-6 flex-1">
               <div className="flex items-center gap-3">
-                <div className="px-2.5 py-1 bg-indigo-100 dark:bg-indigo-900/40 text-indigo-700 dark:text-indigo-400 rounded-full text-[10px] font-bold uppercase tracking-widest">
+                <div className="px-3 py-1 bg-white dark:bg-slate-800 text-indigo-600 dark:text-indigo-400 rounded-lg text-[9px] font-black uppercase tracking-[0.15em] border border-slate-100 dark:border-slate-700 shadow-sm">
                   {imovel.tipo_leilao || 'Processo Judicial'}
                 </div>
-                <div className="flex items-center gap-1.5 text-xs text-slate-500 dark:text-slate-400 font-medium">
-                  <Calendar size={14} />
-                  {imovel.data_leilao ? new Date(imovel.data_leilao).toLocaleString('pt-BR') : 'Data não informada'}
+                <div className="flex items-center gap-1.5 text-[10px] text-slate-500 font-bold uppercase tracking-wider">
+                  <Calendar size={14} className="text-slate-300" />
+                  {imovel.data_leilao ? new Date(imovel.data_leilao).toLocaleString('pt-BR') : 'Agendamento Pendente'}
                 </div>
               </div>
               
               <div>
-                <h3 className="text-lg font-black text-slate-900 dark:text-white tracking-tight">{imovel.processo}</h3>
-                <p className="text-xs text-slate-600 dark:text-slate-400 font-bold uppercase tracking-widest mt-1">{imovel.comarca || 'Comarca não informada'}</p>
+                <h3 className="text-2xl font-black text-slate-900 dark:text-white tracking-tighter mb-1">{imovel.processo}</h3>
+                <p className="text-[10px] text-slate-500 font-black uppercase tracking-[0.2em] flex items-center gap-2">
+                  <span className="w-4 h-px bg-slate-300" />
+                  {imovel.comarca || 'Tribunal de Justiça'}
+                </p>
               </div>
 
-              <div className="flex flex-wrap gap-4">
+              <div className="flex flex-wrap items-center gap-6">
                 {imovel.link_edital && (
                   <a 
                     href={imovel.link_edital} 
                     target="_blank" 
                     rel="noopener noreferrer"
-                    className="flex items-center gap-2 text-[10px] font-bold text-blue-600 dark:text-blue-400 uppercase tracking-widest hover:underline"
+                    className="flex items-center gap-3 py-3 px-6 bg-white dark:bg-slate-800 rounded-2xl text-[10px] font-black text-blue-600 dark:text-blue-400 uppercase tracking-widest border border-slate-100 dark:border-slate-700 hover:shadow-lg transition-all active:scale-95"
                   >
-                    <LinkIcon size={12} />
-                    Acessar Edital Completo
+                    <LinkIcon size={14} strokeWidth={2.5} />
+                    Consultar Edital
                   </a>
                 )}
-                <div className="flex items-center gap-2 text-[10px] font-bold text-slate-500 uppercase tracking-widest">
-                  < Hammer size={12} />
-                  {imovel.forma_arrematacao || 'Online'}
+                <div className="flex items-center gap-2 text-[10px] font-bold text-slate-400 uppercase tracking-widest">
+                  <Hammer size={14} />
+                  {imovel.forma_arrematacao || 'Sessão Online'}
                 </div>
               </div>
             </div>
 
-            <div className="flex gap-8 items-end border-t md:border-t-0 md:border-l border-slate-100 dark:border-slate-800 pt-6 md:pt-0 md:pl-8">
+            <div className="flex flex-col justify-center gap-6 border-t md:border-t-0 md:border-l border-slate-200 dark:border-slate-800 pt-8 md:pt-0 md:pl-12">
               <div className="text-right">
-                <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1.5">Lance Mínimo</p>
-                <div className="flex items-baseline justify-end gap-2">
-                  <p className="text-2xl font-black text-slate-900 dark:text-white leading-none">
+                <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mb-2">Lance de Referência</p>
+                <div className="flex items-baseline justify-end gap-3">
+                  <p className="text-4xl font-black text-slate-900 dark:text-white tracking-tighter leading-none">
                     R$ {(imovel.valor_minimo || 0).toLocaleString('pt-BR')}
                   </p>
-                  {imovel.valor_avaliacao && imovel.valor_minimo && (
-                    <span className="text-[9px] font-bold text-emerald-500 bg-emerald-50 dark:bg-emerald-500/10 px-1.5 py-0.5 rounded uppercase tracking-tighter shadow-sm">
-                      -{Math.round((1 - (imovel.valor_minimo / imovel.valor_avaliacao)) * 100)}%
-                    </span>
-                  )}
                 </div>
-                <p className="text-[9px] font-bold text-slate-400 dark:text-slate-600 uppercase tracking-tighter mt-1">
-                  Avaliação: R$ {(imovel.valor_avaliacao || 0).toLocaleString('pt-BR')}
-                </p>
+                {imovel.valor_avaliacao && imovel.valor_minimo && (
+                  <div className="flex items-center justify-end gap-2 mt-3 text-emerald-600 font-black text-[11px] uppercase tracking-widest">
+                    <span>-{Math.round((1 - (imovel.valor_minimo / imovel.valor_avaliacao)) * 100)}% de Desconto</span>
+                    <TrendingUp size={14} />
+                  </div>
+                )}
+                <div className="mt-4 pt-4 border-t border-slate-100 dark:border-slate-800 text-[10px] font-bold text-slate-400 uppercase tracking-widest flex items-center justify-end gap-2 text-nowrap">
+                  <span>Avaliação: R$ {(imovel.valor_avaliacao || 0).toLocaleString('pt-BR')}</span>
+                </div>
               </div>
             </div>
           </div>
         </motion.div>
       )}
 
-      <div className="flex flex-wrap gap-1 p-1 bg-slate-100 dark:bg-slate-800 rounded-lg w-fit">
+      <div className="flex flex-wrap gap-2 p-1.5 bg-slate-100 dark:bg-slate-900 rounded-[1.25rem] w-fit mb-8 border border-slate-200 dark:border-slate-800 shadow-inner">
         {[
-          { id: 'analise', label: 'Análise de Risco', icon: ShieldAlert },
-          { id: 'custos', label: 'Custos & Balanço', icon: Wallet },
-          { id: 'documentos', label: 'Documentação', icon: FileText },
+          { id: 'analise', label: 'Monitoramento', icon: ShieldAlert },
+          { id: 'custos', label: 'Performance', icon: Wallet },
+          { id: 'documentos', label: 'Arquivos', icon: FileText },
         ].map(tab => (
           <button
             key={tab.id}
             onClick={() => setActiveTab(tab.id as any)}
             className={cn(
-              "relative flex items-center gap-2 px-3 md:px-5 py-2 rounded-md text-[10px] font-bold uppercase tracking-wider transition-all",
-              activeTab === tab.id ? "text-blue-600 dark:text-blue-400" : "text-slate-600 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-300"
+              "relative flex items-center gap-2.5 px-6 py-3 rounded-xl text-[10px] font-black uppercase tracking-[0.15em] transition-all duration-300",
+              activeTab === tab.id ? "text-slate-900 dark:text-white" : "text-slate-500 hover:text-slate-700 dark:hover:text-slate-300"
             )}
           >
             {activeTab === tab.id && (
               <motion.div
                 layoutId="active-tab"
-                className="absolute inset-0 bg-white dark:bg-slate-700 rounded-md shadow-sm"
-                transition={{ type: "spring", bounce: 0.2, duration: 0.6 }}
+                className="absolute inset-0 bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-slate-200/50 dark:border-slate-700"
+                transition={{ type: "spring", bounce: 0.15, duration: 0.5 }}
               />
             )}
-            <span className="relative z-10 flex items-center gap-2">
-              <tab.icon size={14} />
+            <span className="relative z-10 flex items-center gap-2.5">
+              <tab.icon size={16} strokeWidth={2.5} />
               {tab.label}
             </span>
           </button>
@@ -335,46 +344,59 @@ export default function PropertyDetails() {
               className="space-y-6"
             >
             {!imovel.analise_risco && !analyzing ? (
-              <div className="bg-white dark:bg-slate-900 p-8 md:p-12 rounded-xl border border-slate-200 dark:border-slate-800 text-center space-y-6 shadow-sm border-dashed">
-                <div className="w-16 h-16 bg-white dark:bg-slate-800 rounded-full flex items-center justify-center mx-auto border border-slate-100 dark:border-slate-700">
-                  <ShieldAlert className="text-slate-500 dark:text-slate-700" size={32} />
+              <div className="bg-white dark:bg-slate-900 p-12 md:p-20 rounded-[3rem] border-2 border-dashed border-slate-100 dark:border-slate-800 text-center space-y-8 shadow-sm">
+                <div className="w-24 h-24 bg-slate-50 dark:bg-slate-800 rounded-[2.5rem] flex items-center justify-center mx-auto border border-slate-100 dark:border-slate-700 shadow-inner">
+                  <ShieldAlert className="text-slate-300 dark:text-slate-600" size={48} />
                 </div>
-                <div className="max-w-md mx-auto">
-                  <h3 className="text-xl font-bold text-slate-900 dark:text-white mb-2">Relatório de Inteligência Crítica</h3>
-                  <p className="text-sm text-slate-600 dark:text-slate-400 font-medium">Avalie riscos jurídicos e viabilidade financeira com nossa rede neural especializada.</p>
+                <div className="max-w-md mx-auto space-y-4">
+                  <h3 className="text-2xl font-black text-slate-900 dark:text-white tracking-tighter">Diligência Inteligente</h3>
+                  <p className="text-sm text-slate-500 dark:text-slate-400 font-bold leading-relaxed uppercase tracking-widest text-[10px]">Execute uma varredura completa de riscos jurídicos, financeiros e operacionais utilizando nossa IA de alta performance.</p>
                 </div>
                 <button
                   onClick={handleGenerateAnalysis}
-                  className="btn-primary flex items-center gap-2 mx-auto uppercase tracking-widest text-[10px]"
+                  className="py-5 px-12 bg-slate-900 dark:bg-white text-white dark:text-slate-900 rounded-2xl text-[10px] font-black uppercase tracking-[0.25em] shadow-2xl hover:scale-105 transition-all active:scale-95 flex items-center gap-4 mx-auto"
                 >
                   <Loader2 className={cn("animate-spin", !analyzing && "hidden")} />
-                  Processar Análise IA
+                  Mapear Riscos de Ativo
                 </button>
               </div>
             ) : analyzing ? (
-              <div className="bg-white dark:bg-slate-900 p-12 rounded-xl border border-slate-200 dark:border-slate-800 text-center shadow-sm">
-                <Loader2 className="animate-spin text-blue-600 mx-auto mb-4" size={40} />
-                <h3 className="text-lg font-bold text-slate-900 dark:text-white mb-1">Mapeando Matrículas e Editais...</h3>
-                <p className="text-xs text-slate-600 dark:text-slate-400 font-bold uppercase tracking-widest">Aguarde a geração do relatório</p>
+              <div className="bg-white dark:bg-slate-900 p-20 rounded-[3rem] border border-slate-100 dark:border-slate-800 text-center shadow-sm">
+                <div className="relative size-24 mx-auto mb-8">
+                  <div className="absolute inset-0 border-4 border-slate-100 dark:border-slate-800 rounded-full" />
+                  <div className="absolute inset-0 border-4 border-blue-500 rounded-full border-t-transparent animate-spin" />
+                  <div className="absolute inset-0 flex items-center justify-center">
+                    <Zap className="text-blue-500 animate-pulse" size={32} />
+                  </div>
+                </div>
+                <h3 className="text-xl font-black text-slate-900 dark:text-white tracking-tighter mb-2">Processando Diligência Digital...</h3>
+                <p className="text-[10px] text-slate-400 font-black uppercase tracking-[0.2em]">Consultando bases jurídicas e projeções de ROI</p>
               </div>
             ) : (
-              <div className="bg-white dark:bg-slate-900 p-6 md:p-8 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm prose dark:prose-invert prose-slate max-w-none">
-                <div className="flex justify-between items-center mb-8 not-prose">
+              <div className="space-y-8">
+                <div className="flex justify-between items-center px-4">
                   <div className="flex items-center gap-3">
-                    <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-                    <h3 className="text-[10px] font-bold text-slate-500 dark:text-slate-500 uppercase tracking-widest">
-                      Análise de Decisão Estratégica
+                    <div className="w-3 h-3 rounded-full bg-emerald-500 shadow-[0_0_10px_rgba(16,185,129,0.5)] animate-pulse" />
+                    <h3 className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-[0.3em]">
+                      Relatório de Decisão Crítica
                     </h3>
                   </div>
                   <button 
                     onClick={handleGenerateAnalysis}
-                    className="text-[10px] text-blue-600 dark:text-blue-400 font-bold hover:underline uppercase tracking-widest"
+                    className="flex items-center gap-2 text-[10px] text-blue-600 dark:text-blue-400 font-black uppercase tracking-widest hover:opacity-70 transition-opacity"
                   >
-                    Recalcular Relatório
+                    <RefreshCw size={14} strokeWidth={3} />
+                    Recalcular
                   </button>
                 </div>
-                <div className="markdown-body p-6 bg-white dark:bg-slate-800/30 rounded-xl border border-slate-100 dark:border-slate-800">
-                  <ReactMarkdown>{imovel.analise_risco || ''}</ReactMarkdown>
+
+                <div className="bg-white dark:bg-slate-900 p-8 md:p-12 rounded-[3.5rem] border border-slate-100 dark:border-slate-800 shadow-2xl relative overflow-hidden">
+                  <div className="absolute top-0 right-0 p-12 opacity-[0.02] pointer-events-none">
+                    <ShieldCheck size={200} strokeWidth={1} />
+                  </div>
+                  <div className="markdown-body prose dark:prose-invert prose-slate max-w-none prose-headings:font-black prose-headings:tracking-tighter prose-p:font-medium prose-p:text-slate-600 dark:prose-p:text-slate-400">
+                    <ReactMarkdown>{imovel.analise_risco || ''}</ReactMarkdown>
+                  </div>
                 </div>
               </div>
             )}
@@ -391,107 +413,131 @@ export default function PropertyDetails() {
               className="space-y-8"
             >
               {/* Seção de Lucratividade Consolidada */}
-              <div className="bg-slate-900 dark:bg-blue-600 p-6 md:p-8 rounded-2xl shadow-xl border border-slate-800 dark:border-blue-500 overflow-hidden relative">
-                <div className="absolute top-0 right-0 p-8 opacity-10 pointer-events-none">
-                  <TrendingUp size={120} />
-                </div>
+              <div className="bg-slate-900 rounded-[3rem] p-8 md:p-12 shadow-2xl border border-slate-800 overflow-hidden relative group">
+                {/* Background effects */}
+                <div className="absolute top-0 right-0 w-96 h-96 bg-blue-500/10 rounded-full blur-[100px] -mr-32 -mt-32 pointer-events-none" />
+                <div className="absolute bottom-0 left-0 w-64 h-64 bg-emerald-500/10 rounded-full blur-[80px] -ml-32 -mb-32 pointer-events-none" />
                 
                 <div className="relative z-10">
-                <div className="flex items-center gap-3 mb-6">
-                  <div className="w-10 h-10 bg-white/10 rounded-xl flex items-center justify-center backdrop-blur-md">
-                    <TrendingUp className="text-white" size={20} />
-                  </div>
-                  <div>
-                    <h3 className="text-white font-bold text-lg">Balanço de Lucratividade</h3>
-                    <p className="text-white/60 text-[10px] font-bold uppercase tracking-widest">Performance Financeira do Ativo</p>
-                  </div>
-                </div>
+                  <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-8 mb-12 pb-8 border-b border-slate-800">
+                    <div className="flex items-center gap-6">
+                      <div className="w-16 h-16 bg-blue-600 rounded-3xl flex items-center justify-center shadow-lg shadow-blue-900/20">
+                        <TrendingUp className="text-white" size={32} strokeWidth={2.5} />
+                      </div>
+                      <div>
+                        <p className="text-[10px] font-black text-blue-400 uppercase tracking-[0.25em] mb-1">Performance Estratégica</p>
+                        <h3 className="text-3xl font-black text-white tracking-tighter">Balanço de Ativo</h3>
+                      </div>
+                    </div>
 
-                <div className="grid grid-cols-2 lg:grid-cols-4 gap-6">
-                  <div className="space-y-1">
-                    <p className="text-white/50 text-[10px] font-bold uppercase tracking-widest">Investimento Total</p>
-                    <p className="text-xl md:text-2xl font-black text-white">
-                      R$ {totalInvestimento.toLocaleString('pt-BR')}
-                    </p>
-                  </div>
-                  
-                  <div className="space-y-1">
-                    <p className="text-white/50 text-[10px] font-bold uppercase tracking-widest">Faturamento Líquido</p>
-                    <p className="text-xl md:text-2xl font-black text-white">
-                      R$ {faturamentoLiquido.toLocaleString('pt-BR')}
-                    </p>
-                  </div>
-
-                  <div className="space-y-1 border-t md:border-t-0 pt-4 md:pt-0 lg:border-l lg:border-white/10 lg:pl-6">
-                    <p className="text-white/50 text-[10px] font-bold uppercase tracking-widest">Lucro Estimado</p>
-                    <p className={cn(
-                      "text-xl md:text-2xl font-black",
-                      lucroEstimado >= 0 ? "text-emerald-400" : "text-rose-400"
-                    )}>
-                      R$ {lucroEstimado.toLocaleString('pt-BR')}
-                    </p>
-                  </div>
-
-                  <div className="space-y-1 border-t md:border-t-0 pt-4 md:pt-0 lg:border-l lg:border-white/10 lg:pl-6">
-                    <p className="text-white/50 text-[10px] font-bold uppercase tracking-widest">ROI Estimado</p>
-                    <div className="flex items-baseline gap-2">
-                      <p className={cn(
-                        "text-xl md:text-2xl font-black",
-                        roiEstimado >= 0 ? "text-emerald-400" : "text-rose-400"
+                    <div className="flex flex-col items-end">
+                      <p className="text-[10px] font-black text-slate-500 uppercase tracking-[0.2em] mb-2">Lucro Líquido Projetado</p>
+                      <h4 className={cn(
+                        "text-4xl md:text-5xl font-black tracking-tighter transition-all duration-500",
+                        lucroEstimado >= 0 ? "text-emerald-400 drop-shadow-[0_0_15px_rgba(52,211,153,0.3)]" : "text-rose-400 drop-shadow-[0_0_15px_rgba(248,113,113,0.3)]"
                       )}>
-                        {roiEstimado.toFixed(1)}%
+                        R$ {lucroEstimado.toLocaleString('pt-BR')}
+                      </h4>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-12">
+                    <div className="space-y-2">
+                      <p className="text-[10px] font-black text-slate-500 uppercase tracking-[0.2em]">Investimento Total</p>
+                      <p className="text-2xl font-black text-white tracking-tight">
+                        R$ {totalInvestimento.toLocaleString('pt-BR')}
                       </p>
-                      <span className="text-[10px] font-bold text-white/30 uppercase tracking-tighter">Sobre invest.</span>
+                    </div>
+                    
+                    <div className="space-y-2">
+                      <p className="text-[10px] font-black text-slate-500 uppercase tracking-[0.2em]">Recessão Líquida</p>
+                      <p className="text-2xl font-black text-white tracking-tight">
+                        R$ {faturamentoLiquido.toLocaleString('pt-BR')}
+                      </p>
+                    </div>
+
+                    <div className="space-y-2">
+                      <p className="text-[10px] font-black text-slate-500 uppercase tracking-[0.2em]">Magem de Retorno</p>
+                      <div className="flex items-baseline gap-3">
+                        <p className={cn(
+                          "text-3xl font-black tracking-tight",
+                          roiEstimado >= 0 ? "text-emerald-400" : "text-rose-400"
+                        )}>
+                          {roiEstimado.toFixed(1)}%
+                        </p>
+                        <span className="text-[10px] font-bold text-slate-600 uppercase tracking-tighter">ROI</span>
+                      </div>
+                    </div>
+
+                    <div className="space-y-2">
+                      <p className="text-[10px] font-black text-slate-500 uppercase tracking-[0.2em]">Ponto de Equilíbrio</p>
+                      <div className="w-full bg-slate-800 h-2 rounded-full overflow-hidden">
+                        <motion.div 
+                          initial={{ width: 0 }}
+                          animate={{ width: `${Math.min(100, (totalInvestimento / (faturamentoLiquido || totalInvestimento)) * 100)}%` }}
+                          className="h-full bg-blue-500"
+                        />
+                      </div>
+                      <p className="text-[9px] font-black text-slate-600 uppercase tracking-widest text-right">Amortização de Ativos</p>
+                    </div>
+                  </div>
+
+                  <div className="mt-12 pt-8 border-t border-slate-800 grid grid-cols-2 md:grid-cols-4 gap-8">
+                    <div className="group/item">
+                      <p className="text-slate-600 text-[9px] font-black uppercase tracking-widest mb-1 group-hover/item:text-slate-400 transition-colors">Aquisição</p>
+                      <p className="text-sm font-black text-slate-300">R$ {totalAquisicao.toLocaleString('pt-BR')}</p>
+                    </div>
+                    <div className="group/item">
+                      <p className="text-slate-600 text-[9px] font-black uppercase tracking-widest mb-1 group-hover/item:text-slate-400 transition-colors">Benfeitorias</p>
+                      <p className="text-sm font-black text-slate-300">R$ {totalReforma.toLocaleString('pt-BR')}</p>
+                    </div>
+                    <div className="group/item">
+                      <p className="text-slate-600 text-[9px] font-black uppercase tracking-widest mb-1 group-hover/item:text-slate-400 transition-colors">Custos Operacionais</p>
+                      <p className="text-sm font-black text-slate-300">R$ {totalHolding.toLocaleString('pt-BR')}</p>
+                    </div>
+                    <div className="group/item">
+                      <p className="text-slate-600 text-[9px] font-black uppercase tracking-widest mb-1 group-hover/item:text-slate-400 transition-colors">Intermediação</p>
+                      <p className="text-sm font-black text-rose-400/80">R$ {totalComissoes.toLocaleString('pt-BR')}</p>
                     </div>
                   </div>
                 </div>
-
-                <div className="mt-8 pt-6 border-t border-white/10 grid grid-cols-2 md:grid-cols-4 gap-4">
-                  <div>
-                    <p className="text-white/30 text-[8px] font-bold uppercase tracking-widest mb-1">Aquisição</p>
-                    <p className="text-xs font-bold text-white/80">R$ {totalAquisicao.toLocaleString('pt-BR')}</p>
-                  </div>
-                  <div>
-                    <p className="text-white/30 text-[8px] font-bold uppercase tracking-widest mb-1">Reforma</p>
-                    <p className="text-xs font-bold text-white/80">R$ {totalReforma.toLocaleString('pt-BR')}</p>
-                  </div>
-                  <div>
-                    <p className="text-white/30 text-[8px] font-bold uppercase tracking-widest mb-1">Holding (Gasto fixo)</p>
-                    <p className="text-xs font-bold text-white/80">R$ {totalHolding.toLocaleString('pt-BR')}</p>
-                  </div>
-                  <div>
-                    <p className="text-white/30 text-[8px] font-bold uppercase tracking-widest mb-1">Comissões</p>
-                    <p className="text-xs font-bold text-rose-300">R$ {totalComissoes.toLocaleString('pt-BR')}</p>
-                  </div>
-                </div>
               </div>
-            </div>
 
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
               {/* Custos de Aquisição */}
             <div className="space-y-6">
               <div className="flex justify-between items-center">
-                <h3 className="text-[10px] font-bold text-slate-500 dark:text-slate-500 uppercase tracking-widest">Custos de Aquisição</h3>
+                <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-widest flex items-center gap-2">
+                  <span className="w-4 h-px bg-slate-300" />
+                  Custos de Aquisição
+                </h3>
                 <button 
                   onClick={() => setShowAddAquisicao(!showAddAquisicao)}
-                  className="p-1.5 bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 rounded-md hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors"
+                  className={cn(
+                    "flex items-center gap-2 px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all",
+                    showAddAquisicao 
+                      ? "bg-slate-100 text-slate-500" 
+                      : "bg-slate-900 dark:bg-white text-white dark:text-slate-900 shadow-lg shadow-slate-200 dark:shadow-none"
+                  )}
                 >
-                  <Plus size={14} className={cn("transition-transform", showAddAquisicao && "rotate-45")} />
+                  <Plus size={14} strokeWidth={3} className={cn("transition-transform", showAddAquisicao && "rotate-45")} />
+                  {showAddAquisicao ? 'Cancelar' : 'Adicionar'}
                 </button>
               </div>
-              <div className="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm divide-y divide-slate-50 dark:divide-slate-800 overflow-hidden">
+              <div className="space-y-3">
                 {showAddAquisicao && (
                   <motion.div 
-                    initial={{ height: 0, opacity: 0 }}
-                    animate={{ height: 'auto', opacity: 1 }}
-                    className="p-5 bg-slate-50/50 dark:bg-slate-800/30 border-b border-slate-100 dark:border-slate-800"
+                    initial={{ scale: 0.95, opacity: 0 }}
+                    animate={{ scale: 1, opacity: 1 }}
+                    className="p-6 bg-white dark:bg-slate-900 border-2 border-slate-900 dark:border-white rounded-[2rem] shadow-2xl relative z-20"
                   >
-                    <div className="grid grid-cols-1 gap-4">
-                      <div className="grid grid-cols-2 gap-4">
+                    <div className="grid grid-cols-1 gap-6">
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                         <div>
-                          <label className="block text-[9px] font-bold text-slate-600 dark:text-slate-400 uppercase mb-1.5">Tipo de Custo</label>
+                          <label className="block text-[9px] font-black text-slate-500 uppercase tracking-widest mb-2">Natureza do Custo</label>
                           <select 
                             id="aq-tipo" 
+                            className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-800 border-none rounded-2xl text-xs font-bold outline-none focus:ring-2 focus:ring-slate-900/5 transition-all"
                             onChange={(e) => {
                               const customInput = document.getElementById('aq-tipo-custom-container');
                               if (e.target.value === 'Outros') {
@@ -500,36 +546,31 @@ export default function PropertyDetails() {
                                 customInput?.classList.add('hidden');
                               }
                             }}
-                            className="w-full px-3 py-2 bg-white dark:bg-slate-800 dark:text-slate-200 border border-slate-200 dark:border-slate-700 rounded-lg text-xs outline-none focus:ring-1 focus:ring-blue-500 mb-2"
                           >
-                            <option value="Lance">Lance</option>
+                            <option value="Lance">Lance de Arrematação</option>
                             <option value="ITBI">ITBI</option>
                             <option value="Emolumentos">Emolumentos (Cartório)</option>
-                            <option value="Taxa Leiloeiro">Taxa Leiloeiro (5%)</option>
-                            <option value="Honorários Advocatícios">Honorários Advocatícios</option>
-                            <option value="Certidões">Certidões</option>
-                            <option value="IPTU Atrasado">IPTU Atrasado</option>
-                            <option value="Condomínio Atrasado">Condomínio Atrasado</option>
-                            <option value="Outros">Outros...</option>
+                            <option value="Taxa Leiloeiro">Comissão Leiloeiro (5%)</option>
+                            <option value="Honorários Advocatícios">Honorários Jurídicos</option>
+                            <option value="Certidões">Emissão de Certidões</option>
+                            <option value="IPTU Atrasado">Dívida de IPTU</option>
+                            <option value="Condomínio Atrasado">Dívida Condominial</option>
+                            <option value="Outros">Outros custos...</option>
                           </select>
-                          <div id="aq-tipo-custom-container" className="hidden">
+                          <div id="aq-tipo-custom-container" className="hidden mt-3">
                             <input 
                               type="text" 
                               id="aq-tipo-custom" 
-                              placeholder="Descreva o custo..."
+                              placeholder="Descreva a natureza do custo..."
                               className={cn(
-                                "w-full px-3 py-2 bg-white dark:bg-slate-800 dark:text-slate-200 border rounded-lg text-xs outline-none transition-all shadow-sm",
-                                formErrors.aqTipo ? "border-rose-500 ring-1 ring-rose-500" : "border-slate-200 dark:border-slate-700 focus:ring-1 focus:ring-blue-500"
+                                "w-full px-4 py-3 bg-slate-50 dark:bg-slate-800 border-none rounded-2xl text-xs font-bold outline-none transition-all",
+                                formErrors.aqTipo ? "ring-2 ring-rose-500/20 text-rose-600" : "focus:ring-2 focus:ring-slate-900/5"
                               )}
-                              onChange={() => {
-                                if (formErrors.aqTipo) setFormErrors({...formErrors, aqTipo: ''});
-                              }}
                             />
-                            {formErrors.aqTipo && <p className="text-[8px] text-rose-500 font-bold mt-1 uppercase tracking-tighter">{formErrors.aqTipo}</p>}
                           </div>
                         </div>
                         <div>
-                          <label className="block text-[9px] font-bold text-slate-600 dark:text-slate-400 uppercase mb-1.5">Valor (R$)</label>
+                          <label className="block text-[9px] font-black text-slate-500 uppercase tracking-widest mb-2">Montante (R$)</label>
                           <CurrencyInput
                             intlConfig={{ locale: 'pt-BR', currency: 'BRL' }}
                             decimalSeparator=","
@@ -537,358 +578,304 @@ export default function PropertyDetails() {
                             decimalsLimit={2}
                             placeholder="0,00"
                             className={cn(
-                              "w-full px-3 py-2 bg-white dark:bg-slate-800 dark:text-slate-200 border rounded-lg text-xs outline-none transition-all shadow-sm",
-                              formErrors.aqValor ? "border-rose-500 ring-1 ring-rose-500" : "border-slate-200 dark:border-slate-700 focus:ring-1 focus:ring-blue-500"
+                              "w-full px-4 py-3 bg-slate-50 dark:bg-slate-800 border-none rounded-2xl text-xs font-bold outline-none transition-all",
+                              formErrors.aqValor ? "ring-2 ring-rose-500/20 text-rose-600" : "focus:ring-2 focus:ring-slate-900/5"
                             )}
                             value={aquisicaoValor}
-                            onValueChange={(_v, _n, values) => {
-                              setAquisicaoValor(values?.float || 0);
-                              if (formErrors.aqValor) setFormErrors({...formErrors, aqValor: ''});
-                            }}
-                          />
-                          {formErrors.aqValor && <p className="text-[8px] text-rose-500 font-bold mt-1 uppercase tracking-tighter">{formErrors.aqValor}</p>}
-                        </div>
-                        <div className="col-span-2 md:col-span-1">
-                          <FilePicker 
-                            label="Comprovante / Nota Fiscal"
-                            onFileSelect={(url) => setAquisicaoFileUrl(url)}
-                            onClear={() => setAquisicaoFileUrl('')}
-                            initialUrl={aquisicaoFileUrl}
+                            onValueChange={(_v, _n, values) => setAquisicaoValor(values?.float || 0)}
                           />
                         </div>
                       </div>
-                      <div className="flex justify-end gap-3">
-                        <button 
-                          onClick={() => { setShowAddAquisicao(false); setAquisicaoValor(0); setAquisicaoFileUrl(''); }}
-                          className="px-3 py-1.5 text-[9px] font-bold text-slate-500 uppercase tracking-widest"
-                        >
-                          Cancelar
-                        </button>
-                        <button 
-                          onClick={() => {
-                            const tipoSelect = document.getElementById('aq-tipo') as HTMLSelectElement;
-                            const tipoCustom = document.getElementById('aq-tipo-custom') as HTMLInputElement;
-                            
-                            let tipo = tipoSelect.value;
-                            if (tipo === 'Outros') {
-                              tipo = tipoCustom.value || '';
-                            }
+                      <FilePicker 
+                        label="Documento Comprobatório"
+                        onFileSelect={(url) => setAquisicaoFileUrl(url)}
+                        onClear={() => setAquisicaoFileUrl('')}
+                        initialUrl={aquisicaoFileUrl}
+                      />
+                      <button 
+                        onClick={() => {
+                          const tipoSelect = document.getElementById('aq-tipo') as HTMLSelectElement;
+                          const tipoCustom = document.getElementById('aq-tipo-custom') as HTMLInputElement;
+                          let tipo = tipoSelect.value === 'Outros' ? tipoCustom.value : tipoSelect.value;
 
-                            const errors: Record<string, string> = {};
-                            if (!tipo.trim()) errors.aqTipo = "Tipo/Descrição obrigatória";
-                            if (!aquisicaoValor || aquisicaoValor <= 0) errors.aqValor = "Valor deve ser maior que zero";
+                          if (!tipo || !aquisicaoValor) {
+                            setFormErrors({ aqTipo: !tipo ? 'Obrigatório' : '', aqValor: !aquisicaoValor ? 'Obrigatório' : '' });
+                            return;
+                          }
 
-                            if (Object.keys(errors).length > 0) {
-                              setFormErrors(errors);
-                              return;
-                            }
-
-                            addCustoAquisicao({ 
-                              id_imovel: id!, 
-                              tipo_custo: tipo, 
-                              valor: aquisicaoValor || 0, 
-                              status_pagamento: StatusPagamento.Pendente,
-                              fileUrl: aquisicaoFileUrl
-                            });
-                            setShowAddAquisicao(false);
-                            setFormErrors({});
-                            setAquisicaoValor(0);
-                            setAquisicaoFileUrl('');
-                          }}
-                          className="px-3 py-1.5 bg-blue-600 text-white rounded-lg text-[9px] font-bold uppercase tracking-widest shadow-sm"
-                        >
-                          Salvar
-                        </button>
-                      </div>
+                          addCustoAquisicao({ 
+                            id_imovel: id!, 
+                            tipo_custo: tipo, 
+                            valor: aquisicaoValor, 
+                            status_pagamento: StatusPagamento.Pendente,
+                            fileUrl: aquisicaoFileUrl
+                          });
+                          setShowAddAquisicao(false);
+                          setAquisicaoValor(0);
+                          setAquisicaoFileUrl('');
+                        }}
+                        className="w-full py-4 bg-slate-900 dark:bg-white text-white dark:text-slate-900 rounded-2xl text-[10px] font-black uppercase tracking-[0.2em] hover:bg-slate-800 transition-all active:scale-95 shadow-xl"
+                      >
+                        Registrar Lançamento
+                      </button>
                     </div>
                   </motion.div>
                 )}
-                {filteredCustosAquisicao.map(c => (
-                  <div key={c.id} className="p-4 flex justify-between items-center hover:bg-slate-50/50 dark:hover:bg-slate-800/50 transition-colors">
-                    <div>
-                      <p className="text-sm font-bold text-slate-800 dark:text-slate-200">{c.tipo_custo}</p>
-                      <p className="text-[10px] font-bold uppercase tracking-tighter text-slate-500 dark:text-slate-500">{c.status_pagamento}</p>
-                    </div>
-                    <div className="flex items-center gap-4">
-                      {c.fileUrl && (
-                        <FileThumbnail url={c.fileUrl} className="w-10 h-10" />
-                      )}
-                      <div className="text-right">
-                        <p className="text-sm font-bold text-slate-900 dark:text-slate-100 leading-none">R$ {c.valor.toLocaleString('pt-BR')}</p>
-                        <p className="text-[8px] text-slate-500 dark:text-slate-600 font-bold uppercase tracking-tighter mt-1">Valor do Custo</p>
+                
+                <AnimatePresence mode="popLayout">
+                  {filteredCustosAquisicao.length === 0 && !showAddAquisicao ? (
+                    <div className="py-12 flex flex-col items-center justify-center text-center space-y-4 bg-slate-50 dark:bg-slate-900/50 rounded-[2rem] border-2 border-dashed border-slate-100 dark:border-slate-800">
+                      <div className="size-12 bg-white dark:bg-slate-800 rounded-2xl shadow-sm flex items-center justify-center text-slate-300">
+                        <Wallet size={24} />
                       </div>
-                      <button onClick={() => removeCustoAquisicao(c.id!)} className="text-slate-500 dark:text-slate-700 hover:text-rose-500 transition-colors">
-                        <Trash2 size={16} />
-                      </button>
+                      <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Sem lançamentos de aquisição</p>
                     </div>
-                  </div>
-                ))}
+                  ) : (
+                    filteredCustosAquisicao.map(c => (
+                      <motion.div 
+                        layout
+                        key={c.id} 
+                        initial={{ opacity: 0, x: -10 }}
+                        animate={{ opacity: 1, x: 0 }}
+                        exit={{ opacity: 0, scale: 0.95 }}
+                        className="p-5 flex justify-between items-center bg-white dark:bg-slate-900 rounded-[1.5rem] border border-slate-100 dark:border-slate-800 hover:shadow-xl hover:shadow-slate-200/50 dark:hover:shadow-none transition-all group"
+                      >
+                        <div className="flex items-center gap-4">
+                          <div className="w-1.5 h-10 bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden">
+                            <div className="h-1/2 bg-blue-500" />
+                          </div>
+                          <div>
+                            <p className="text-sm font-black text-slate-900 dark:text-white leading-tight mb-0.5">{c.tipo_custo}</p>
+                            <p className="text-[9px] font-black uppercase tracking-widest text-slate-400">{c.status_pagamento}</p>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-6">
+                          <div className="text-right">
+                            <p className="text-base font-black text-slate-900 dark:text-white leading-none">R$ {c.valor.toLocaleString('pt-BR')}</p>
+                            <p className="text-[8px] text-slate-400 font-bold uppercase tracking-widest mt-1">Lançamento</p>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            {c.fileUrl && <FileThumbnail url={c.fileUrl} className="w-10 h-10 rounded-xl" />}
+                            <button 
+                              onClick={() => removeCustoAquisicao(c.id!)} 
+                              className="p-3 text-slate-300 hover:text-rose-500 hover:bg-rose-50 rounded-xl transition-all active:scale-95"
+                            >
+                              <Trash2 size={16} />
+                            </button>
+                          </div>
+                        </div>
+                      </motion.div>
+                    ))
+                  )}
+                </AnimatePresence>
               </div>
             </div>
 
             {/* Custos de Reforma */}
             <div className="space-y-6 lg:col-span-2">
-              <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-                <div className="flex flex-wrap items-center gap-3">
-                  <h3 className="text-[10px] font-bold text-slate-500 dark:text-slate-500 uppercase tracking-widest">Cronograma & Custos de Reforma</h3>
-                  <button 
-                    onClick={() => setShowAddReforma(!showAddReforma)}
-                    className={cn(
-                      "flex items-center gap-1.5 px-3 py-1 rounded-full text-[9px] font-bold uppercase tracking-wider transition-all",
-                      showAddReforma ? "bg-slate-200 dark:bg-slate-800 text-slate-600 dark:text-slate-400" : "bg-blue-600 text-white shadow-sm shadow-blue-100 dark:shadow-none"
-                    )}
-                  >
-                    <Plus size={12} className={cn("transition-transform", showAddReforma && "rotate-45")} />
-                    {showAddReforma ? "Fechar" : "Registrar Novo Custo"}
-                  </button>
-                </div>
-                <div className="flex gap-2">
-                  <div className="px-3 py-1 bg-blue-50 dark:bg-blue-900/30 rounded-lg border border-blue-100 dark:border-blue-800">
-                    <p className="text-[8px] font-bold text-blue-400 dark:text-blue-500 uppercase tracking-tighter">Total Orçado</p>
-                    <p className="text-xs font-bold text-blue-700 dark:text-blue-400">
-                      R$ {filteredCustosReforma.reduce((acc, curr) => acc + (curr.orcamento || 0), 0).toLocaleString('pt-BR')}
-                    </p>
-                  </div>
-                  <div className="px-3 py-1 bg-emerald-50 dark:bg-emerald-900/30 rounded-lg border border-emerald-100 dark:border-emerald-800">
-                    <p className="text-[8px] font-bold text-emerald-400 dark:text-emerald-500 uppercase tracking-tighter">Total Real</p>
-                    <p className="text-xs font-bold text-emerald-700 dark:text-emerald-400">
-                      R$ {filteredCustosReforma.reduce((acc, curr) => acc + (curr.valor_real || 0), 0).toLocaleString('pt-BR')}
-                    </p>
-                  </div>
-                </div>
+              <div className="flex justify-between items-center">
+                <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-widest flex items-center gap-2">
+                  <span className="w-4 h-px bg-slate-300" />
+                  Benfeitorias & Reforma
+                </h3>
+                <button 
+                  onClick={() => setShowAddReforma(!showAddReforma)}
+                  className={cn(
+                    "flex items-center gap-2 px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all",
+                    showAddReforma 
+                      ? "bg-slate-100 text-slate-500" 
+                      : "bg-slate-900 dark:bg-white text-white dark:text-slate-900 shadow-lg shadow-slate-200 dark:shadow-none"
+                  )}
+                >
+                  <Plus size={14} strokeWidth={3} className={cn("transition-transform", showAddReforma && "rotate-45")} />
+                  {showAddReforma ? 'Cancelar' : 'Nova Etapa'}
+                </button>
               </div>
 
-              <div className="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm overflow-hidden">
+              <div className="space-y-6">
                 {showAddReforma && (
                   <motion.div 
-                    initial={{ height: 0, opacity: 0 }}
-                    animate={{ height: 'auto', opacity: 1 }}
-                    className="p-5 bg-slate-50/80 dark:bg-slate-800/50 border-b border-slate-100 dark:border-slate-800"
+                    initial={{ scale: 0.95, opacity: 0 }}
+                    animate={{ scale: 1, opacity: 1 }}
+                    className="p-8 bg-white dark:bg-slate-900 border-2 border-slate-900 rounded-[2.5rem] shadow-2xl relative z-20"
                   >
-                    <div className="grid grid-cols-1 md:grid-cols-5 gap-4 items-start">
-                      <div className="md:col-span-2">
-                        <label className="block text-[9px] font-bold text-slate-600 dark:text-slate-400 uppercase mb-1.5">Descrição da Etapa</label>
-                        <input 
-                          type="text" 
-                          id="reforma-desc"
-                          placeholder="Ex: Pintura, Piso, Elétrica..."
-                          className={cn(
-                            "w-full px-3 py-2 bg-white dark:bg-slate-800 dark:text-slate-200 border rounded-lg text-xs outline-none transition-all shadow-sm",
-                            formErrors.desc ? "border-rose-500 ring-1 ring-rose-500" : "border-slate-200 dark:border-slate-700 focus:ring-1 focus:ring-blue-500"
-                          )}
-                        />
-                        {formErrors.desc && <p className="text-[8px] text-rose-500 font-bold mt-1 uppercase tracking-tighter">{formErrors.desc}</p>}
-                      </div>
-                      <div>
-                        <label className="block text-[9px] font-bold text-slate-600 dark:text-slate-400 uppercase mb-1.5">Orçamento (R$)</label>
-                        <CurrencyInput
-                          intlConfig={{ locale: 'pt-BR', currency: 'BRL' }}
-                          decimalSeparator=","
-                          groupSeparator="."
-                          decimalsLimit={2}
-                          placeholder="0,00"
-                          className={cn(
-                            "w-full px-3 py-2 bg-white dark:bg-slate-800 dark:text-slate-200 border rounded-lg text-xs outline-none transition-all shadow-sm",
-                            formErrors.orc ? "border-rose-500 ring-1 ring-rose-500" : "border-slate-200 dark:border-slate-700 focus:ring-1 focus:ring-blue-500"
-                          )}
-                          value={reformaOrc}
-                          onValueChange={(_value, _name, values) => setReformaOrc(values?.float || 0)}
-                        />
-                        {formErrors.orc && <p className="text-[8px] text-rose-500 font-bold mt-1 uppercase tracking-tighter">{formErrors.orc}</p>}
-                      </div>
-                      <div>
-                        <label className="block text-[9px] font-bold text-slate-600 dark:text-slate-400 uppercase mb-1.5">Valor Real (R$)</label>
-                        <CurrencyInput
-                          intlConfig={{ locale: 'pt-BR', currency: 'BRL' }}
-                          decimalSeparator=","
-                          groupSeparator="."
-                          decimalsLimit={2}
-                          placeholder="0,00"
-                          className={cn(
-                            "w-full px-3 py-2 bg-white dark:bg-slate-800 border rounded-lg text-xs outline-none transition-all shadow-sm",
-                            formErrors.real 
-                              ? "border-rose-500 ring-1 ring-rose-500 dark:text-rose-400" 
-                              : (reformaReal && reformaReal > 0 && reformaOrc && reformaOrc > 0)
-                                ? (reformaReal > reformaOrc 
-                                    ? "border-rose-500 ring-1 ring-rose-500/30 text-rose-600 dark:text-rose-400 focus:ring-rose-500" 
-                                    : "border-emerald-500 ring-1 ring-emerald-500/30 text-emerald-600 dark:text-emerald-400 focus:ring-emerald-500")
-                                : "border-slate-200 dark:border-slate-700 dark:text-slate-200 focus:ring-1 focus:ring-blue-500"
-                          )}
-                          value={reformaReal}
-                          onValueChange={(_value, _name, values) => setReformaReal(values?.float || 0)}
-                        />
-                        {formErrors.real && <p className="text-[8px] text-rose-500 font-bold mt-1 uppercase tracking-tighter">{formErrors.real}</p>}
-                      </div>
-                      <div className="grid grid-cols-2 gap-4 md:col-span-1">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                      <div className="space-y-6">
                         <div>
-                          <label className="block text-[9px] font-bold text-slate-600 dark:text-slate-400 uppercase mb-1.5 text-nowrap">Prazo Est.</label>
+                          <label className="block text-[9px] font-black text-slate-500 uppercase tracking-[0.2em] mb-2">Descrição da Etapa</label>
                           <input 
-                            type="date" 
-                            id="reforma-prazo"
-                            className={cn(
-                              "w-full px-2 py-1.5 bg-white dark:bg-slate-800 dark:text-slate-200 border rounded-lg text-[10px] outline-none transition-all shadow-sm",
-                              formErrors.prazo ? "border-rose-500 ring-1 ring-rose-500" : "border-slate-200 dark:border-slate-700 focus:ring-1 focus:ring-blue-500"
-                            )}
+                            type="text" 
+                            id="reforma-desc-v2"
+                            placeholder="Ex: Pintura, Hidráulica, Piso..."
+                            className="w-full px-5 py-4 bg-slate-50 dark:bg-slate-800 border-none rounded-2xl text-xs font-bold outline-none focus:ring-2 focus:ring-slate-900/5 transition-all"
+                            value={reformaDescricao}
+                            onChange={(e) => setReformaDescricao(e.target.value)}
                           />
-                          {formErrors.prazo && <p className="text-[8px] text-rose-500 font-bold mt-1 uppercase tracking-tighter">{formErrors.prazo}</p>}
                         </div>
-                        <div>
-                          <label className="block text-[9px] font-bold text-slate-600 dark:text-slate-400 uppercase mb-1.5 text-nowrap">Conclusão</label>
-                          <input 
-                            type="date" 
-                            id="reforma-conclusao"
-                            className={cn(
-                              "w-full px-2 py-1.5 bg-white dark:bg-slate-800 dark:text-slate-200 border rounded-lg text-[10px] outline-none transition-all shadow-sm",
-                              formErrors.conclusao ? "border-rose-500 ring-1 ring-rose-500" : "border-slate-200 dark:border-slate-700 focus:ring-1 focus:ring-blue-500"
-                            )}
-                          />
-                          {formErrors.conclusao && <p className="text-[8px] text-rose-500 font-bold mt-1 uppercase tracking-tighter">{formErrors.conclusao}</p>}
+                        <div className="grid grid-cols-2 gap-4">
+                          <div>
+                            <label className="block text-[9px] font-black text-slate-500 uppercase tracking-[0.2em] mb-2">Orçamento (R$)</label>
+                            <CurrencyInput
+                              intlConfig={{ locale: 'pt-BR', currency: 'BRL' }}
+                              decimalSeparator=","
+                              groupSeparator="."
+                              decimalsLimit={2}
+                              placeholder="0,00"
+                              className="w-full px-5 py-4 bg-slate-50 dark:bg-slate-800 border-none rounded-2xl text-xs font-bold outline-none focus:ring-2 focus:ring-slate-900/5 transition-all"
+                              value={reformaOrc}
+                              onValueChange={(_v, _n, values) => setReformaOrc(values?.float || 0)}
+                            />
+                          </div>
+                          <div>
+                            <label className="block text-[9px] font-black text-slate-500 uppercase tracking-[0.2em] mb-2">Gasto Real (R$)</label>
+                            <CurrencyInput
+                              intlConfig={{ locale: 'pt-BR', currency: 'BRL' }}
+                              decimalSeparator=","
+                              groupSeparator="."
+                              decimalsLimit={2}
+                              placeholder="0,00"
+                              className="w-full px-5 py-4 bg-slate-50 dark:bg-slate-800 border-none rounded-2xl text-xs font-bold outline-none focus:ring-2 focus:ring-slate-900/5 transition-all outline-none"
+                              value={reformaReal}
+                              onValueChange={(_v, _n, values) => setReformaReal(values?.float || 0)}
+                            />
+                          </div>
                         </div>
                       </div>
-                      <div className="md:col-span-5">
+                      <div className="space-y-6">
+                        <div className="grid grid-cols-2 gap-4">
+                          <div>
+                            <label className="block text-[9px] font-black text-slate-500 uppercase tracking-[0.2em] mb-2">Previsão</label>
+                            <input 
+                              type="date" 
+                              id="reforma-prazo-v2"
+                              className="w-full px-5 py-4 bg-slate-50 dark:bg-slate-800 border-none rounded-2xl text-xs font-bold outline-none focus:ring-2 focus:ring-slate-900/5 transition-all"
+                            />
+                          </div>
+                          <div>
+                            <label className="block text-[9px] font-black text-slate-500 uppercase tracking-[0.2em] mb-2">Conclusão</label>
+                            <input 
+                              type="date" 
+                              id="reforma-conclusao-v2"
+                              className="w-full px-5 py-4 bg-slate-50 dark:bg-slate-800 border-none rounded-2xl text-xs font-bold outline-none focus:ring-2 focus:ring-slate-900/5 transition-all"
+                            />
+                          </div>
+                        </div>
                         <FilePicker 
-                          label="Comprovante / Nota Fiscal"
+                          label="Documentação Extra"
                           onFileSelect={(url) => setReformaFileUrl(url)}
                           onClear={() => setReformaFileUrl('')}
                           initialUrl={reformaFileUrl}
                         />
                       </div>
-                      <div className="md:col-span-5 flex flex-wrap justify-end gap-3 mt-2">
-                        <button 
-                          onClick={() => {
-                            setShowAddReforma(false);
-                            setFormErrors({});
-                            setReformaOrc(0);
-                            setReformaReal(0);
-                            setReformaFileUrl('');
-                          }}
-                          className="px-4 py-2 text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest hover:text-slate-600 dark:hover:text-slate-300 transition-colors"
-                        >
-                          Cancelar
-                        </button>
-                        <button 
-                          onClick={() => {
-                            const descInput = document.getElementById('reforma-desc') as HTMLInputElement;
-                            const prazoInput = document.getElementById('reforma-prazo') as HTMLInputElement;
-                            const conclusaoInput = document.getElementById('reforma-conclusao') as HTMLInputElement;
-
-                            const desc = descInput.value.trim();
-                            const orc = reformaOrc || 0;
-                            const real = reformaReal || 0;
-                            const prazo = prazoInput.value;
-                            const conclusao = conclusaoInput.value;
-                            
-                            const errors: Record<string, string> = {};
-                            if (!desc) errors.desc = "Descrição obrigatória";
-                            if (orc <= 0) errors.orc = "Orçamento inválido";
-                            if (!prazo) errors.prazo = "Prazo estimado é obrigatório";
-                            if (prazo && isNaN(new Date(prazo).getTime())) errors.prazo = "Prazo inválido";
-                            if (conclusao && isNaN(new Date(conclusao).getTime())) errors.conclusao = "Data de conclusão inválida";
-                            
-                            if (Object.keys(errors).length > 0) {
-                              setFormErrors(errors);
-                              return;
-                            }
-
-                            addCustoReforma({ 
-                              id_imovel: id!, 
-                              descricao_etapa: desc, 
-                              orcamento: orc, 
-                              valor_real: real,
-                              prazo_execucao: prazo,
-                              data_conclusao: conclusao,
-                              fileUrl: reformaFileUrl
-                            });
-                            setShowAddReforma(false);
-                            setFormErrors({});
-                            setReformaOrc(0);
-                            setReformaReal(0);
-                            setReformaFileUrl('');
-                          }}
-                          className="btn-primary flex items-center justify-center gap-2 text-[10px] tracking-widest px-8 w-full md:w-auto"
-                        >
-                          <Plus size={14} />
-                          SALVAR ETAPA
-                        </button>
-                      </div>
                     </div>
+                    <button 
+                      onClick={() => {
+                        const desc = (document.getElementById('reforma-desc-v2') as HTMLInputElement).value;
+                        const prazo = (document.getElementById('reforma-prazo-v2') as HTMLInputElement).value;
+                        const conclusao = (document.getElementById('reforma-conclusao-v2') as HTMLInputElement).value;
+
+                        if (!desc || !reformaOrc) return;
+                        addCustoReforma({ 
+                          id_imovel: id!, 
+                          descricao_etapa: desc, 
+                          orcamento: reformaOrc, 
+                          valor_real: reformaReal, 
+                          prazo_execucao: prazo,
+                          data_conclusao: conclusao,
+                          fileUrl: reformaFileUrl
+                        });
+                        setShowAddReforma(false);
+                        setReformaOrc(0);
+                        setReformaReal(0);
+                        setReformaFileUrl('');
+                      }}
+                      className="w-full mt-8 py-5 bg-slate-900 dark:bg-white text-white dark:text-slate-900 rounded-[1.5rem] text-[10px] font-black uppercase tracking-[0.25em] shadow-xl hover:bg-slate-800 transition-all active:scale-95"
+                    >
+                      Protocolar Etapa de Obra
+                    </button>
                   </motion.div>
                 )}
 
-                <div className="divide-y divide-slate-50 dark:divide-slate-800">
-                  {filteredCustosReforma.length === 0 ? (
-                    <div className="p-8 text-center text-slate-500 dark:text-slate-600 text-[10px] font-bold uppercase tracking-widest">
-                      Nenhuma etapa de reforma registrada
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  {filteredCustosReforma.length === 0 && !showAddReforma ? (
+                    <div className="col-span-full py-16 flex flex-col items-center justify-center text-center space-y-4 bg-slate-50 dark:bg-slate-900/50 rounded-[3rem] border-2 border-dashed border-slate-100 dark:border-slate-800">
+                      <div className="size-14 bg-white dark:bg-slate-800 rounded-2xl shadow-sm flex items-center justify-center text-slate-300">
+                        <Hammer size={28} />
+                      </div>
+                      <p className="text-[11px] font-black text-slate-400 uppercase tracking-[0.2em]">Canteiro de obras limpo</p>
                     </div>
                   ) : (
                     filteredCustosReforma.map(r => {
                       const isCompleted = !!r.data_conclusao;
                       const isOverBudget = (r.valor_real || 0) > r.orcamento;
-                      const isDelayed = !isCompleted && r.prazo_execucao && new Date(r.prazo_execucao) < new Date();
+                      const porcentagemUso = Math.round(((r.valor_real || 0) / r.orcamento) * 100) || 0;
                       
                       return (
-                        <div key={r.id} className="p-4 flex flex-col md:flex-row justify-between items-start md:items-center gap-4 hover:bg-slate-50/50 dark:hover:bg-slate-800/50 transition-colors">
-                          <div className="flex-1 w-full">
-                            <div className="flex items-center gap-3 mb-1">
-                              <p className="text-sm font-bold text-slate-800 dark:text-slate-200">{r.descricao_etapa}</p>
-                              <div className={cn(
-                                "px-2 py-0.5 rounded-full text-[8px] font-black uppercase tracking-widest shadow-sm",
-                                isCompleted ? "bg-emerald-500 text-white" : 
-                                isDelayed ? "bg-rose-500 text-white" : 
-                                "bg-blue-500 text-white"
-                              )}>
-                                {isCompleted ? "Concluído" : isDelayed ? "Atrasado" : "Em Andamento"}
+                        <motion.div 
+                          layout
+                          key={r.id} 
+                          initial={{ opacity: 0, scale: 0.95 }}
+                          animate={{ opacity: 1, scale: 1 }}
+                          className="bg-white dark:bg-slate-900 rounded-[2.5rem] p-7 border border-slate-100 dark:border-slate-800 shadow-sm hover:shadow-2xl hover:shadow-slate-200/50 transition-all relative overflow-hidden group"
+                        >
+                          <div className={cn(
+                            "absolute top-0 left-0 w-full h-1.5",
+                            isCompleted ? "bg-emerald-500" : isOverBudget ? "bg-rose-500" : "bg-blue-500"
+                          )} />
+                          
+                          <div className="flex justify-between items-start mb-6">
+                            <div>
+                              <h4 className="text-lg font-black text-slate-900 dark:text-white tracking-tighter mb-1">{r.descricao_etapa}</h4>
+                              <div className="flex items-center gap-2 text-[9px] font-black text-slate-400 uppercase tracking-widest">
+                                <Calendar size={12} strokeWidth={2.5} />
+                                {isCompleted ? `Concluído em: ${new Date(r.data_conclusao).toLocaleDateString('pt-BR')}` : `Previsão: ${r.prazo_execucao ? new Date(r.prazo_execucao).toLocaleDateString('pt-BR') : 'A definir'}`}
                               </div>
                             </div>
-                            <div className="flex flex-wrap items-center gap-3 mt-1.5">
-                             <p className="text-[9px] font-bold uppercase tracking-tighter text-slate-400 dark:text-slate-500">
-                                Prazo: <span className="text-slate-600 dark:text-slate-400">{r.prazo_execucao ? new Date(r.prazo_execucao).toLocaleDateString('pt-BR') : 'Indefinido'}</span>
-                             </p>
-                             <div className="hidden sm:block w-px h-2 bg-slate-200 dark:bg-slate-700" />
-                             <p className="text-[9px] font-bold uppercase tracking-tighter text-slate-400 dark:text-slate-500">
-                                Conclusão: <span className={cn(
-                                  "font-bold",
-                                  r.data_conclusao ? "text-slate-800 dark:text-slate-200" : "text-slate-400 dark:text-slate-700"
-                                )}>
-                                  {r.data_conclusao ? new Date(r.data_conclusao).toLocaleDateString('pt-BR') : 'Pendente'}
-                                </span>
-                             </p>
-                             <div className="hidden sm:block w-px h-2 bg-slate-200 dark:bg-slate-700" />
-                             <p className="text-[9px] font-bold uppercase tracking-tighter text-slate-400 dark:text-slate-500">
-                                Orc: <span className="text-slate-600 dark:text-slate-400">R$ {r.orcamento.toLocaleString('pt-BR')}</span>
-                             </p>
-                             <div className="hidden sm:block w-px h-2 bg-slate-200 dark:bg-slate-700" />
-                             <p className="text-[9px] font-bold uppercase tracking-tighter text-slate-400 dark:text-slate-500">
-                                Realizado: <span className={cn(
-                                  "font-bold",
-                                  (r.valor_real || 0) > r.orcamento ? "text-rose-600 dark:text-rose-400" : "text-emerald-600 dark:text-emerald-400"
-                                )}>
-                                  R$ {(r.valor_real || 0).toLocaleString('pt-BR')}
-                                </span>
-                             </p>
+                            <button 
+                              onClick={() => removeCustoReforma(r.id!)}
+                              className="p-3 text-slate-200 hover:text-rose-500 hover:bg-rose-50 rounded-2xl transition-all"
+                            >
+                              <Trash2 size={16} />
+                            </button>
                           </div>
-                        </div>
-                        <div className="flex items-center justify-between w-full md:w-auto md:justify-end gap-4 border-t md:border-t-0 border-slate-50 dark:border-slate-800 pt-3 md:pt-0">
+
+                          <div className="grid grid-cols-2 gap-6 mb-6">
+                            <div className="space-y-1">
+                              <p className="text-[9px] font-black text-slate-400 uppercase tracking-[0.15em]">Estimado</p>
+                              <p className="text-sm font-black text-slate-600 dark:text-slate-400">R$ {r.orcamento.toLocaleString('pt-BR')}</p>
+                            </div>
+                            <div className="space-y-1">
+                              <p className="text-[9px] font-black text-slate-400 uppercase tracking-[0.15em]">Realizado</p>
+                              <p className={cn("text-sm font-black", isOverBudget ? "text-rose-600" : "text-emerald-600")}>
+                                R$ {r.valor_real.toLocaleString('pt-BR')}
+                              </p>
+                            </div>
+                          </div>
+
+                          <div className="space-y-3">
+                            <div className="flex justify-between items-end text-[9px] font-black uppercase tracking-[0.15em]">
+                              <span className="text-slate-400">Consumo de Budget</span>
+                              <span className={isOverBudget ? "text-rose-600" : "text-emerald-600"}>{porcentagemUso}%</span>
+                            </div>
+                            <div className="w-full h-1.5 bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden">
+                              <motion.div 
+                                initial={{ width: 0 }}
+                                animate={{ width: `${Math.min(100, porcentagemUso)}%` }}
+                                className={cn("h-full rounded-full", isOverBudget ? "bg-rose-500" : "bg-emerald-500")}
+                              />
+                            </div>
+                          </div>
+
                           {r.fileUrl && (
-                            <FileThumbnail url={r.fileUrl} className="w-12 h-12" />
+                            <div className="mt-6 pt-6 border-t border-slate-50 dark:border-slate-800 flex items-center justify-between">
+                              <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest text-nowrap">Comprovantes & NF</p>
+                              <FileThumbnail url={r.fileUrl} className="w-12 h-12 rounded-2xl" />
+                            </div>
                           )}
-                          <div className="text-left md:text-right">
-                            <p className={cn(
-                              "text-xs font-black",
-                              (r.valor_real || 0) > r.orcamento ? "text-rose-500 dark:text-rose-400" : "text-emerald-500 dark:text-emerald-400"
-                            )}>
-                              {r.orcamento > 0 ? ((((r.valor_real || 0) / r.orcamento) - 1) * 100).toFixed(1) + '%' : '0%'}
-                            </p>
-                            <p className="text-[8px] text-slate-500 dark:text-slate-600 font-bold uppercase tracking-tighter">Variação</p>
-                          </div>
-                          <button onClick={() => removeCustoReforma(r.id!)} className="text-slate-500 dark:text-slate-700 hover:text-rose-500 transition-colors">
-                            <Trash2 size={16} />
-                          </button>
-                        </div>
-                      </div>
-                    );
-                  })
-                )}
+                        </motion.div>
+                      );
+                    })
+                  )}
                 </div>
               </div>
             </div>
@@ -896,381 +883,394 @@ export default function PropertyDetails() {
             {/* Holding / Mensalidades */}
             <div className="space-y-6">
               <div className="flex justify-between items-center">
-                <h3 className="text-[10px] font-bold text-slate-500 dark:text-slate-500 uppercase tracking-widest">Holding (Manutenção)</h3>
+                <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-widest flex items-center gap-2">
+                  <span className="w-4 h-px bg-slate-300" />
+                  Custos Fixos & Manutenção
+                </h3>
                 <button 
                   onClick={() => setShowAddHolding(!showAddHolding)}
-                  className="p-1.5 bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 rounded-md hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors"
+                  className={cn(
+                    "flex items-center gap-2 px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all",
+                    showAddHolding 
+                      ? "bg-slate-100 text-slate-500" 
+                      : "bg-slate-900 dark:bg-white text-white dark:text-slate-900 shadow-lg shadow-slate-200 dark:shadow-none"
+                  )}
                 >
-                  <Plus size={14} className={cn("transition-transform", showAddHolding && "rotate-45")} />
+                  <Plus size={14} strokeWidth={3} className={cn("transition-transform", showAddHolding && "rotate-45")} />
+                  {showAddHolding ? 'Cancelar' : 'Novo Lançamento'}
                 </button>
               </div>
-              <div className="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm divide-y divide-slate-50 dark:divide-slate-800 overflow-hidden">
+
+              <div className="space-y-3">
                 {showAddHolding && (
                   <motion.div 
-                    initial={{ height: 0, opacity: 0 }}
-                    animate={{ height: 'auto', opacity: 1 }}
-                    className="p-5 bg-slate-50/50 dark:bg-slate-800/30 border-b border-slate-100 dark:border-slate-800"
+                    initial={{ scale: 0.95, opacity: 0 }}
+                    animate={{ scale: 1, opacity: 1 }}
+                    className="p-8 bg-white dark:bg-slate-900 border-2 border-slate-900 rounded-[2rem] shadow-2xl relative z-20"
                   >
-                    <div className="grid grid-cols-1 gap-4">
-                      <div className="grid grid-cols-2 gap-4">
-                        <div>
-                          <label className="block text-[9px] font-bold text-slate-600 dark:text-slate-400 uppercase mb-1.5">Despesa</label>
-                          <input 
-                            type="text" 
-                            id="hold-tipo" 
-                            placeholder="Ex: Condomínio, IPTU..."
-                            className={cn(
-                              "w-full px-3 py-2 bg-white dark:bg-slate-800 dark:text-slate-200 border rounded-lg text-xs outline-none transition-all",
-                              formErrors.holdTipo ? "border-rose-500 ring-1 ring-rose-500" : "border-slate-200 dark:border-slate-700 focus:ring-1 focus:ring-blue-500"
-                            )}
-                          />
-                          {formErrors.holdTipo && <p className="text-[8px] text-rose-500 font-bold mt-1 uppercase tracking-tighter">{formErrors.holdTipo}</p>}
-                        </div>
-                        <div>
-                          <label className="block text-[9px] font-bold text-slate-500 dark:text-slate-400 uppercase mb-1.5">Valor (R$)</label>
-                          <CurrencyInput
-                            intlConfig={{ locale: 'pt-BR', currency: 'BRL' }}
-                            decimalSeparator=","
-                            groupSeparator="."
-                            decimalsLimit={2}
-                            placeholder="0,00"
-                            className={cn(
-                              "w-full px-3 py-2 bg-white dark:bg-slate-800 dark:text-slate-200 border rounded-lg text-xs outline-none transition-all",
-                              formErrors.holdValor ? "border-rose-500 ring-1 ring-rose-500" : "border-slate-200 dark:border-slate-700 focus:ring-1 focus:ring-blue-500"
-                            )}
-                            value={holdingValor}
-                            onValueChange={(_v, _n, values) => {
-                              setHoldingValor(values?.float || 0);
-                              if (formErrors.holdValor) setFormErrors({...formErrors, holdValor: ''});
-                            }}
-                          />
-                          {formErrors.holdValor && <p className="text-[8px] text-rose-500 font-bold mt-1 uppercase tracking-tighter">{formErrors.holdValor}</p>}
-                        </div>
-                        <div className="col-span-2">
-                          <FilePicker 
-                            label="Comprovante / Nota Fiscal"
-                            onFileSelect={(url) => setHoldingFileUrl(url)}
-                            onClear={() => setHoldingFileUrl('')}
-                            initialUrl={holdingFileUrl}
-                          />
-                        </div>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                      <div>
+                        <label className="block text-[9px] font-black text-slate-500 uppercase tracking-[0.2em] mb-2">Natureza da Despesa</label>
+                        <input 
+                          type="text" 
+                          id="hold-tipo-v2" 
+                          placeholder="Ex: Condomínio, IPTU, Energia..."
+                          className="w-full px-5 py-4 bg-slate-50 dark:bg-slate-800 border-none rounded-2xl text-xs font-bold outline-none focus:ring-2 focus:ring-slate-900/5 transition-all"
+                        />
                       </div>
-                      <div className="flex justify-end gap-3">
-                        <button 
-                          onClick={() => { setShowAddHolding(false); setHoldingValor(0); setHoldingFileUrl(''); }}
-                          className="px-3 py-1.5 text-[9px] font-bold text-slate-500 uppercase tracking-widest"
-                        >
-                          Cancelar
-                        </button>
-                        <button 
-                          onClick={() => {
-                            const tipo = (document.getElementById('hold-tipo') as HTMLInputElement).value.trim();
-                            const valor = holdingValor || 0;
-                            
-                            const errors: Record<string, string> = {};
-                            if (!tipo) errors.holdTipo = "Despesa é obrigatória";
-                            if (valor <= 0) errors.holdValor = "Valor deve ser maior que zero";
-
-                            if (Object.keys(errors).length > 0) {
-                              setFormErrors(errors);
-                              return;
-                            }
-
-                            addHolding({ 
-                              id_imovel: id!, 
-                              tipo_despesa: tipo, 
-                              valor_mensal: valor,
-                              competencia: new Date().toLocaleDateString('pt-BR', { month: '2-digit', year: 'numeric' }),
-                              fileUrl: holdingFileUrl
-                            });
-                            setShowAddHolding(false);
-                            setFormErrors({});
-                            setHoldingValor(0);
-                            setHoldingFileUrl('');
-                          }}
-                          className="px-3 py-1.5 bg-blue-600 text-white rounded-lg text-[9px] font-bold uppercase tracking-widest shadow-sm"
-                        >
-                          Salvar
-                        </button>
+                      <div>
+                        <label className="block text-[9px] font-black text-slate-500 uppercase tracking-[0.2em] mb-2">Valor (R$)</label>
+                        <CurrencyInput
+                          intlConfig={{ locale: 'pt-BR', currency: 'BRL' }}
+                          decimalSeparator=","
+                          groupSeparator="."
+                          decimalsLimit={2}
+                          placeholder="0,00"
+                          className="w-full px-5 py-4 bg-slate-50 dark:bg-slate-800 border-none rounded-2xl text-xs font-bold outline-none focus:ring-2 focus:ring-slate-900/5 transition-all text-rose-600"
+                          value={holdingValor}
+                          onValueChange={(_v, _n, values) => setHoldingValor(values?.float || 0)}
+                        />
                       </div>
                     </div>
+                    <div className="mt-6">
+                      <FilePicker 
+                        label="Comprovante de Pagamento"
+                        onFileSelect={(url) => setHoldingFileUrl(url)}
+                        onClear={() => setHoldingFileUrl('')}
+                        initialUrl={holdingFileUrl}
+                      />
+                    </div>
+                    <button 
+                      onClick={() => {
+                        const tipo = (document.getElementById('hold-tipo-v2') as HTMLInputElement).value;
+                        if (!tipo || !holdingValor) return;
+                        addHolding({ 
+                          id_imovel: id!, 
+                          tipo_despesa: tipo, 
+                          valor_mensal: holdingValor, 
+                          competencia: new Date().toLocaleDateString('pt-BR', { month: '2-digit', year: 'numeric' }),
+                          fileUrl: holdingFileUrl
+                        });
+                        setShowAddHolding(false);
+                        setHoldingValor(0);
+                        setHoldingFileUrl('');
+                      }}
+                      className="w-full mt-8 py-5 bg-slate-900 dark:bg-white text-white dark:text-slate-900 rounded-[1.5rem] text-[10px] font-black uppercase tracking-[0.25em] shadow-xl hover:bg-slate-800 transition-all active:scale-95"
+                    >
+                      Processar Custo Operacional
+                    </button>
                   </motion.div>
                 )}
-                {filteredHolding.map(h => (
-                  <div key={h.id} className="p-4 flex justify-between items-center hover:bg-slate-50/50 dark:hover:bg-slate-800/50 transition-colors">
-                    <div>
-                      <p className="text-sm font-bold text-slate-800 dark:text-slate-200">{h.tipo_despesa}</p>
-                      <p className="text-[10px] font-bold uppercase tracking-tighter text-slate-500 dark:text-slate-500">{h.competencia}</p>
-                    </div>
-                    <div className="flex items-center gap-4">
-                      {h.fileUrl && (
-                        <FileThumbnail url={h.fileUrl} className="w-10 h-10" />
-                      )}
-                      <div className="text-right">
-                        <p className="text-sm font-bold text-slate-900 dark:text-slate-100 leading-none">R$ {h.valor_mensal.toLocaleString('pt-BR')}</p>
-                        <p className="text-[8px] text-slate-500 dark:text-slate-600 font-bold uppercase tracking-tighter mt-1">Gasto Mensal</p>
+
+                <AnimatePresence mode="popLayout">
+                  {filteredHolding.length === 0 && !showAddHolding ? (
+                    <div className="py-12 flex flex-col items-center justify-center text-center space-y-4 bg-slate-50 dark:bg-slate-900/50 rounded-[2rem] border-2 border-dashed border-slate-100 dark:border-slate-800">
+                      <div className="size-12 bg-white dark:bg-slate-800 rounded-2xl shadow-sm flex items-center justify-center text-slate-300">
+                        <ArrowDownCircle size={24} />
                       </div>
-                      <button onClick={() => removeHolding(h.id!)} className="text-slate-500 dark:text-slate-700 hover:text-rose-500 transition-colors">
-                        <Trash2 size={16} />
-                      </button>
+                      <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Sem despesas operacionais</p>
                     </div>
-                  </div>
-                ))}
+                  ) : (
+                    filteredHolding.map(h => (
+                      <motion.div 
+                        layout
+                        key={h.id} 
+                        initial={{ opacity: 0, x: -10 }}
+                        animate={{ opacity: 1, x: 0 }}
+                        exit={{ opacity: 0, scale: 0.95 }}
+                        className="p-5 flex justify-between items-center bg-white dark:bg-slate-900 rounded-[1.5rem] border border-slate-100 dark:border-slate-800 group"
+                      >
+                        <div className="flex items-center gap-4">
+                          <div className="w-1.5 h-10 bg-slate-200 dark:bg-slate-800 rounded-full" />
+                          <div>
+                            <p className="text-sm font-black text-slate-900 dark:text-white leading-tight">{h.tipo_despesa}</p>
+                            <p className="text-[8px] font-black uppercase tracking-widest text-slate-400">Despesa Operacional • {h.competencia}</p>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-6">
+                          <div className="text-right">
+                            <p className="text-base font-black text-rose-500 leading-none">R$ {h.valor_mensal.toLocaleString('pt-BR')}</p>
+                            <p className="text-[8px] text-slate-400 font-bold uppercase tracking-widest mt-1">Gasto Fixo</p>
+                          </div>
+                          <div className="flex items-center gap-2 text-nowrap">
+                            {h.fileUrl && <FileThumbnail url={h.fileUrl} className="w-10 h-10 rounded-xl" />}
+                            <button 
+                              onClick={() => removeHolding(h.id!)}
+                              className="p-3 text-slate-200 hover:text-rose-500 hover:bg-rose-50 rounded-xl transition-all"
+                            >
+                              <Trash2 size={16} />
+                            </button>
+                          </div>
+                        </div>
+                      </motion.div>
+                    ))
+                  )}
+                </AnimatePresence>
               </div>
             </div>
 
             {/* Faturamento */}
             <div className="space-y-6">
               <div className="flex justify-between items-center">
-                <h3 className="text-[10px] font-bold text-slate-500 dark:text-slate-500 uppercase tracking-widest">Faturamento Realizado</h3>
+                <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-widest flex items-center gap-2">
+                  <span className="w-4 h-px bg-slate-300" />
+                  Receita & Faturamento
+                </h3>
                 <button 
                   onClick={() => setShowAddFaturamento(!showAddFaturamento)}
-                  className="p-1.5 bg-emerald-50 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400 rounded-md hover:bg-emerald-100 dark:hover:bg-emerald-800 transition-colors"
+                  className={cn(
+                    "flex items-center gap-2 px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all",
+                    showAddFaturamento 
+                      ? "bg-slate-100 text-slate-500" 
+                      : "bg-emerald-600 text-white shadow-lg shadow-emerald-200 dark:shadow-none"
+                  )}
                 >
-                  <Plus size={14} className={cn("transition-transform", showAddFaturamento && "rotate-45")} />
+                  <Plus size={14} strokeWidth={3} className={cn("transition-transform", showAddFaturamento && "rotate-45")} />
+                  {showAddFaturamento ? 'Cancelar' : 'Registrar Venda / Aluguel'}
                 </button>
               </div>
               
-              <div className="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm divide-y divide-slate-50 dark:divide-slate-800 overflow-hidden">
+              <div className="space-y-4">
                 {showAddFaturamento && (
                   <motion.div 
-                    initial={{ height: 0, opacity: 0 }}
-                    animate={{ height: 'auto', opacity: 1 }}
-                    className="p-5 bg-emerald-50/30 dark:bg-emerald-950/20 border-b border-emerald-100 dark:border-emerald-900/40"
+                    initial={{ scale: 0.95, opacity: 0 }}
+                    animate={{ scale: 1, opacity: 1 }}
+                    className="p-8 bg-white dark:bg-slate-900 border-2 border-emerald-500 rounded-[2rem] shadow-2xl relative z-20"
                   >
-                    <div className="grid grid-cols-1 md:grid-cols-4 gap-4 items-start">
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 items-start">
                       <div>
-                        <label className="block text-[9px] font-bold text-slate-600 dark:text-slate-400 uppercase mb-1.5">Tipo</label>
+                        <label className="block text-[9px] font-black text-slate-500 uppercase tracking-[0.2em] mb-2">Modalidade</label>
                         <select 
-                          id="fat-tipo"
-                          className="w-full px-3 py-2 bg-white dark:bg-slate-800 dark:text-slate-200 border border-slate-200 dark:border-slate-700 rounded-lg text-xs outline-none focus:ring-1 focus:ring-emerald-500 shadow-sm"
+                          id="fat-tipo-v2"
+                          className="w-full px-5 py-4 bg-slate-50 dark:bg-slate-800 border-none rounded-2xl text-xs font-bold outline-none focus:ring-2 focus:ring-emerald-500/10 transition-all"
                         >
-                          <option value={TipoFaturamento.Venda}>Venda</option>
-                          <option value={TipoFaturamento.Locacao}>Locação</option>
+                          <option value={TipoFaturamento.Venda}>Venda de Ativo</option>
+                          <option value={TipoFaturamento.Locacao}>Locação Mensal</option>
                         </select>
                       </div>
                       <div>
-                        <label className="block text-[9px] font-bold text-slate-600 dark:text-slate-400 uppercase mb-1.5">Valor Bruto (R$)</label>
+                        <label className="block text-[9px] font-black text-slate-500 uppercase tracking-[0.2em] mb-2">Valor Total (R$)</label>
                         <CurrencyInput
                           intlConfig={{ locale: 'pt-BR', currency: 'BRL' }}
                           decimalSeparator=","
                           groupSeparator="."
                           decimalsLimit={2}
                           placeholder="0,00"
-                          className={cn(
-                            "w-full px-3 py-2 bg-white dark:bg-slate-800 dark:text-slate-200 border rounded-lg text-xs outline-none transition-all shadow-sm",
-                            formErrors.fatValor ? "border-rose-500 ring-1 ring-rose-500" : "border-slate-200 dark:border-slate-700 focus:ring-1 focus:ring-emerald-500"
-                          )}
+                          className="w-full px-5 py-4 bg-slate-50 dark:bg-slate-800 border-none rounded-2xl text-xs font-bold outline-none focus:ring-2 focus:ring-emerald-500/10 transition-all text-emerald-600"
                           value={fatValor}
                           onValueChange={(_value, _name, values) => setFatValor(values?.float || 0)}
                         />
-                        {formErrors.fatValor && <p className="text-[8px] text-rose-500 font-bold mt-1 uppercase tracking-tighter">{formErrors.fatValor}</p>}
                       </div>
                       <div>
-                        <label className="block text-[9px] font-bold text-slate-600 dark:text-slate-400 uppercase mb-1.5">Corretagem (R$)</label>
+                        <label className="block text-[9px] font-black text-slate-500 uppercase tracking-[0.2em] mb-2">Corretagem (R$)</label>
                         <CurrencyInput
                           intlConfig={{ locale: 'pt-BR', currency: 'BRL' }}
                           decimalSeparator=","
                           groupSeparator="."
                           decimalsLimit={2}
                           placeholder="0,00"
-                          className="w-full px-3 py-2 bg-white dark:bg-slate-800 dark:text-slate-200 border border-slate-200 dark:border-slate-700 rounded-lg text-xs outline-none focus:ring-1 focus:ring-emerald-500 shadow-sm"
+                          className="w-full px-5 py-4 bg-slate-50 dark:bg-slate-800 border-none rounded-2xl text-xs font-bold outline-none focus:ring-2 focus:ring-emerald-500/10 transition-all text-rose-500"
                           value={fatComissao}
                           onValueChange={(_value, _name, values) => setFatComissao(values?.float || 0)}
                         />
                       </div>
                       <div>
-                        <label className="block text-[9px] font-bold text-slate-600 dark:text-slate-400 uppercase mb-1.5">Data</label>
+                        <label className="block text-[9px] font-black text-slate-500 uppercase tracking-[0.2em] mb-2">Data da Operação</label>
                         <input 
                           type="date" 
-                          id="fat-data"
-                          className={cn(
-                            "w-full px-3 py-2 bg-white dark:bg-slate-800 dark:text-slate-200 border rounded-lg text-xs outline-none transition-all shadow-sm",
-                            formErrors.fatData ? "border-rose-500 ring-1 ring-rose-500" : "border-slate-200 dark:border-slate-700 focus:ring-1 focus:ring-emerald-500"
-                          )}
+                          id="fat-data-v2"
+                          className="w-full px-5 py-4 bg-slate-50 dark:bg-slate-800 border-none rounded-2xl text-xs font-bold outline-none focus:ring-2 focus:ring-emerald-500/10 transition-all"
                         />
-                        {formErrors.fatData && <p className="text-[8px] text-rose-500 font-bold mt-1 uppercase tracking-tighter">{formErrors.fatData}</p>}
-                      </div>
-                      <div className="md:col-span-4 flex justify-end gap-3 mt-2">
-                        <button 
-                          onClick={() => {
-                            setShowAddFaturamento(false);
-                            setFormErrors({});
-                            setFatValor(0);
-                            setFatComissao(0);
-                          }}
-                          className="px-4 py-2 text-[10px] font-bold text-slate-500 dark:text-slate-500 uppercase tracking-widest hover:text-slate-600 dark:hover:text-slate-300 transition-colors"
-                        >
-                          Cancelar
-                        </button>
-                        <button 
-                          onClick={() => {
-                            const tipoInput = document.getElementById('fat-tipo') as HTMLSelectElement;
-                            const dataInput = document.getElementById('fat-data') as HTMLInputElement;
-
-                            const valor = fatValor || 0;
-                            const comissao = fatComissao || 0;
-                            const data = dataInput.value;
-                            
-                            const errors: Record<string, string> = {};
-                            if (valor <= 0) errors.fatValor = "Valor deve ser positivo";
-                            if (!data) errors.fatData = "Data obrigatória";
-                            if (data && isNaN(new Date(data).getTime())) errors.fatData = "Data inválida";
-                            
-                            if (Object.keys(errors).length > 0) {
-                              setFormErrors(errors);
-                              return;
-                            }
-
-                            addFaturamento({ 
-                              id_imovel: id!, 
-                              tipo: tipoInput.value as TipoFaturamento, 
-                              valor: valor,
-                              custo_corretagem: comissao,
-                              data_operacao: data
-                            });
-                            setShowAddFaturamento(false);
-                            setFormErrors({});
-                            setFatValor(0);
-                            setFatComissao(0);
-                          }}
-                          className="btn-primary bg-emerald-600 hover:bg-emerald-700 border-emerald-500 flex items-center justify-center gap-2 text-[10px] tracking-widest px-8 w-full md:w-auto shadow-emerald-500/20 shadow-lg"
-                        >
-                          <Plus size={14} />
-                          REGISTRAR FATURAMENTO
-                        </button>
                       </div>
                     </div>
+                    <button 
+                      onClick={() => {
+                        const tipo = (document.getElementById('fat-tipo-v2') as HTMLSelectElement).value;
+                        const data = (document.getElementById('fat-data-v2') as HTMLInputElement).value;
+                        if (!fatValor || !data) return;
+
+                        addFaturamento({ 
+                          id_imovel: id!, 
+                          tipo: tipo as TipoFaturamento, 
+                          valor: fatValor,
+                          custo_corretagem: fatComissao,
+                          data_operacao: data
+                        });
+                        setShowAddFaturamento(false);
+                        setFatValor(0);
+                        setFatComissao(0);
+                      }}
+                      className="w-full mt-8 py-5 bg-emerald-600 text-white rounded-[1.5rem] text-[10px] font-black uppercase tracking-[0.25em] shadow-xl shadow-emerald-100 hover:bg-emerald-700 transition-all active:scale-95"
+                    >
+                      Liquidar Operação & Salvar
+                    </button>
                   </motion.div>
                 )}
 
-                {filteredFaturamento.length === 0 ? (
-                  <div className="p-8 text-center text-slate-500 dark:text-slate-600 text-[10px] font-bold uppercase tracking-widest">
-                    Nenhum faturamento registrado
-                  </div>
-                ) : (
-                  filteredFaturamento.map(f => (
-                    <div key={f.id} className="p-4 flex justify-between items-center hover:bg-slate-50/50 dark:hover:bg-slate-800/50 transition-colors">
-                    <div className="flex items-center gap-3">
-                      <div className={cn(
-                        "w-2 h-2 rounded-full",
-                        f.tipo === TipoFaturamento.Venda ? "bg-emerald-500" : "bg-blue-500"
-                      )} />
-                      <div>
-                        <p className="text-sm font-bold text-slate-800 dark:text-slate-200 leading-tight">{f.tipo}</p>
-                        <div className="flex items-center gap-1 mt-0.5">
-                          <Calendar size={10} className="text-slate-500 dark:text-slate-600" />
-                          <p className="text-[10px] text-slate-500 dark:text-slate-500 font-bold uppercase tracking-tighter">{f.data_operacao || 'Pendente'}</p>
+                <AnimatePresence mode="popLayout">
+                  {filteredFaturamento.length === 0 && !showAddFaturamento ? (
+                    <div className="py-12 flex flex-col items-center justify-center text-center space-y-4 bg-slate-50 dark:bg-slate-900/50 rounded-[2rem] border-2 border-dashed border-slate-100 dark:border-slate-800">
+                      <div className="size-12 bg-white dark:bg-slate-800 rounded-2xl shadow-sm flex items-center justify-center text-slate-300">
+                        <TrendingUp size={24} />
+                      </div>
+                      <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Aguardando liquidação do ativo</p>
+                    </div>
+                  ) : (
+                    filteredFaturamento.map(f => (
+                      <motion.div 
+                        layout
+                        key={f.id} 
+                        initial={{ opacity: 0, scale: 0.95 }}
+                        animate={{ opacity: 1, scale: 1 }}
+                        exit={{ opacity: 0, scale: 0.9 }}
+                        className="p-6 bg-white dark:bg-slate-900 rounded-[2rem] border border-slate-100 dark:border-slate-800 flex justify-between items-center group overflow-hidden relative"
+                      >
+                        <div className="flex items-center gap-5">
+                          <div className={cn(
+                            "size-12 rounded-2xl flex items-center justify-center",
+                            f.tipo === TipoFaturamento.Venda ? "bg-emerald-50 text-emerald-600" : "bg-blue-50 text-blue-600"
+                          )}>
+                            {f.tipo === TipoFaturamento.Venda ? <CheckCircle2 size={24} /> : <Calendar size={24} />}
+                          </div>
+                          <div>
+                            <p className="text-base font-black text-slate-900 dark:text-white leading-tight">{f.tipo}</p>
+                            <p className="text-[8px] font-black uppercase tracking-widest text-slate-400 mt-1">Concluído em: {f.data_operacao}</p>
+                          </div>
                         </div>
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-4">
-                      <div className="text-right">
-                        <p className="text-sm font-bold text-emerald-600 dark:text-emerald-400 leading-none">R$ {f.valor.toLocaleString('pt-BR')}</p>
-                        {f.custo_corretagem && <p className="text-[10px] text-rose-400 dark:text-rose-500 font-bold uppercase mt-1">- R$ {f.custo_corretagem.toLocaleString('pt-BR')} Comissão</p>}
-                      </div>
-                      <button onClick={() => removeFaturamento(f.id!)} className="text-slate-500 dark:text-slate-700 hover:text-rose-500 transition-colors">
-                        <Trash2 size={16} />
-                      </button>
-                    </div>
-                  </div>
-                ))
-              )}
+                        <div className="flex items-center gap-8">
+                          <div className="text-right">
+                            <p className="text-lg font-black text-emerald-600 leading-none">R$ {f.valor.toLocaleString('pt-BR')}</p>
+                            {f.custo_corretagem > 0 && (
+                              <p className="text-[9px] font-black text-rose-500 uppercase tracking-tighter mt-1.5">
+                                comissão: - R$ {f.custo_corretagem.toLocaleString('pt-BR')}
+                              </p>
+                            )}
+                          </div>
+                          <button 
+                            onClick={() => removeFaturamento(f.id!)}
+                            className="p-3 text-slate-200 hover:text-rose-500 hover:bg-rose-50 rounded-2xl transition-all"
+                          >
+                            <Trash2 size={16} />
+                          </button>
+                        </div>
+                      </motion.div>
+                    ))
+                  )}
+                </AnimatePresence>
               </div>
             </div>
           </div>
         </motion.div>
-          )}
+      )}
 
-          {activeTab === 'documentos' && (
-            <motion.div 
-              key="documentos"
-              initial={{ opacity: 0, y: 10 }} 
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -10 }}
-              transition={{ duration: 0.3 }}
-              className="space-y-6"
-            >
-            <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-              <h3 className="text-[10px] font-bold text-slate-500 dark:text-slate-500 uppercase tracking-widest">Repositório de Documentos</h3>
-              <button 
-                onClick={() => addDocumento({ id_imovel: id!, tipo_doc: 'Escritura', status: StatusDoc.Pendente })}
-                className="btn-primary flex items-center gap-2 text-[10px] tracking-widest w-full md:w-auto justify-center"
-              >
-                <Plus size={14} />
-                ANEXAR ARQUIVO
-              </button>
+      {activeTab === 'documentos' && (
+        <motion.div 
+          key="documentos"
+          initial={{ opacity: 0, y: 10 }} 
+          animate={{ opacity: 1, y: 0 }}
+          exit={{ opacity: 0, y: -10 }}
+          transition={{ duration: 0.3 }}
+          className="space-y-8"
+        >
+          <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6 px-4">
+            <div>
+              <h3 className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-[0.3em] mb-1">Cofre de Documentos</h3>
+              <p className="text-[10px] font-bold text-slate-300 dark:text-slate-700 uppercase tracking-widest">Armazenamento seguro e centralizado</p>
             </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {filteredDocumentos.map(doc => (
-                <div key={doc.id} className="bg-white dark:bg-slate-900 p-5 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm flex flex-col gap-4 hover:shadow-lg hover:border-blue-200 dark:hover:border-blue-900/40 transition-all group relative overflow-hidden">
-                  <div className="flex items-start justify-between">
-                    <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 bg-blue-50 dark:bg-blue-900/20 rounded-xl flex items-center justify-center text-blue-600 dark:text-blue-400">
-                        {getFileMetaData(doc.fileUrl)?.isPDF ? <FileIcon size={20} /> : <ImageIcon size={20} />}
+            <button 
+              onClick={() => addDocumento({ id_imovel: id!, tipo_doc: 'Matrícula do Imóvel', status: StatusDoc.Pendente })}
+              className="bg-slate-900 dark:bg-white text-white dark:text-slate-900 px-8 py-4 rounded-2xl text-[10px] font-black uppercase tracking-[0.2em] shadow-xl hover:scale-105 transition-all active:scale-95 flex items-center gap-3 w-full md:w-auto justify-center"
+            >
+              <Plus size={16} strokeWidth={3} />
+              Importar Arquivo
+            </button>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 pb-12">
+            {filteredDocumentos.length === 0 ? (
+              <div className="col-span-full py-24 flex flex-col items-center justify-center text-center space-y-6 bg-white dark:bg-slate-900 rounded-[3rem] border border-slate-100 dark:border-slate-800 shadow-sm">
+                <div className="size-20 bg-slate-50 dark:bg-slate-800 rounded-[2rem] flex items-center justify-center text-slate-200">
+                  <FolderOpen size={40} />
+                </div>
+                <div>
+                  <p className="text-lg font-black text-slate-900 dark:text-white tracking-tighter">O cofre está vazio</p>
+                  <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mt-1">Anexe escrituras, certidões e comprovantes</p>
+                </div>
+              </div>
+            ) : (
+              filteredDocumentos.map(doc => (
+                <motion.div 
+                  layout
+                  key={doc.id} 
+                  className="bg-white dark:bg-slate-900 p-6 rounded-[2.5rem] border border-slate-100 dark:border-slate-800 shadow-sm hover:shadow-2xl hover:border-blue-100 dark:hover:border-blue-900/20 transition-all group overflow-hidden flex flex-col gap-6"
+                >
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-4">
+                      <div className="size-12 bg-slate-50 dark:bg-slate-800 rounded-2xl flex items-center justify-center text-slate-400 group-hover:bg-blue-50 group-hover:text-blue-500 transition-colors">
+                        {getFileMetaData(doc.fileUrl)?.isPDF ? <FileIcon size={24} strokeWidth={2.5} /> : <ImageIcon size={24} strokeWidth={2.5} />}
                       </div>
-                      <div className="flex-1 min-w-0">
-                        <p className="text-sm font-bold text-slate-900 dark:text-white truncate leading-tight">{doc.tipo_doc}</p>
-                        <p className="text-[8px] text-slate-500 font-black uppercase tracking-widest mt-0.5">ID: {doc.id?.slice(-6)}</p>
+                      <div className="max-w-[140px]">
+                        <p className="text-sm font-black text-slate-900 dark:text-white truncate leading-tight tracking-tight">{doc.tipo_doc}</p>
+                        <p className="text-[9px] font-black text-slate-300 dark:text-slate-700 uppercase tracking-widest mt-1">Ref: {doc.id?.slice(-4)}</p>
                       </div>
                     </div>
-                    <button onClick={() => removeDocumento(doc.id!)} className="text-slate-500 dark:text-slate-800 hover:text-rose-500 transition-colors">
+                    <button 
+                      onClick={() => removeDocumento(doc.id!)}
+                      className="p-3 text-slate-100 hover:text-rose-500 hover:bg-rose-50 rounded-2xl transition-all"
+                    >
                       <Trash2 size={16} />
                     </button>
                   </div>
 
-                  <div className="relative aspect-video rounded-xl border border-slate-100 dark:border-slate-800 bg-slate-50 dark:bg-slate-950/50 flex items-center justify-center overflow-hidden">
+                  <div className="relative aspect-[4/3] rounded-[1.5rem] bg-slate-50 dark:bg-slate-950 flex items-center justify-center overflow-hidden border border-slate-100 dark:border-slate-800 shadow-inner">
                     {doc.fileUrl ? (
-                      <FileThumbnail url={doc.fileUrl} className="w-full h-full border-0 rounded-none shadow-none" />
+                      <FileThumbnail url={doc.fileUrl} className="w-full h-full border-none rounded-none object-cover" />
                     ) : (
-                      <div className="flex flex-col items-center gap-2 text-slate-500 dark:text-slate-700">
-                        <ImageIcon size={32} strokeWidth={1} />
-                        <span className="text-[10px] font-bold uppercase tracking-widest">Sem visualização</span>
+                      <div className="flex flex-col items-center gap-3 text-slate-200">
+                        <ImageIcon size={48} strokeWidth={1} />
+                        <span className="text-[10px] font-black uppercase tracking-widest">Pendente</span>
                       </div>
                     )}
-                  </div>
-
-                  <div className="flex items-center justify-between mt-auto pt-2 border-t border-slate-50 dark:border-slate-800/60">
-                    <div className={cn(
-                      "px-2.5 py-1 rounded-full text-[9px] font-black uppercase tracking-widest flex items-center gap-1.5 shadow-sm",
-                      doc.status === StatusDoc.Registrado ? "bg-emerald-500 text-white" : 
-                      doc.status === StatusDoc.Pendente ? "bg-slate-100 dark:bg-slate-800 text-slate-500" :
-                      "bg-blue-500 text-white"
-                    )}>
-                      {doc.status === StatusDoc.Registrado && <CheckCircle2 size={10} />}
-                      {doc.status === StatusDoc.Pendente && <Clock size={10} />}
-                      {doc.status}
-                    </div>
-                    
                     {doc.fileUrl && (
-                      <div className="flex items-center gap-1">
+                      <div className="absolute inset-0 bg-slate-900/0 group-hover:bg-slate-900/40 transition-all flex items-center justify-center opacity-0 group-hover:opacity-100 gap-3">
                         <a 
                           href={doc.fileUrl} 
                           target="_blank" 
                           rel="noopener noreferrer"
-                          className="p-1.5 text-slate-500 hover:text-blue-500 transition-colors"
-                          title="Visualizar"
+                          className="size-12 bg-white rounded-2xl flex items-center justify-center text-slate-900 shadow-xl hover:scale-110 transition-all"
                         >
-                          <Eye size={16} />
+                          <Eye size={20} strokeWidth={2.5} />
                         </a>
                         <a 
                           href={doc.fileUrl} 
-                          download={`${doc.tipo_doc}.png`}
-                          className="p-1.5 text-slate-500 hover:text-emerald-500 transition-colors"
-                          title="Download"
+                          download
+                          className="size-12 bg-emerald-500 rounded-2xl flex items-center justify-center text-white shadow-xl hover:scale-110 transition-all"
                         >
-                          <Download size={16} />
+                          <Download size={20} strokeWidth={2.5} />
                         </a>
                       </div>
                     )}
                   </div>
-                </div>
-              ))}
-            </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
-    </div>
-    </motion.div>
+
+                  <div className="flex items-center justify-between mt-auto">
+                    <div className={cn(
+                      "px-3 py-1.5 rounded-xl text-[9px] font-black uppercase tracking-widest border shadow-sm",
+                      doc.status === StatusDoc.Registrado ? "bg-emerald-50 border-emerald-100 text-emerald-600" : 
+                      doc.status === StatusDoc.Pendente ? "bg-slate-50 border-slate-100 text-slate-400" :
+                      "bg-blue-50 border-blue-100 text-blue-600"
+                    )}>
+                      {doc.status}
+                    </div>
+                    <p className="text-[9px] font-black text-slate-300 dark:text-slate-800 uppercase tracking-widest">Diligência OK</p>
+                  </div>
+                </motion.div>
+              ))
+            )}
+          </div>
+        </motion.div>
+      )}
+    </AnimatePresence>
+  </div>
+</motion.div>
   );
 }

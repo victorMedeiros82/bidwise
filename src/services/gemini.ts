@@ -39,7 +39,7 @@ export async function generateRiskAnalysis(
   ` : "";
 
   const prompt = `
-    Como um especialista jurídico e de investimentos imobiliários no Brasil (especialmente focado em leilões e oportunidades de mercado), analise os seguintes dados e gere um relatório de análise de risco e viabilidade.
+    Como um especialista jurídico e de investimentos imobiliários no Brasil (focado em análise de ativos), analise os seguintes dados e gere um relatório de análise de risco e viabilidade.
     
     ${leilaoInfo}
     ${financialInfo}
