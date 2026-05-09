@@ -1,15 +1,15 @@
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { Plus, Search, MapPin, Building2, ChevronRight, Gavel, Trash2, X, ClipboardCheck, Loader2 } from 'lucide-react';
+import { Plus, Search, MapPin, Building2, ChevronRight, Gavel, Trash2, X, ClipboardCheck, Loader2, Info, Calendar, Link as LinkIcon } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import CurrencyInput from 'react-currency-input-field';
 import { useFirestore } from '../hooks/useFirestore';
-import { Imovel, Leilao, TipoImovel, SituacaoJuridica, EstadoConservacao, StatusArrematacao, OrigemImovel } from '../types';
+import { Imovel, TipoImovel, SituacaoJuridica, EstadoConservacao, StatusArrematacao, OrigemImovel, TipoLeilao, FormaArrematacao } from '../types';
 import { cn } from '../lib/utils';
 
 export default function Properties() {
   const navigate = useNavigate();
   const { data: properties, add, remove } = useFirestore<Imovel>('imoveis');
-  const { data: auctions } = useFirestore<Leilao>('leiloes');
   
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
@@ -18,13 +18,57 @@ export default function Properties() {
   const [filterStatus, setFilterStatus] = useState<StatusArrematacao | 'Todos'>('Todos');
   const [filterLocation, setFilterLocation] = useState('');
   const [searchingCep, setSearchingCep] = useState(false);
+  const [errors, setErrors] = useState<Record<string, string>>({});
   const [formData, setFormData] = useState<Partial<Imovel>>({
     origem: OrigemImovel.Leilao,
     tipo_imovel: TipoImovel.Apartamento,
     situacao_juridica: SituacaoJuridica.ExecucaoFiscal,
     estado_conservacao: EstadoConservacao.Regular,
-    status_arrematacao: StatusArrematacao.Analise
+    status_arrematacao: StatusArrematacao.Analise,
+    tipo_leilao: TipoLeilao.Judicial,
+    forma_arrematacao: FormaArrematacao.Online
   });
+
+  const validateForm = () => {
+    const newErrors: Record<string, string> = {};
+
+    if (!formData.endereco?.trim()) newErrors.endereco = 'Endereço é obrigatório';
+    if (!formData.matricula?.trim()) newErrors.matricula = 'Matrícula é obrigatória';
+    if (!formData.area_m2 || formData.area_m2 <= 0) newErrors.area_m2 = 'Área deve ser maior que zero';
+    if (formData.cep && formData.cep.length !== 8) newErrors.cep = 'CEP deve ter 8 dígitos';
+    if (!formData.bairro?.trim()) newErrors.bairro = 'Bairro é obrigatório';
+    if (!formData.cidade?.trim()) newErrors.cidade = 'Cidade é obrigatória';
+    if (!formData.estado?.trim() || formData.estado.length !== 2) newErrors.estado = 'UF inválida';
+
+    if (formData.origem === OrigemImovel.Leilao) {
+      if (!formData.processo?.trim()) {
+        newErrors.processo = 'Número do processo é obrigatório';
+      } else if (formData.processo.length < 10) {
+        newErrors.processo = 'Número do processo parece ser inválido';
+      }
+
+      if (!formData.comarca?.trim()) newErrors.comarca = 'Comarca é obrigatória';
+      
+      if (!formData.data_leilao) {
+        newErrors.data_leilao = 'Data do leilão é obrigatória';
+      } else {
+        const date = new Date(formData.data_leilao);
+        if (isNaN(date.getTime())) {
+          newErrors.data_leilao = 'Data do leilão é inválida';
+        }
+      }
+
+      if (formData.valor_avaliacao === undefined || formData.valor_avaliacao <= 0) {
+        newErrors.valor_avaliacao = 'Valor de avaliação deve ser positivo';
+      }
+      if (formData.valor_minimo === undefined || formData.valor_minimo <= 0) {
+        newErrors.valor_minimo = 'Lance mínimo deve ser positivo';
+      }
+    }
+
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
 
   const filteredProperties = properties.filter(p => {
     const matchesSearch = p.endereco.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -73,13 +117,22 @@ export default function Properties() {
       situacao_juridica: SituacaoJuridica.ExecucaoFiscal,
       estado_conservacao: EstadoConservacao.Regular,
       status_arrematacao: StatusArrematacao.Analise,
+      tipo_leilao: TipoLeilao.Judicial,
+      forma_arrematacao: FormaArrematacao.Online,
       cep: '',
       endereco: '',
       bairro: '',
       cidade: '',
       estado: '',
       matricula: '',
-      area_m2: undefined
+      area_m2: undefined,
+      processo: '',
+      comarca: '',
+      data_leilao: '',
+      link_edital: '',
+      valor_avaliacao: 0,
+      valor_minimo: 0,
+      condicoes_pagamento: ''
     });
   };
 
@@ -90,6 +143,8 @@ export default function Properties() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!validateForm()) return;
+    
     try {
       await add(formData as any);
       setIsModalOpen(false);
@@ -300,7 +355,7 @@ export default function Properties() {
                         <button
                           key={origem}
                           type="button"
-                          onClick={() => setFormData({ ...formData, origem, id_leilao: origem === OrigemImovel.Leilao ? formData.id_leilao : undefined })}
+                          onClick={() => setFormData({ ...formData, origem })}
                           className={cn(
                             "flex-1 py-2 px-3 rounded-xl border text-xs font-bold uppercase tracking-wider transition-all",
                             formData.origem === origem 
@@ -315,19 +370,150 @@ export default function Properties() {
                   </div>
 
                   {formData.origem === OrigemImovel.Leilao && (
-                    <div className="md:col-span-2">
-                      <label className="block text-sm font-medium mb-1 dark:text-slate-300">Vincular a Leilão</label>
-                      <select
-                        required
-                        className="w-full px-4 py-2 border border-gray-200 dark:border-slate-800 bg-white dark:bg-slate-800 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
-                        value={formData.id_leilao || ''}
-                        onChange={e => setFormData({...formData, id_leilao: e.target.value})}
-                      >
-                        <option value="">Selecione um leilão...</option>
-                        {auctions.map(a => (
-                          <option key={a.id} value={a.id}>{a.processo} - {a.comarca}</option>
-                        ))}
-                      </select>
+                    <div className="md:col-span-2 grid grid-cols-1 md:grid-cols-2 gap-4 bg-slate-50 dark:bg-slate-800/50 p-4 rounded-2xl border border-slate-100 dark:border-slate-800">
+                      <h3 className="md:col-span-2 text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-2 px-1">Dados do Processo de Leilão</h3>
+                      
+                      <div className="md:col-span-2">
+                        <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1.5 ml-1">Número do Processo</label>
+                        <input
+                          type="text"
+                          placeholder="0000000-00.0000.0.00.0000"
+                          className={cn(
+                            "w-full px-4 py-2 bg-white dark:bg-slate-800 border rounded-xl outline-none text-sm font-medium dark:text-slate-200",
+                            errors.processo ? "border-rose-500" : "border-slate-200 dark:border-slate-700"
+                          )}
+                          value={formData.processo || ''}
+                          onChange={e => {
+                            setFormData({...formData, processo: e.target.value});
+                            if (errors.processo) setErrors({...errors, processo: ''});
+                          }}
+                        />
+                        {errors.processo && <p className="text-[10px] text-rose-500 font-bold mt-1 ml-1">{errors.processo}</p>}
+                      </div>
+
+                      <div>
+                        <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1.5 ml-1">Comarca / Vara</label>
+                        <input
+                          type="text"
+                          className={cn(
+                            "w-full px-4 py-2 bg-white dark:bg-slate-800 border rounded-xl outline-none text-sm font-medium dark:text-slate-200",
+                            errors.comarca ? "border-rose-500" : "border-slate-200 dark:border-slate-700"
+                          )}
+                          value={formData.comarca || ''}
+                          onChange={e => {
+                            setFormData({...formData, comarca: e.target.value});
+                            if (errors.comarca) setErrors({...errors, comarca: ''});
+                          }}
+                        />
+                        {errors.comarca && <p className="text-[10px] text-rose-500 font-bold mt-1 ml-1">{errors.comarca}</p>}
+                      </div>
+
+                      <div>
+                        <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1.5 ml-1">Data do Leilão</label>
+                        <input
+                          type="datetime-local"
+                          className={cn(
+                            "w-full px-4 py-2 bg-white dark:bg-slate-800 border rounded-xl outline-none text-sm font-medium dark:text-slate-200",
+                            errors.data_leilao ? "border-rose-500" : "border-slate-200 dark:border-slate-700"
+                          )}
+                          value={formData.data_leilao || ''}
+                          onChange={e => {
+                            setFormData({...formData, data_leilao: e.target.value});
+                            if (errors.data_leilao) setErrors({...errors, data_leilao: ''});
+                          }}
+                        />
+                        {errors.data_leilao && <p className="text-[10px] text-rose-500 font-bold mt-1 ml-1">{errors.data_leilao}</p>}
+                      </div>
+
+                      <div>
+                        <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1.5 ml-1">Tipo de Leilão</label>
+                        <select
+                          className="w-full px-4 py-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl outline-none text-sm font-medium dark:text-slate-200"
+                          value={formData.tipo_leilao}
+                          onChange={e => setFormData({...formData, tipo_leilao: e.target.value as TipoLeilao})}
+                        >
+                          <option value={TipoLeilao.Judicial}>Judicial</option>
+                          <option value={TipoLeilao.Extrajudicial}>Extrajudicial</option>
+                        </select>
+                      </div>
+
+                      <div>
+                        <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1.5 ml-1">Forma de Arrematação</label>
+                        <select
+                          className="w-full px-4 py-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl outline-none text-sm font-medium dark:text-slate-200"
+                          value={formData.forma_arrematacao}
+                          onChange={e => setFormData({...formData, forma_arrematacao: e.target.value as FormaArrematacao})}
+                        >
+                          <option value={FormaArrematacao.Online}>Online</option>
+                          <option value={FormaArrematacao.Presencial}>Presencial</option>
+                          <option value={FormaArrematacao.Hibrido}>Híbrido</option>
+                        </select>
+                      </div>
+
+                      <div>
+                        <label className="flex items-center gap-1.5 text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1.5 ml-1">Valor Avaliação</label>
+                        <div className="relative">
+                          <span className={cn(
+                            "absolute left-4 top-1/2 -translate-y-1/2 text-xs font-bold border-r pr-3",
+                            errors.valor_avaliacao ? "text-rose-500 border-rose-200" : "text-slate-500 border-slate-200"
+                          )}>R$</span>
+                          <CurrencyInput
+                            intlConfig={{ locale: 'pt-BR', currency: 'BRL' }}
+                            decimalSeparator=","
+                            groupSeparator="."
+                            decimalsLimit={2}
+                            placeholder="0,00"
+                            className={cn(
+                              "w-full pl-14 pr-4 py-2 bg-white dark:bg-slate-800 border rounded-xl outline-none text-sm font-black dark:text-slate-200",
+                              errors.valor_avaliacao ? "border-rose-500" : "border-slate-200 dark:border-slate-700"
+                            )}
+                            value={formData.valor_avaliacao || ''}
+                            onValueChange={(_v, _n, values) => {
+                              setFormData({...formData, valor_avaliacao: values?.float || 0});
+                              if (errors.valor_avaliacao) setErrors({...errors, valor_avaliacao: ''});
+                            }}
+                          />
+                        </div>
+                        {errors.valor_avaliacao && <p className="text-[10px] text-rose-500 font-bold mt-1 ml-1">{errors.valor_avaliacao}</p>}
+                      </div>
+
+                      <div>
+                        <label className="flex items-center gap-1.5 text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1.5 ml-1">Lance Mínimo</label>
+                        <div className="relative">
+                          <span className={cn(
+                            "absolute left-4 top-1/2 -translate-y-1/2 text-xs font-bold border-r pr-3",
+                            errors.valor_minimo ? "text-rose-500 border-rose-200" : "text-slate-500 border-slate-200"
+                          )}>R$</span>
+                          <CurrencyInput
+                            intlConfig={{ locale: 'pt-BR', currency: 'BRL' }}
+                            decimalSeparator=","
+                            groupSeparator="."
+                            decimalsLimit={2}
+                            placeholder="0,00"
+                            className={cn(
+                              "w-full pl-14 pr-4 py-2 bg-white dark:bg-slate-800 border rounded-xl outline-none text-sm font-black dark:text-slate-200",
+                              errors.valor_minimo ? "border-rose-500" : "border-slate-200 dark:border-slate-700"
+                            )}
+                            value={formData.valor_minimo || ''}
+                            onValueChange={(_v, _n, values) => {
+                              setFormData({...formData, valor_minimo: values?.float || 0});
+                              if (errors.valor_minimo) setErrors({...errors, valor_minimo: ''});
+                            }}
+                          />
+                        </div>
+                        {errors.valor_minimo && <p className="text-[10px] text-rose-500 font-bold mt-1 ml-1">{errors.valor_minimo}</p>}
+                      </div>
+
+                      <div className="md:col-span-2">
+                        <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1.5 ml-1">Link do Edital</label>
+                        <input
+                          type="text"
+                          placeholder="https://..."
+                          className="w-full px-4 py-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl outline-none text-sm font-medium dark:text-slate-200"
+                          value={formData.link_edital || ''}
+                          onChange={e => setFormData({...formData, link_edital: e.target.value})}
+                        />
+                      </div>
                     </div>
                   )}
                   <div className="md:col-span-2 grid grid-cols-4 gap-4">
@@ -339,69 +525,118 @@ export default function Properties() {
                         type="text"
                         maxLength={8}
                         placeholder="00000000"
-                        className="w-full px-4 py-2 border border-gray-200 dark:border-slate-800 bg-white dark:bg-slate-800 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
+                        className={cn(
+                          "w-full px-4 py-2 border bg-white dark:bg-slate-800 rounded-xl focus:ring-2 outline-none",
+                          errors.cep ? "border-rose-500 focus:ring-rose-500/20" : "border-gray-200 dark:border-slate-800 focus:ring-blue-500"
+                        )}
                         value={formData.cep || ''}
-                        onChange={e => handleCepChange(e.target.value)}
+                        onChange={e => {
+                          handleCepChange(e.target.value);
+                          if (errors.cep) setErrors({...errors, cep: ''});
+                        }}
                       />
+                      {errors.cep && <p className="text-[10px] text-rose-500 font-bold mt-1">{errors.cep}</p>}
                     </div>
                     <div className="col-span-4 md:col-span-3">
                       <label className="block text-sm font-medium mb-1 dark:text-slate-300">Logradouro / Rua</label>
                       <input
-                        required
                         type="text"
-                        className="w-full px-4 py-2 border border-gray-200 dark:border-slate-800 bg-white dark:bg-slate-800 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
+                        className={cn(
+                          "w-full px-4 py-2 border bg-white dark:bg-slate-800 rounded-xl focus:ring-2 outline-none",
+                          errors.endereco ? "border-rose-500 focus:ring-rose-500/20" : "border-gray-200 dark:border-slate-800 focus:ring-blue-500"
+                        )}
                         value={formData.endereco || ''}
-                        onChange={e => setFormData({...formData, endereco: e.target.value})}
+                        onChange={e => {
+                          setFormData({...formData, endereco: e.target.value});
+                          if (errors.endereco) setErrors({...errors, endereco: ''});
+                        }}
                       />
+                      {errors.endereco && <p className="text-[10px] text-rose-500 font-bold mt-1">{errors.endereco}</p>}
                     </div>
                   </div>
                   <div className="col-span-2 md:col-span-1">
                     <label className="block text-sm font-medium mb-1 dark:text-slate-300">Bairro</label>
                     <input
                       type="text"
-                      className="w-full px-4 py-2 border border-gray-200 dark:border-slate-800 bg-white dark:bg-slate-800 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
+                      className={cn(
+                        "w-full px-4 py-2 border bg-white dark:bg-slate-800 rounded-xl focus:ring-2 outline-none",
+                        errors.bairro ? "border-rose-500 focus:ring-rose-500/20" : "border-gray-200 dark:border-slate-800 focus:ring-blue-500"
+                      )}
                       value={formData.bairro || ''}
-                      onChange={e => setFormData({...formData, bairro: e.target.value})}
+                      onChange={e => {
+                        setFormData({...formData, bairro: e.target.value});
+                        if (errors.bairro) setErrors({...errors, bairro: ''});
+                      }}
                     />
+                    {errors.bairro && <p className="text-[10px] text-rose-500 font-bold mt-1">{errors.bairro}</p>}
                   </div>
                   <div className="grid grid-cols-3 gap-4 col-span-2 md:col-span-1">
                     <div className="col-span-2">
                       <label className="block text-sm font-medium mb-1 dark:text-slate-300">Cidade</label>
                       <input
                         type="text"
-                        className="w-full px-4 py-2 border border-gray-200 dark:border-slate-800 bg-white dark:bg-slate-800 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
+                        className={cn(
+                          "w-full px-4 py-2 border bg-white dark:bg-slate-800 rounded-xl focus:ring-2 outline-none",
+                          errors.cidade ? "border-rose-500 focus:ring-rose-500/20" : "border-gray-200 dark:border-slate-800 focus:ring-blue-500"
+                        )}
                         value={formData.cidade || ''}
-                        onChange={e => setFormData({...formData, cidade: e.target.value})}
+                        onChange={e => {
+                          setFormData({...formData, cidade: e.target.value});
+                          if (errors.cidade) setErrors({...errors, cidade: ''});
+                        }}
                       />
+                      {errors.cidade && <p className="text-[10px] text-rose-500 font-bold mt-1">{errors.cidade}</p>}
                     </div>
                     <div>
                       <label className="block text-sm font-medium mb-1 dark:text-slate-300">UF</label>
                       <input
                         type="text"
                         maxLength={2}
-                        className="w-full px-4 py-2 border border-gray-200 dark:border-slate-800 bg-white dark:bg-slate-800 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none uppercase"
+                        className={cn(
+                          "w-full px-4 py-2 border bg-white dark:bg-slate-800 rounded-xl focus:ring-2 outline-none uppercase",
+                          errors.estado ? "border-rose-500 focus:ring-rose-500/20" : "border-gray-200 dark:border-slate-800 focus:ring-blue-500"
+                        )}
                         value={formData.estado || ''}
-                        onChange={e => setFormData({...formData, estado: e.target.value.toUpperCase()})}
+                        onChange={e => {
+                          setFormData({...formData, estado: e.target.value.toUpperCase()});
+                          if (errors.estado) setErrors({...errors, estado: ''});
+                        }}
                       />
+                      {errors.estado && <p className="text-[10px] text-rose-500 font-bold mt-1">{errors.estado}</p>}
                     </div>
                   </div>
                   <div>
                     <label className="block text-sm font-medium mb-1 dark:text-slate-300">Matrícula RGI</label>
                     <input
-                      required
                       type="text"
-                      className="w-full px-4 py-2 border border-gray-200 dark:border-slate-800 bg-white dark:bg-slate-800 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
-                      onChange={e => setFormData({...formData, matricula: e.target.value})}
+                      className={cn(
+                        "w-full px-4 py-2 border bg-white dark:bg-slate-800 rounded-xl focus:ring-2 outline-none",
+                        errors.matricula ? "border-rose-500 focus:ring-rose-500/20" : "border-gray-200 dark:border-slate-800 focus:ring-blue-500"
+                      )}
+                      value={formData.matricula || ''}
+                      onChange={e => {
+                        setFormData({...formData, matricula: e.target.value});
+                        if (errors.matricula) setErrors({...errors, matricula: ''});
+                      }}
                     />
+                    {errors.matricula && <p className="text-[10px] text-rose-500 font-bold mt-1">{errors.matricula}</p>}
                   </div>
                   <div>
                     <label className="block text-sm font-medium mb-1 dark:text-slate-300">Área (m²)</label>
                     <input
-                      required
                       type="number"
-                      className="w-full px-4 py-2 border border-gray-200 dark:border-slate-800 bg-white dark:bg-slate-800 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
-                      onChange={e => setFormData({...formData, area_m2: parseFloat(e.target.value)})}
+                      step="any"
+                      className={cn(
+                        "w-full px-4 py-2 border bg-white dark:bg-slate-800 rounded-xl focus:ring-2 outline-none",
+                        errors.area_m2 ? "border-rose-500 focus:ring-rose-500/20" : "border-gray-200 dark:border-slate-800 focus:ring-blue-500"
+                      )}
+                      value={formData.area_m2 || ''}
+                      onChange={e => {
+                        setFormData({...formData, area_m2: parseFloat(e.target.value)});
+                        if (errors.area_m2) setErrors({...errors, area_m2: ''});
+                      }}
                     />
+                    {errors.area_m2 && <p className="text-[10px] text-rose-500 font-bold mt-1">{errors.area_m2}</p>}
                   </div>
                   <div>
                     <label className="block text-sm font-medium mb-1 dark:text-slate-300">Tipo de Imóvel</label>

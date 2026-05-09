@@ -1,5 +1,6 @@
 import { motion } from 'motion/react';
 import { 
+  BarChart3, 
   TrendingUp, 
   TrendingDown, 
   Home, 
@@ -9,8 +10,9 @@ import {
   CheckCircle2,
   Hammer
 } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 import { useFirestore } from '../hooks/useFirestore';
-import { Leilao, Imovel, Faturamento } from '../types';
+import { Imovel, Faturamento } from '../types';
 import { 
   PieChart, 
   Pie, 
@@ -21,7 +23,7 @@ import {
 import { cn } from '../lib/utils';
 
 export default function Dashboard() {
-  const { data: auctions } = useFirestore<Leilao>('leiloes');
+  const navigate = useNavigate();
   const { data: properties } = useFirestore<Imovel>('imoveis');
   const { data: billing } = useFirestore<Faturamento>('faturamento');
 
@@ -30,12 +32,14 @@ export default function Dashboard() {
   const now = new Date();
   const nextWeek = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
 
-  const auctionsNext7Days = auctions.filter(a => {
-    const auctionDate = new Date(a.data_leilao);
-    return auctionDate >= now && auctionDate <= nextWeek;
-  }).sort((a, b) => new Date(a.data_leilao).getTime() - new Date(b.data_leilao).getTime());
+  const propertiesWithLeilao = properties.filter(p => p.origem === 'Leilão' && p.data_leilao);
 
-  const upcomingAuctionsCount = auctions.filter(a => new Date(a.data_leilao) > now).length;
+  const auctionsNext7Days = propertiesWithLeilao.filter(a => {
+    const auctionDate = new Date(a.data_leilao!);
+    return auctionDate >= now && auctionDate <= nextWeek;
+  }).sort((a, b) => new Date(a.data_leilao!).getTime() - new Date(b.data_leilao!).getTime());
+
+  const upcomingAuctionsCount = propertiesWithLeilao.filter(a => new Date(a.data_leilao!) > now).length;
   
   const totalInvoiced = billing.reduce((sum, item) => sum + item.valor, 0);
 
@@ -121,24 +125,24 @@ export default function Dashboard() {
                   </p>
                 </div>
                 {auctionsNext7Days.map(a => {
-                  const property = properties.find(p => p.id_leilao === a.id);
                   return (
                     <motion.div 
                       key={a.id}
                       initial={{ opacity: 0, x: -10 }}
                       animate={{ opacity: 1, x: 0 }}
-                      className="p-3 bg-white dark:bg-slate-800/50 rounded-lg border border-slate-100 dark:border-slate-800 hover:border-blue-200 dark:hover:border-blue-900/50 transition-colors shadow-sm"
+                      className="p-3 bg-white dark:bg-slate-800/50 rounded-lg border border-slate-100 dark:border-slate-800 hover:border-blue-200 dark:hover:border-blue-900/50 transition-colors shadow-sm cursor-pointer"
+                      onClick={() => navigate(`/properties/${a.id}`)}
                     >
                       <div className="flex justify-between items-start mb-1">
                         <span className="text-[9px] font-bold text-blue-600 dark:text-blue-400 uppercase tracking-widest px-1.5 py-0.5 bg-blue-50 dark:bg-blue-950/40 rounded">
-                          {new Date(a.data_leilao).toLocaleDateString('pt-BR')}
+                          {new Date(a.data_leilao!).toLocaleDateString('pt-BR')}
                         </span>
                         <span className="text-[9px] font-bold text-slate-500 dark:text-slate-500">
-                          {new Date(a.data_leilao).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
+                          {new Date(a.data_leilao!).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
                         </span>
                       </div>
                       <p className="text-xs font-bold text-slate-700 dark:text-slate-200 truncate">
-                        {property?.endereco || 'Endereço Indisponível'}
+                        {a.endereco}
                       </p>
                       <div className="flex items-center gap-2 mt-2">
                         <Gavel size={12} className="text-slate-500 dark:text-slate-500" />

@@ -37,7 +37,6 @@ import { cn } from './lib/utils';
 
 // Pages
 import Dashboard from './pages/Dashboard';
-import Auctions from './pages/Auctions';
 import Properties from './pages/Properties';
 import PropertyDetails from './pages/PropertyDetails';
 
@@ -45,7 +44,6 @@ function Sidebar({ isOpen, onClose, darkMode, onToggleDarkMode }: { isOpen: bool
   const location = useLocation();
   const navItems = [
     { icon: BarChart3, label: 'Dashboard', path: '/' },
-    { icon: Gavel, label: 'Leilões', path: '/auctions' },
     { icon: Home, label: 'Imóveis', path: '/properties' },
   ];
 
@@ -351,7 +349,6 @@ export default function App() {
                 <div>
                   <h2 className="text-lg md:text-xl font-bold text-slate-900 dark:text-white tracking-tight">
                     {window.location.pathname === '/' ? 'Dashboard Analítico' : 
-                     window.location.pathname === '/auctions' ? 'Monitoramento de Leilões' : 
                      window.location.pathname === '/properties' ? 'Gestão de Imóveis' : 'Detalhes do Ativo'}
                   </h2>
                   <p className="text-[10px] text-slate-600 dark:text-slate-400 font-medium hidden sm:block">BEM-VINDO AO PROP-MAESTRO CENTRAL</p>
@@ -372,7 +369,6 @@ export default function App() {
               <AnimatePresence mode="wait">
                 <Routes>
                   <Route path="/" element={<Dashboard />} />
-                  <Route path="/auctions" element={<Auctions />} />
                   <Route path="/properties" element={<Properties />} />
                   <Route path="/properties/:id" element={<PropertyDetails />} />
                   <Route path="*" element={<Navigate to="/" />} />

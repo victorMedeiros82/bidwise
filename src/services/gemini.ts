@@ -1,11 +1,11 @@
 import { GoogleGenAI } from "@google/genai";
-import { Imovel, Leilao } from "../types";
+import { Imovel } from "../types";
 
 const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY! });
 
 export async function generateRiskAnalysis(
   imovel: Imovel, 
-  leilao?: Leilao, 
+  _leilao?: any, 
   financials?: { 
     totalInvestimento: number; 
     lucroEstimado: number; 
@@ -15,13 +15,14 @@ export async function generateRiskAnalysis(
     faturamentoLiquido: number;
   }
 ) {
-  const leilaoInfo = leilao ? `
-    DADOS DO LEILÃO:
-    - Processo: ${leilao.processo}
-    - Comarca: ${leilao.comarca}
-    - Tipo: ${leilao.tipo}
-    - Valor Mínimo: R$ ${leilao.valor_minimo?.toLocaleString('pt-BR')}
-    - Valor Avaliação: R$ ${leilao.valor_avaliacao?.toLocaleString('pt-BR')}
+  const leilaoInfo = imovel.origem === 'Leilão' && imovel.processo ? `
+    DADOS DO LEILÃO INTEGRADOS:
+    - Processo: ${imovel.processo}
+    - Comarca: ${imovel.comarca}
+    - Tipo: ${imovel.tipo_leilao || 'Não especificado'}
+    - Valor Mínimo: R$ ${imovel.valor_minimo?.toLocaleString('pt-BR')}
+    - Valor Avaliação: R$ ${imovel.valor_avaliacao?.toLocaleString('pt-BR')}
+    - Forma de Arrematação: ${imovel.forma_arrematacao}
   ` : `
     DADOS DE AQUISIÇÃO:
     - Origem: ${imovel.origem}

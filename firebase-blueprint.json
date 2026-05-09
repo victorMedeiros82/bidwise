@@ -1,40 +1,34 @@
 {
   "entities": {
-    "leilao": {
-      "title": "Leilão",
-      "description": "Dados do processo de leilão",
-      "type": "object",
-      "properties": {
-        "processo": { "type": "string", "description": "Número do Processo" },
-        "comarca": { "type": "string", "description": "Comarca / Vara" },
-        "tipo": { "type": "string", "enum": ["Judicial", "Extrajudicial"], "description": "Tipo de leilão" },
-        "data_leilao": { "type": "string", "format": "date-time", "description": "Data do Leilão" },
-        "link_edital": { "type": "string", "description": "Link do Edital" },
-        "valor_avaliacao": { "type": "number", "description": "Valor de Avaliação" },
-        "valor_minimo": { "type": "number", "description": "Valor Mínimo de Lance" },
-        "forma_arrematacao": { "type": "string", "enum": ["Presencial", "Online", "Híbrido"], "description": "Forma de arrematação" },
-        "condicoes_pagamento": { "type": "string", "description": "Condições de Pagamento" },
-        "createdAt": { "type": "string", "format": "date-time" },
-        "updatedAt": { "type": "string", "format": "date-time" },
-        "createdBy": { "type": "string" }
-      },
-      "required": ["processo", "comarca", "tipo", "data_leilao"]
-    },
     "imovel": {
       "title": "Imóvel",
-      "description": "Dados do imóvel arrematado ou em análise",
+      "description": "Dados do imóvel arrematado ou em análise (inclui dados de leilão se aplicável)",
       "type": "object",
       "properties": {
-        "id_leilao": { "type": "string", "description": "ID do Leilão (FK)" },
         "origem": { "type": "string", "enum": ["Leilão", "Compra Direta", "Outro"], "description": "Origem do imóvel" },
         "matricula": { "type": "string", "description": "Matrícula RGI" },
         "endereco": { "type": "string", "description": "Endereço Completo" },
+        "cep": { "type": "string" },
+        "bairro": { "type": "string" },
+        "cidade": { "type": "string" },
+        "estado": { "type": "string" },
         "area_m2": { "type": "number", "description": "Área (m²)" },
         "tipo_imovel": { "type": "string", "enum": ["Apartamento", "Casa", "Terreno", "Sala Comercial", "Galpão", "Outro"], "description": "Tipo de Imóvel" },
         "situacao_juridica": { "type": "string", "enum": ["Alienação Fiduciária", "Inventário", "Execução Fiscal", "Penhora", "Outro"], "description": "Situação Jurídica" },
         "estado_conservacao": { "type": "string", "enum": ["Ótimo", "Bom", "Regular", "Ruim", "Demolido"], "description": "Estado de Conservação" },
         "analise_risco": { "type": "string", "description": "Relatório de análise de risco gerado por IA" },
         "status_arrematacao": { "type": "string", "enum": ["Análise", "Arrematado", "Perdido", "Cancelado"] },
+        
+        "processo": { "type": "string", "description": "Número do Processo (Leilão)" },
+        "comarca": { "type": "string", "description": "Comarca / Vara (Leilão)" },
+        "tipo_leilao": { "type": "string", "enum": ["Judicial", "Extrajudicial"], "description": "Tipo de leilão" },
+        "data_leilao": { "type": "string", "format": "date-time", "description": "Data do Leilão" },
+        "link_edital": { "type": "string", "description": "Link do Edital" },
+        "valor_avaliacao": { "type": "number", "description": "Valor de Avaliação" },
+        "valor_minimo": { "type": "number", "description": "Valor Mínimo de Lance" },
+        "forma_arrematacao": { "type": "string", "enum": ["Presencial", "Online", "Híbrido"], "description": "Forma de arrematação" },
+        "condicoes_pagamento": { "type": "string", "description": "Condições de Pagamento" },
+
         "createdAt": { "type": "string", "format": "date-time" },
         "updatedAt": { "type": "string", "format": "date-time" },
         "createdBy": { "type": "string" }
@@ -123,13 +117,9 @@
     }
   },
   "firestore": {
-    "leiloes": {
-      "schema": "leilao",
-      "description": "Lista de leilões monitorados"
-    },
     "imoveis": {
       "schema": "imovel",
-      "description": "Lista de imóveis vinculados a leilões"
+      "description": "Lista de imóveis arrematados ou em análise"
     },
     "custos_aquisicao": {
       "schema": "custo_aquisicao",

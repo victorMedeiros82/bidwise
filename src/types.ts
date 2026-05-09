@@ -85,7 +85,6 @@ export interface Leilao {
 
 export interface Imovel {
   id?: string;
-  id_leilao?: string;
   origem: OrigemImovel;
   matricula: string;
   cep?: string;
@@ -99,6 +98,18 @@ export interface Imovel {
   estado_conservacao: EstadoConservacao;
   analise_risco?: string;
   status_arrematacao?: StatusArrematacao;
+  
+  // Campos integrados de Leilão
+  processo?: string;
+  comarca?: string;
+  tipo_leilao?: TipoLeilao;
+  data_leilao?: string;
+  link_edital?: string;
+  valor_avaliacao?: number;
+  valor_minimo?: number;
+  forma_arrematacao?: FormaArrematacao;
+  condicoes_pagamento?: string;
+
   createdAt?: any;
   updatedAt?: any;
   createdBy: string;

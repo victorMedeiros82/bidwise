@@ -49,10 +49,8 @@ export default function PropertyDetails() {
   const { id } = useParams();
   const navigate = useNavigate();
   const { data: properties, update: updateImovel } = useFirestore<Imovel>('imoveis');
-  const { data: auctions } = useFirestore<Leilao>('leiloes');
   
   const imovel = properties.find(p => p.id === id);
-  const leilao = auctions.find(a => a.id === imovel?.id_leilao);
 
   const { data: custosAquisicao, add: addCustoAquisicao, remove: removeCustoAquisicao } = useFirestore<CustoAquisicao>('custos_aquisicao');
   const { data: custosReforma, add: addCustoReforma, remove: removeCustoReforma } = useFirestore<CustoReforma>('custos_reforma');
@@ -152,7 +150,7 @@ export default function PropertyDetails() {
     
     setAnalyzing(true);
     try {
-      const analysis = await generateRiskAnalysis(imovel, leilao, {
+      const analysis = await generateRiskAnalysis(imovel, undefined, {
         totalInvestimento,
         lucroEstimado,
         roiEstimado,
@@ -217,7 +215,7 @@ export default function PropertyDetails() {
             <div className="flex items-center gap-1.5">
               <Gavel size={14} className="text-slate-500 dark:text-slate-700" />
               {imovel.origem === OrigemImovel.Leilao 
-                ? `Leilão: ${leilao?.processo || (imovel.id_leilao ? 'Processando...' : 'N/A')}` 
+                ? `Leilão: ${imovel.processo || 'N/A'}` 
                 : imovel.origem}
             </div>
             <div className="flex items-center gap-1.5">
@@ -227,6 +225,74 @@ export default function PropertyDetails() {
           </div>
         </div>
       </div>
+
+      {imovel.origem === OrigemImovel.Leilao && imovel.processo && (
+        <motion.div 
+          initial={{ opacity: 0, y: -10 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="bg-white dark:bg-slate-900 p-6 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm relative overflow-hidden group"
+        >
+          <div className="absolute top-0 right-0 p-8 opacity-5 pointer-events-none group-hover:scale-110 transition-transform duration-500">
+            <Gavel size={120} />
+          </div>
+          
+          <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6 relative z-10">
+            <div className="space-y-4 flex-1">
+              <div className="flex items-center gap-3">
+                <div className="px-2.5 py-1 bg-indigo-100 dark:bg-indigo-900/40 text-indigo-700 dark:text-indigo-400 rounded-full text-[10px] font-bold uppercase tracking-widest">
+                  {imovel.tipo_leilao || 'Processo Judicial'}
+                </div>
+                <div className="flex items-center gap-1.5 text-xs text-slate-500 dark:text-slate-400 font-medium">
+                  <Calendar size={14} />
+                  {imovel.data_leilao ? new Date(imovel.data_leilao).toLocaleString('pt-BR') : 'Data não informada'}
+                </div>
+              </div>
+              
+              <div>
+                <h3 className="text-lg font-black text-slate-900 dark:text-white tracking-tight">{imovel.processo}</h3>
+                <p className="text-xs text-slate-600 dark:text-slate-400 font-bold uppercase tracking-widest mt-1">{imovel.comarca || 'Comarca não informada'}</p>
+              </div>
+
+              <div className="flex flex-wrap gap-4">
+                {imovel.link_edital && (
+                  <a 
+                    href={imovel.link_edital} 
+                    target="_blank" 
+                    rel="noopener noreferrer"
+                    className="flex items-center gap-2 text-[10px] font-bold text-blue-600 dark:text-blue-400 uppercase tracking-widest hover:underline"
+                  >
+                    <LinkIcon size={12} />
+                    Acessar Edital Completo
+                  </a>
+                )}
+                <div className="flex items-center gap-2 text-[10px] font-bold text-slate-500 uppercase tracking-widest">
+                  < Hammer size={12} />
+                  {imovel.forma_arrematacao || 'Online'}
+                </div>
+              </div>
+            </div>
+
+            <div className="flex gap-8 items-end border-t md:border-t-0 md:border-l border-slate-100 dark:border-slate-800 pt-6 md:pt-0 md:pl-8">
+              <div className="text-right">
+                <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1.5">Lance Mínimo</p>
+                <div className="flex items-baseline justify-end gap-2">
+                  <p className="text-2xl font-black text-slate-900 dark:text-white leading-none">
+                    R$ {(imovel.valor_minimo || 0).toLocaleString('pt-BR')}
+                  </p>
+                  {imovel.valor_avaliacao && imovel.valor_minimo && (
+                    <span className="text-[9px] font-bold text-emerald-500 bg-emerald-50 dark:bg-emerald-500/10 px-1.5 py-0.5 rounded uppercase tracking-tighter shadow-sm">
+                      -{Math.round((1 - (imovel.valor_minimo / imovel.valor_avaliacao)) * 100)}%
+                    </span>
+                  )}
+                </div>
+                <p className="text-[9px] font-bold text-slate-400 dark:text-slate-600 uppercase tracking-tighter mt-1">
+                  Avaliação: R$ {(imovel.valor_avaliacao || 0).toLocaleString('pt-BR')}
+                </p>
+              </div>
+            </div>
+          </div>
+        </motion.div>
+      )}
 
       <div className="flex flex-wrap gap-1 p-1 bg-slate-100 dark:bg-slate-800 rounded-lg w-fit">
         {[
@@ -451,8 +517,15 @@ export default function PropertyDetails() {
                               type="text" 
                               id="aq-tipo-custom" 
                               placeholder="Descreva o custo..."
-                              className="w-full px-3 py-2 bg-white dark:bg-slate-800 dark:text-slate-200 border border-slate-200 dark:border-slate-700 rounded-lg text-xs outline-none focus:ring-1 focus:ring-blue-500"
+                              className={cn(
+                                "w-full px-3 py-2 bg-white dark:bg-slate-800 dark:text-slate-200 border rounded-lg text-xs outline-none transition-all shadow-sm",
+                                formErrors.aqTipo ? "border-rose-500 ring-1 ring-rose-500" : "border-slate-200 dark:border-slate-700 focus:ring-1 focus:ring-blue-500"
+                              )}
+                              onChange={() => {
+                                if (formErrors.aqTipo) setFormErrors({...formErrors, aqTipo: ''});
+                              }}
                             />
+                            {formErrors.aqTipo && <p className="text-[8px] text-rose-500 font-bold mt-1 uppercase tracking-tighter">{formErrors.aqTipo}</p>}
                           </div>
                         </div>
                         <div>
@@ -463,10 +536,17 @@ export default function PropertyDetails() {
                             groupSeparator="."
                             decimalsLimit={2}
                             placeholder="0,00"
-                            className="w-full px-3 py-2 bg-white dark:bg-slate-800 dark:text-slate-200 border border-slate-200 dark:border-slate-700 rounded-lg text-xs outline-none focus:ring-1 focus:ring-blue-500"
+                            className={cn(
+                              "w-full px-3 py-2 bg-white dark:bg-slate-800 dark:text-slate-200 border rounded-lg text-xs outline-none transition-all shadow-sm",
+                              formErrors.aqValor ? "border-rose-500 ring-1 ring-rose-500" : "border-slate-200 dark:border-slate-700 focus:ring-1 focus:ring-blue-500"
+                            )}
                             value={aquisicaoValor}
-                            onValueChange={(_v, _n, values) => setAquisicaoValor(values?.float || 0)}
+                            onValueChange={(_v, _n, values) => {
+                              setAquisicaoValor(values?.float || 0);
+                              if (formErrors.aqValor) setFormErrors({...formErrors, aqValor: ''});
+                            }}
                           />
+                          {formErrors.aqValor && <p className="text-[8px] text-rose-500 font-bold mt-1 uppercase tracking-tighter">{formErrors.aqValor}</p>}
                         </div>
                         <div className="col-span-2 md:col-span-1">
                           <FilePicker 
@@ -491,7 +571,16 @@ export default function PropertyDetails() {
                             
                             let tipo = tipoSelect.value;
                             if (tipo === 'Outros') {
-                              tipo = tipoCustom.value || 'Outro Custo';
+                              tipo = tipoCustom.value || '';
+                            }
+
+                            const errors: Record<string, string> = {};
+                            if (!tipo.trim()) errors.aqTipo = "Tipo/Descrição obrigatória";
+                            if (!aquisicaoValor || aquisicaoValor <= 0) errors.aqValor = "Valor deve ser maior que zero";
+
+                            if (Object.keys(errors).length > 0) {
+                              setFormErrors(errors);
+                              return;
                             }
 
                             addCustoAquisicao({ 
@@ -502,6 +591,7 @@ export default function PropertyDetails() {
                               fileUrl: aquisicaoFileUrl
                             });
                             setShowAddAquisicao(false);
+                            setFormErrors({});
                             setAquisicaoValor(0);
                             setAquisicaoFileUrl('');
                           }}
@@ -640,6 +730,7 @@ export default function PropertyDetails() {
                               formErrors.prazo ? "border-rose-500 ring-1 ring-rose-500" : "border-slate-200 dark:border-slate-700 focus:ring-1 focus:ring-blue-500"
                             )}
                           />
+                          {formErrors.prazo && <p className="text-[8px] text-rose-500 font-bold mt-1 uppercase tracking-tighter">{formErrors.prazo}</p>}
                         </div>
                         <div>
                           <label className="block text-[9px] font-bold text-slate-600 dark:text-slate-400 uppercase mb-1.5 text-nowrap">Conclusão</label>
@@ -651,6 +742,7 @@ export default function PropertyDetails() {
                               formErrors.conclusao ? "border-rose-500 ring-1 ring-rose-500" : "border-slate-200 dark:border-slate-700 focus:ring-1 focus:ring-blue-500"
                             )}
                           />
+                          {formErrors.conclusao && <p className="text-[8px] text-rose-500 font-bold mt-1 uppercase tracking-tighter">{formErrors.conclusao}</p>}
                         </div>
                       </div>
                       <div className="md:col-span-5">
@@ -688,7 +780,10 @@ export default function PropertyDetails() {
                             
                             const errors: Record<string, string> = {};
                             if (!desc) errors.desc = "Descrição obrigatória";
-                            if (orc <= 0) errors.orc = "Valor inválido";
+                            if (orc <= 0) errors.orc = "Orçamento inválido";
+                            if (!prazo) errors.prazo = "Prazo estimado é obrigatório";
+                            if (prazo && isNaN(new Date(prazo).getTime())) errors.prazo = "Prazo inválido";
+                            if (conclusao && isNaN(new Date(conclusao).getTime())) errors.conclusao = "Data de conclusão inválida";
                             
                             if (Object.keys(errors).length > 0) {
                               setFormErrors(errors);
@@ -824,8 +919,12 @@ export default function PropertyDetails() {
                             type="text" 
                             id="hold-tipo" 
                             placeholder="Ex: Condomínio, IPTU..."
-                            className="w-full px-3 py-2 bg-white dark:bg-slate-800 dark:text-slate-200 border border-slate-200 dark:border-slate-700 rounded-lg text-xs outline-none focus:ring-1 focus:ring-blue-500"
+                            className={cn(
+                              "w-full px-3 py-2 bg-white dark:bg-slate-800 dark:text-slate-200 border rounded-lg text-xs outline-none transition-all",
+                              formErrors.holdTipo ? "border-rose-500 ring-1 ring-rose-500" : "border-slate-200 dark:border-slate-700 focus:ring-1 focus:ring-blue-500"
+                            )}
                           />
+                          {formErrors.holdTipo && <p className="text-[8px] text-rose-500 font-bold mt-1 uppercase tracking-tighter">{formErrors.holdTipo}</p>}
                         </div>
                         <div>
                           <label className="block text-[9px] font-bold text-slate-500 dark:text-slate-400 uppercase mb-1.5">Valor (R$)</label>
@@ -835,10 +934,17 @@ export default function PropertyDetails() {
                             groupSeparator="."
                             decimalsLimit={2}
                             placeholder="0,00"
-                            className="w-full px-3 py-2 bg-white dark:bg-slate-800 dark:text-slate-200 border border-slate-200 dark:border-slate-700 rounded-lg text-xs outline-none focus:ring-1 focus:ring-blue-500"
+                            className={cn(
+                              "w-full px-3 py-2 bg-white dark:bg-slate-800 dark:text-slate-200 border rounded-lg text-xs outline-none transition-all",
+                              formErrors.holdValor ? "border-rose-500 ring-1 ring-rose-500" : "border-slate-200 dark:border-slate-700 focus:ring-1 focus:ring-blue-500"
+                            )}
                             value={holdingValor}
-                            onValueChange={(_v, _n, values) => setHoldingValor(values?.float || 0)}
+                            onValueChange={(_v, _n, values) => {
+                              setHoldingValor(values?.float || 0);
+                              if (formErrors.holdValor) setFormErrors({...formErrors, holdValor: ''});
+                            }}
                           />
+                          {formErrors.holdValor && <p className="text-[8px] text-rose-500 font-bold mt-1 uppercase tracking-tighter">{formErrors.holdValor}</p>}
                         </div>
                         <div className="col-span-2">
                           <FilePicker 
@@ -858,16 +964,27 @@ export default function PropertyDetails() {
                         </button>
                         <button 
                           onClick={() => {
-                            const tipo = (document.getElementById('hold-tipo') as HTMLInputElement).value;
-                            if (!tipo) return;
+                            const tipo = (document.getElementById('hold-tipo') as HTMLInputElement).value.trim();
+                            const valor = holdingValor || 0;
+                            
+                            const errors: Record<string, string> = {};
+                            if (!tipo) errors.holdTipo = "Despesa é obrigatória";
+                            if (valor <= 0) errors.holdValor = "Valor deve ser maior que zero";
+
+                            if (Object.keys(errors).length > 0) {
+                              setFormErrors(errors);
+                              return;
+                            }
+
                             addHolding({ 
                               id_imovel: id!, 
                               tipo_despesa: tipo, 
-                              valor_mensal: holdingValor || 0,
+                              valor_mensal: valor,
                               competencia: new Date().toLocaleDateString('pt-BR', { month: '2-digit', year: 'numeric' }),
                               fileUrl: holdingFileUrl
                             });
                             setShowAddHolding(false);
+                            setFormErrors({});
                             setHoldingValor(0);
                             setHoldingFileUrl('');
                           }}
@@ -967,8 +1084,12 @@ export default function PropertyDetails() {
                         <input 
                           type="date" 
                           id="fat-data"
-                          className="w-full px-3 py-2 bg-white dark:bg-slate-800 dark:text-slate-200 border border-slate-200 dark:border-slate-700 rounded-lg text-xs outline-none focus:ring-1 focus:ring-emerald-500 shadow-sm"
+                          className={cn(
+                            "w-full px-3 py-2 bg-white dark:bg-slate-800 dark:text-slate-200 border rounded-lg text-xs outline-none transition-all shadow-sm",
+                            formErrors.fatData ? "border-rose-500 ring-1 ring-rose-500" : "border-slate-200 dark:border-slate-700 focus:ring-1 focus:ring-emerald-500"
+                          )}
                         />
+                        {formErrors.fatData && <p className="text-[8px] text-rose-500 font-bold mt-1 uppercase tracking-tighter">{formErrors.fatData}</p>}
                       </div>
                       <div className="md:col-span-4 flex justify-end gap-3 mt-2">
                         <button 
@@ -989,9 +1110,12 @@ export default function PropertyDetails() {
 
                             const valor = fatValor || 0;
                             const comissao = fatComissao || 0;
+                            const data = dataInput.value;
                             
                             const errors: Record<string, string> = {};
                             if (valor <= 0) errors.fatValor = "Valor deve ser positivo";
+                            if (!data) errors.fatData = "Data obrigatória";
+                            if (data && isNaN(new Date(data).getTime())) errors.fatData = "Data inválida";
                             
                             if (Object.keys(errors).length > 0) {
                               setFormErrors(errors);
@@ -1003,7 +1127,7 @@ export default function PropertyDetails() {
                               tipo: tipoInput.value as TipoFaturamento, 
                               valor: valor,
                               custo_corretagem: comissao,
-                              data_operacao: dataInput.value
+                              data_operacao: data
                             });
                             setShowAddFaturamento(false);
                             setFormErrors({});
