@@ -17,7 +17,8 @@
         "situacao_juridica": { "type": "string", "enum": ["Alienação Fiduciária", "Inventário", "Execução Fiscal", "Penhora", "Outro"], "description": "Situação Jurídica" },
         "estado_conservacao": { "type": "string", "enum": ["Ótimo", "Bom", "Regular", "Ruim", "Demolido"], "description": "Estado de Conservação" },
         "analise_risco": { "type": "string", "description": "Relatório de análise de risco gerado por IA" },
-        "status_arrematacao": { "type": "string", "enum": ["Análise", "Arrematado", "Perdido", "Cancelado"] },
+        "status_arrematacao": { "type": "string", "enum": ["Análise", "Arrematado", "Vendido", "Alugado", "Perdido", "Cancelado", "Reprovado"] },
+        "valor_arrematacao": { "type": "number", "description": "Valor total do lance no leilão" },
         
         "processo": { "type": "string", "description": "Número do Processo (Leilão)" },
         "comarca": { "type": "string", "description": "Comarca / Vara (Leilão)" },

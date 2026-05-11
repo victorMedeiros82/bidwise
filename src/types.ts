@@ -39,7 +39,9 @@ export enum StatusArrematacao {
   Arrematado = 'Arrematado',
   Perdido = 'Perdido',
   Cancelado = 'Cancelado',
-  Reprovado = 'Reprovado'
+  Reprovado = 'Reprovado',
+  Vendido = 'Vendido',
+  Alugado = 'Alugado'
 }
 
 export enum StatusPagamento {
@@ -77,6 +79,7 @@ export interface Leilao {
   link_edital?: string;
   valor_avaliacao?: number;
   valor_minimo?: number;
+  valor_arrematacao?: number;
   forma_arrematacao?: FormaArrematacao;
   condicoes_pagamento?: string;
   createdAt?: any;
@@ -108,6 +111,7 @@ export interface Imovel {
   link_edital?: string;
   valor_avaliacao?: number;
   valor_minimo?: number;
+  valor_arrematacao?: number;
   forma_arrematacao?: FormaArrematacao;
   condicoes_pagamento?: string;
 

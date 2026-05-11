@@ -39,6 +39,7 @@ import {
   CustoReforma, 
   Documento, 
   StatusPagamento,
+  StatusArrematacao,
   StatusDoc,
   TipoFaturamento,
   Faturamento,
@@ -65,6 +66,7 @@ export default function PropertyDetails() {
   const { data: faturamento, add: addFaturamento, remove: removeFaturamento } = useFirestore<Faturamento>('faturamento');
 
   const [activeTab, setActiveTab] = useState<'analise' | 'custos' | 'documentos'>('analise');
+  const [isEditingLance, setIsEditingLance] = useState(false);
   const [analyzing, setAnalyzing] = useState(false);
   const [showAddReforma, setShowAddReforma] = useState(false);
   const [showAddFaturamento, setShowAddFaturamento] = useState(false);
@@ -80,6 +82,7 @@ export default function PropertyDetails() {
   const [fatComissao, setFatComissao] = useState<number | undefined>(0);
   const [aquisicaoValor, setAquisicaoValor] = useState<number | undefined>(0);
   const [holdingValor, setHoldingValor] = useState<number | undefined>(0);
+  const [holdingCompetencia, setHoldingCompetencia] = useState('');
   
   const [aquisicaoFileUrl, setAquisicaoFileUrl] = useState('');
   const [reformaFileUrl, setReformaFileUrl] = useState('');
@@ -149,8 +152,10 @@ export default function PropertyDetails() {
   const totalComissoes = filteredFaturamento.reduce((acc, curr) => acc + (curr.custo_corretagem || 0), 0);
   const faturamentoLiquido = faturamentoBruto - totalComissoes;
   
-  const lucroEstimado = faturamentoLiquido - totalInvestimento;
-  const roiEstimado = totalInvestimento > 0 ? (lucroEstimado / totalInvestimento) * 100 : 0;
+  const lucroBruto = faturamentoLiquido - totalInvestimento;
+  const impostoRenda = lucroBruto > 0 ? lucroBruto * 0.15 : 0;
+  const lucroLiquido = lucroBruto - impostoRenda;
+  const roiLiquido = totalInvestimento > 0 ? (lucroLiquido / totalInvestimento) * 100 : 0;
 
   const handleGenerateAnalysis = async () => {
     if (!imovel) return;
@@ -159,8 +164,10 @@ export default function PropertyDetails() {
     try {
       const analysis = await generateRiskAnalysis(imovel, undefined, {
         totalInvestimento,
-        lucroEstimado,
-        roiEstimado,
+        lucroBruto,
+        impostoRenda,
+        lucroLiquido,
+        roiLiquido,
         totalReforma,
         totalHolding,
         faturamentoLiquido
@@ -221,14 +228,24 @@ export default function PropertyDetails() {
           </div>
         </div>
 
-        <div className={cn(
-          "px-6 py-3 rounded-2xl text-[10px] font-black uppercase tracking-widest shadow-sm border md:self-start",
-          imovel.status_arrematacao === 'Arrematado' 
-            ? "bg-emerald-50 border-emerald-100 text-emerald-600" 
-            : "bg-amber-50 border-amber-100 text-amber-600"
-        )}>
-          {imovel.status_arrematacao}
-        </div>
+        <select
+          value={imovel.status_arrematacao}
+          onChange={(e) => updateImovel(id!, { status_arrematacao: e.target.value as StatusArrematacao })}
+          className={cn(
+            "px-6 py-3 rounded-2xl text-[10px] font-black uppercase tracking-widest shadow-sm border md:self-start outline-none cursor-pointer appearance-none transition-all",
+            imovel.status_arrematacao === 'Arrematado' 
+              ? "bg-emerald-50 border-emerald-100 text-emerald-600" 
+              : imovel.status_arrematacao === 'Vendido' || imovel.status_arrematacao === 'Alugado'
+              ? "bg-blue-50 border-blue-100 text-blue-600"
+              : imovel.status_arrematacao === 'Perdido' || imovel.status_arrematacao === 'Cancelado' || imovel.status_arrematacao === 'Reprovado'
+              ? "bg-rose-50 border-rose-100 text-rose-600"
+              : "bg-amber-50 border-amber-100 text-amber-600"
+          )}
+        >
+          {Object.values(StatusArrematacao).map(status => (
+            <option key={status} value={status} className="bg-white text-slate-900">{status}</option>
+          ))}
+        </select>
       </div>
 
       {imovel.origem === OrigemImovel.Leilao && imovel.processo && (
@@ -280,21 +297,57 @@ export default function PropertyDetails() {
               </div>
             </div>
 
-            <div className="flex flex-col justify-center gap-6 border-t md:border-t-0 md:border-l border-slate-200 dark:border-slate-800 pt-8 md:pt-0 md:pl-12">
+            <div className="flex flex-col justify-center gap-6 border-t md:border-t-0 md:border-l border-slate-200 dark:border-slate-800 pt-8 md:pt-0 md:pl-12 min-w-[200px]">
               <div className="text-right">
-                <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mb-2">Lance de Referência</p>
-                <div className="flex items-baseline justify-end gap-3">
-                  <p className="text-4xl font-black text-slate-900 dark:text-white tracking-tighter leading-none">
-                    R$ {(imovel.valor_minimo || 0).toLocaleString('pt-BR')}
-                  </p>
+                <div className="flex items-center justify-end gap-2 mb-2">
+                  <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">Lance de Arrematação</p>
+                  <button 
+                    onClick={() => setIsEditingLance(!isEditingLance)}
+                    className="p-1 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-md transition-colors text-slate-400"
+                  >
+                    <Plus size={12} className={cn(isEditingLance && "rotate-45")} />
+                  </button>
                 </div>
-                {imovel.valor_avaliacao && imovel.valor_minimo && (
+                
+                {isEditingLance ? (
+                  <div className="flex flex-col items-end gap-2">
+                    <CurrencyInput
+                      intlConfig={{ locale: 'pt-BR', currency: 'BRL' }}
+                      decimalSeparator=","
+                      groupSeparator="."
+                      decimalsLimit={2}
+                      placeholder="Valor do Lance"
+                      className="w-full max-w-[180px] px-4 py-2 bg-white dark:bg-slate-800 border-2 border-slate-900 dark:border-white rounded-xl text-xs font-bold outline-none text-right"
+                      defaultValue={imovel.valor_arrematacao || imovel.valor_minimo}
+                      onValueChange={(_v, _n, values) => {
+                        if (values?.float !== undefined) {
+                          updateImovel(id!, { valor_arrematacao: values.float });
+                        }
+                      }}
+                    />
+                    <p className="text-[8px] font-black text-slate-400 uppercase tracking-widest">Valor informativo (não soma nos custos)</p>
+                  </div>
+                ) : (
+                  <div className="flex items-baseline justify-end gap-3">
+                    <p className="text-4xl font-black text-slate-900 dark:text-white tracking-tighter leading-none">
+                      R$ {(imovel.valor_arrematacao || imovel.valor_minimo || 0).toLocaleString('pt-BR')}
+                    </p>
+                  </div>
+                )}
+                
+                {imovel.valor_avaliacao && (imovel.valor_arrematacao || imovel.valor_minimo) && (
                   <div className="flex items-center justify-end gap-2 mt-3 text-emerald-600 font-black text-[11px] uppercase tracking-widest">
-                    <span>-{Math.round((1 - (imovel.valor_minimo / imovel.valor_avaliacao)) * 100)}% de Desconto</span>
+                    <span>-{Math.round((1 - ((imovel.valor_arrematacao || imovel.valor_minimo!) / imovel.valor_avaliacao)) * 100)}% de Desconto</span>
                     <TrendingUp size={14} />
                   </div>
                 )}
                 <div className="mt-4 pt-4 border-t border-slate-100 dark:border-slate-800 text-[10px] font-bold text-slate-400 uppercase tracking-widest flex items-center justify-end gap-2 text-nowrap">
+                  {imovel.valor_arrematacao ? (
+                    <span>Mínimo Orig.: R$ {(imovel.valor_minimo || 0).toLocaleString('pt-BR')}</span>
+                  ) : (
+                    <span className="text-[8px] text-slate-300 italic">Lance real não registrado</span>
+                  )}
+                  <span className="w-1 h-1 rounded-full bg-slate-200" />
                   <span>Avaliação: R$ {(imovel.valor_avaliacao || 0).toLocaleString('pt-BR')}</span>
                 </div>
               </div>
@@ -431,13 +484,24 @@ export default function PropertyDetails() {
                     </div>
 
                     <div className="flex flex-col items-end">
-                      <p className="text-[10px] font-black text-slate-500 uppercase tracking-[0.2em] mb-2">Lucro Líquido Projetado</p>
-                      <h4 className={cn(
-                        "text-4xl md:text-5xl font-black tracking-tighter transition-all duration-500",
-                        lucroEstimado >= 0 ? "text-emerald-400 drop-shadow-[0_0_15px_rgba(52,211,153,0.3)]" : "text-rose-400 drop-shadow-[0_0_15px_rgba(248,113,113,0.3)]"
-                      )}>
-                        R$ {lucroEstimado.toLocaleString('pt-BR')}
-                      </h4>
+                      <p className="text-[10px] font-black text-slate-500 uppercase tracking-[0.2em] mb-2">Lucro Líquido Realizado</p>
+                      <div className="flex flex-col items-end gap-1">
+                        <h4 className={cn(
+                          "text-4xl md:text-5xl font-black tracking-tighter transition-all duration-500 leading-none",
+                          lucroLiquido >= 0 ? "text-emerald-400 drop-shadow-[0_0_15px_rgba(52,211,153,0.3)]" : "text-rose-400 drop-shadow-[0_0_15px_rgba(248,113,113,0.3)]"
+                        )}>
+                          R$ {lucroLiquido.toLocaleString('pt-BR')}
+                        </h4>
+                        <div className="flex items-center gap-2">
+                          <p className="text-[9px] font-bold text-slate-600 uppercase tracking-widest">
+                            Lucro Bruto: R$ {lucroBruto.toLocaleString('pt-BR')}
+                          </p>
+                          <span className="w-1 h-1 rounded-full bg-slate-800" />
+                          <p className="text-[9px] font-bold text-rose-500 uppercase tracking-widest">
+                            IR (15%): - R$ {impostoRenda.toLocaleString('pt-BR')}
+                          </p>
+                        </div>
+                      </div>
                     </div>
                   </div>
 
@@ -461,11 +525,11 @@ export default function PropertyDetails() {
                       <div className="flex items-baseline gap-3">
                         <p className={cn(
                           "text-3xl font-black tracking-tight",
-                          roiEstimado >= 0 ? "text-emerald-400" : "text-rose-400"
+                          roiLiquido >= 0 ? "text-emerald-400" : "text-rose-400"
                         )}>
-                          {roiEstimado.toFixed(1)}%
+                          {roiLiquido.toFixed(1)}%
                         </p>
-                        <span className="text-[10px] font-bold text-slate-600 uppercase tracking-tighter">ROI</span>
+                        <span className="text-[10px] font-bold text-slate-600 uppercase tracking-tighter">ROI LÍQUIDO</span>
                       </div>
                     </div>
 
@@ -908,8 +972,8 @@ export default function PropertyDetails() {
                     animate={{ scale: 1, opacity: 1 }}
                     className="p-8 bg-white dark:bg-slate-900 border-2 border-slate-900 rounded-[2rem] shadow-2xl relative z-20"
                   >
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                      <div>
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+                      <div className="md:col-span-1">
                         <label className="block text-[9px] font-black text-slate-500 uppercase tracking-[0.2em] mb-2">Natureza da Despesa</label>
                         <input 
                           type="text" 
@@ -918,7 +982,17 @@ export default function PropertyDetails() {
                           className="w-full px-5 py-4 bg-slate-50 dark:bg-slate-800 border-none rounded-2xl text-xs font-bold outline-none focus:ring-2 focus:ring-slate-900/5 transition-all"
                         />
                       </div>
-                      <div>
+                      <div className="md:col-span-1">
+                        <label className="block text-[9px] font-black text-slate-500 uppercase tracking-[0.2em] mb-2">Referência / Competência</label>
+                        <input 
+                          type="text" 
+                          placeholder="Ex: Jan/2024"
+                          className="w-full px-5 py-4 bg-slate-50 dark:bg-slate-800 border-none rounded-2xl text-xs font-bold outline-none focus:ring-2 focus:ring-slate-900/5 transition-all"
+                          value={holdingCompetencia}
+                          onChange={(e) => setHoldingCompetencia(e.target.value)}
+                        />
+                      </div>
+                      <div className="md:col-span-1">
                         <label className="block text-[9px] font-black text-slate-500 uppercase tracking-[0.2em] mb-2">Valor (R$)</label>
                         <CurrencyInput
                           intlConfig={{ locale: 'pt-BR', currency: 'BRL' }}
@@ -948,11 +1022,12 @@ export default function PropertyDetails() {
                           id_imovel: id!, 
                           tipo_despesa: tipo, 
                           valor_mensal: holdingValor, 
-                          competencia: new Date().toLocaleDateString('pt-BR', { month: '2-digit', year: 'numeric' }),
+                          competencia: holdingCompetencia || new Date().toLocaleDateString('pt-BR', { month: '2-digit', year: 'numeric' }),
                           fileUrl: holdingFileUrl
                         });
                         setShowAddHolding(false);
                         setHoldingValor(0);
+                        setHoldingCompetencia('');
                         setHoldingFileUrl('');
                       }}
                       className="w-full mt-8 py-5 bg-slate-900 dark:bg-white text-white dark:text-slate-900 rounded-[1.5rem] text-[10px] font-black uppercase tracking-[0.25em] shadow-xl hover:bg-slate-800 transition-all active:scale-95"
@@ -1096,6 +1171,14 @@ export default function PropertyDetails() {
                           custo_corretagem: fatComissao,
                           data_operacao: data
                         });
+
+                        // Se for venda ou locação, atualiza o status do imóvel automaticamente
+                        if (tipo === TipoFaturamento.Venda) {
+                          updateImovel(id!, { status_arrematacao: StatusArrematacao.Vendido });
+                        } else if (tipo === TipoFaturamento.Locacao) {
+                          updateImovel(id!, { status_arrematacao: StatusArrematacao.Alugado });
+                        }
+
                         setShowAddFaturamento(false);
                         setFatValor(0);
                         setFatComissao(0);

@@ -35,9 +35,7 @@ service cloud.firestore {
              data.tipo in ['Judicial', 'Extrajudicial'] &&
              data.data_leilao is string &&
              (!('valor_avaliacao' in data) || data.valor_avaliacao is number) &&
-             (!('valor_minimo' in data) || data.valor_minimo is number) &&
-             data.createdBy == request.auth.uid &&
-             data.createdAt == request.time;
+             (!('valor_minimo' in data) || data.valor_minimo is number);
     }
 
     function isValidImovel(data) {
@@ -49,18 +47,16 @@ service cloud.firestore {
              data.tipo_imovel in ['Apartamento', 'Casa', 'Terreno', 'Sala Comercial', 'Galpão', 'Outro'] &&
              data.situacao_juridica in ['Alienação Fiduciária', 'Inventário', 'Execução Fiscal', 'Penhora', 'Outro'] &&
              data.estado_conservacao in ['Ótimo', 'Bom', 'Regular', 'Ruim', 'Demolido'] &&
-             (!('analise_risco' in data) || data.analise_risco is string) &&
-             data.createdBy == request.auth.uid &&
-             data.createdAt == request.time;
+             (!('status_arrematacao' in data) || data.status_arrematacao in ['Análise', 'Arrematado', 'Vendido', 'Alugado', 'Perdido', 'Cancelado', 'Reprovado']) &&
+             (!('valor_arrematacao' in data) || data.valor_arrematacao is number) &&
+             (!('analise_risco' in data) || data.analise_risco is string);
     }
 
     function isValidCustoAquisicao(data) {
       return data.id_imovel is string && isValidId(data.id_imovel) &&
              data.tipo_custo is string && data.tipo_custo.size() <= 200 &&
              data.valor is number &&
-             (!('fileUrl' in data) || data.fileUrl is string) &&
-             data.createdBy == request.auth.uid &&
-             data.createdAt == request.time;
+             (!('fileUrl' in data) || data.fileUrl is string);
     }
 
     function isValidCustoReforma(data) {
@@ -70,43 +66,41 @@ service cloud.firestore {
              (!('valor_real' in data) || data.valor_real is number) &&
              (!('prazo_execucao' in data) || data.prazo_execucao is string) &&
              (!('data_conclusao' in data) || data.data_conclusao is string) &&
-             (!('fileUrl' in data) || data.fileUrl is string) &&
-             data.createdBy == request.auth.uid &&
-             data.createdAt == request.time;
+             (!('fileUrl' in data) || data.fileUrl is string);
     }
 
     function isValidHolding(data) {
       return data.id_imovel is string && isValidId(data.id_imovel) &&
              data.tipo_despesa is string && data.tipo_despesa.size() <= 200 &&
              data.valor_mensal is number &&
-             (!('fileUrl' in data) || data.fileUrl is string) &&
-             data.createdBy == request.auth.uid &&
-             data.createdAt == request.time;
+             (!('competencia' in data) || data.competencia is string) &&
+             (!('fileUrl' in data) || data.fileUrl is string);
     }
 
     function isValidFaturamento(data) {
       return data.id_imovel is string && isValidId(data.id_imovel) &&
              data.tipo in ['Venda', 'Locação'] &&
              data.valor is number &&
-             data.createdBy == request.auth.uid &&
-             data.createdAt == request.time;
+             (!('data_operacao' in data) || data.data_operacao is string) &&
+             (!('custo_corretagem' in data) || data.custo_corretagem is number);
     }
 
     function isValidDocumento(data) {
       return data.id_imovel is string && isValidId(data.id_imovel) &&
              data.tipo_doc is string && data.tipo_doc.size() <= 200 &&
              data.status in ['Pendente', 'Recebido', 'Protocolado', 'Registrado', 'Cancelado'] &&
-             (!('fileUrl' in data) || data.fileUrl is string) &&
-             data.createdBy == request.auth.uid &&
-             data.createdAt == request.time;
+             (!('fileUrl' in data) || data.fileUrl is string);
     }
 
     // --- Collection Matches ---
 
     match /leiloes/{leilaoId} {
       allow read: if isSignedIn() && isOwner(existing());
-      allow create: if isSignedIn() && isValidLeilao(incoming());
+      allow create: if isSignedIn() && isValidLeilao(incoming()) &&
+                    incoming().createdBy == request.auth.uid &&
+                    incoming().createdAt == request.time;
       allow update: if isSignedIn() && isOwner(existing()) && 
+                    isValidLeilao(incoming()) &&
                     incoming().createdBy == existing().createdBy &&
                     incoming().createdAt == existing().createdAt &&
                     incoming().updatedAt == request.time;
@@ -114,8 +108,10 @@ service cloud.firestore {
     }
 
     match /imoveis/{imovelId} {
-      allow read: if isSignedIn();
-      allow create: if isSignedIn() && isValidImovel(incoming());
+      allow read: if isSignedIn() && isOwner(existing());
+      allow create: if isSignedIn() && isValidImovel(incoming()) &&
+                    incoming().createdBy == request.auth.uid &&
+                    incoming().createdAt == request.time;
       allow update: if isSignedIn() && isOwner(existing()) && 
                     isValidImovel(incoming()) &&
                     incoming().createdBy == existing().createdBy &&
@@ -126,8 +122,11 @@ service cloud.firestore {
 
     match /custos_aquisicao/{custoId} {
       allow read: if isSignedIn() && isOwner(existing());
-      allow create: if isSignedIn() && isValidCustoAquisicao(incoming());
+      allow create: if isSignedIn() && isValidCustoAquisicao(incoming()) &&
+                    incoming().createdBy == request.auth.uid &&
+                    incoming().createdAt == request.time;
       allow update: if isSignedIn() && isOwner(existing()) && 
+                    isValidCustoAquisicao(incoming()) &&
                     incoming().createdBy == existing().createdBy &&
                     incoming().createdAt == existing().createdAt &&
                     incoming().updatedAt == request.time;
@@ -136,8 +135,11 @@ service cloud.firestore {
 
     match /custos_reforma/{reformaId} {
       allow read: if isSignedIn() && isOwner(existing());
-      allow create: if isSignedIn() && isValidCustoReforma(incoming());
+      allow create: if isSignedIn() && isValidCustoReforma(incoming()) &&
+                    incoming().createdBy == request.auth.uid &&
+                    incoming().createdAt == request.time;
       allow update: if isSignedIn() && isOwner(existing()) && 
+                    isValidCustoReforma(incoming()) &&
                     incoming().createdBy == existing().createdBy &&
                     incoming().createdAt == existing().createdAt &&
                     incoming().updatedAt == request.time;
@@ -146,8 +148,11 @@ service cloud.firestore {
 
     match /holding/{holdingId} {
       allow read: if isSignedIn() && isOwner(existing());
-      allow create: if isSignedIn() && isValidHolding(incoming());
+      allow create: if isSignedIn() && isValidHolding(incoming()) &&
+                    incoming().createdBy == request.auth.uid &&
+                    incoming().createdAt == request.time;
       allow update: if isSignedIn() && isOwner(existing()) && 
+                    isValidHolding(incoming()) &&
                     incoming().createdBy == existing().createdBy &&
                     incoming().createdAt == existing().createdAt &&
                     incoming().updatedAt == request.time;
@@ -156,8 +161,11 @@ service cloud.firestore {
 
     match /faturamento/{faturamentoId} {
       allow read: if isSignedIn() && isOwner(existing());
-      allow create: if isSignedIn() && isValidFaturamento(incoming());
+      allow create: if isSignedIn() && isValidFaturamento(incoming()) &&
+                    incoming().createdBy == request.auth.uid &&
+                    incoming().createdAt == request.time;
       allow update: if isSignedIn() && isOwner(existing()) && 
+                    isValidFaturamento(incoming()) &&
                     incoming().createdBy == existing().createdBy &&
                     incoming().createdAt == existing().createdAt &&
                     incoming().updatedAt == request.time;
@@ -166,8 +174,11 @@ service cloud.firestore {
 
     match /documentos/{docId} {
       allow read: if isSignedIn() && isOwner(existing());
-      allow create: if isSignedIn() && isValidDocumento(incoming());
+      allow create: if isSignedIn() && isValidDocumento(incoming()) &&
+                    incoming().createdBy == request.auth.uid &&
+                    incoming().createdAt == request.time;
       allow update: if isSignedIn() && isOwner(existing()) && 
+                    isValidDocumento(incoming()) &&
                     incoming().createdBy == existing().createdBy &&
                     incoming().createdAt == existing().createdAt &&
                     incoming().updatedAt == request.time;

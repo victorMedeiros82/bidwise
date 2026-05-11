@@ -8,8 +8,10 @@ export async function generateRiskAnalysis(
   _leilao?: any, 
   financials?: { 
     totalInvestimento: number; 
-    lucroEstimado: number; 
-    roiEstimado: number; 
+    lucroBruto: number;
+    impostoRenda: number;
+    lucroLiquido: number;
+    roiLiquido: number;
     totalReforma: number;
     totalHolding: number;
     faturamentoLiquido: number;
@@ -21,6 +23,7 @@ export async function generateRiskAnalysis(
     - Comarca: ${imovel.comarca}
     - Tipo: ${imovel.tipo_leilao || 'Não especificado'}
     - Valor Mínimo: R$ ${imovel.valor_minimo?.toLocaleString('pt-BR')}
+    - Valor Arrematação (Real): R$ ${imovel.valor_arrematacao?.toLocaleString('pt-BR') || 'Não informado'}
     - Valor Avaliação: R$ ${imovel.valor_avaliacao?.toLocaleString('pt-BR')}
     - Forma de Arrematação: ${imovel.forma_arrematacao}
   ` : `
@@ -30,12 +33,14 @@ export async function generateRiskAnalysis(
 
   const financialInfo = financials ? `
     DADOS FINANCEIROS CONSOLIDADOS:
-    - Total Investimento (Estimado): R$ ${financials.totalInvestimento.toLocaleString('pt-BR')}
+    - Total Investimento (Cash-out): R$ ${financials.totalInvestimento.toLocaleString('pt-BR')}
     - Total em Reformas: R$ ${financials.totalReforma.toLocaleString('pt-BR')}
     - Custos de Holding/Mensais: R$ ${financials.totalHolding.toLocaleString('pt-BR')}
     - Faturamento Líquido Esperado: R$ ${financials.faturamentoLiquido.toLocaleString('pt-BR')}
-    - Lucro Bruto Estimado: R$ ${financials.lucroEstimado.toLocaleString('pt-BR')}
-    - ROI Estimado: ${financials.roiEstimado.toFixed(2)}%
+    - Lucro Bruto Estimado: R$ ${financials.lucroBruto.toLocaleString('pt-BR')}
+    - Imposto de Renda (15%): R$ ${financials.impostoRenda.toLocaleString('pt-BR')}
+    - Lucro Líquido Final: R$ ${financials.lucroLiquido.toLocaleString('pt-BR')}
+    - ROI Líquido: ${financials.roiLiquido.toFixed(2)}%
   ` : "";
 
   const prompt = `
