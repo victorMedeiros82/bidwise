@@ -1112,81 +1112,117 @@ export default function PropertyDetails() {
                     animate={{ scale: 1, opacity: 1 }}
                     className="p-8 bg-white dark:bg-slate-900 border-2 border-emerald-500 rounded-[2rem] shadow-2xl relative z-20"
                   >
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 items-start">
-                      <div>
-                        <label className="block text-[9px] font-black text-slate-500 uppercase tracking-[0.2em] mb-2">Modalidade</label>
-                        <select 
-                          id="fat-tipo-v2"
-                          className="w-full px-5 py-4 bg-slate-50 dark:bg-slate-800 border-none rounded-2xl text-xs font-bold outline-none focus:ring-2 focus:ring-emerald-500/10 transition-all"
-                        >
-                          <option value={TipoFaturamento.Venda}>Venda de Ativo</option>
-                          <option value={TipoFaturamento.Locacao}>Locação Mensal</option>
-                        </select>
+                    <div className="space-y-8">
+                      <div className="flex items-center gap-4 border-b border-emerald-500/20 pb-6 mb-2">
+                        <div className="size-12 bg-emerald-500 rounded-2xl flex items-center justify-center text-white shadow-[0_0_20px_rgba(16,185,129,0.3)]">
+                          <DollarSign size={24} strokeWidth={2.5} />
+                        </div>
+                        <div>
+                          <h3 className="text-xl font-black text-slate-900 dark:text-white tracking-tighter leading-tight">Liquidar Ativo</h3>
+                          <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Encerramento de ciclo e apuração de resultados</p>
+                        </div>
                       </div>
-                      <div>
-                        <label className="block text-[9px] font-black text-slate-500 uppercase tracking-[0.2em] mb-2">Valor Total (R$)</label>
-                        <CurrencyInput
-                          intlConfig={{ locale: 'pt-BR', currency: 'BRL' }}
-                          decimalSeparator=","
-                          groupSeparator="."
-                          decimalsLimit={2}
-                          placeholder="0,00"
-                          className="w-full px-5 py-4 bg-slate-50 dark:bg-slate-800 border-none rounded-2xl text-xs font-bold outline-none focus:ring-2 focus:ring-emerald-500/10 transition-all text-emerald-600"
-                          value={fatValor}
-                          onValueChange={(_value, _name, values) => setFatValor(values?.float || 0)}
-                        />
+
+                      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                        <div className="space-y-2">
+                          <label className="block text-[10px] font-black text-slate-500 uppercase tracking-[0.2em]">Operação</label>
+                          <div className="relative group">
+                            <select 
+                              id="fat-tipo-v2"
+                              className="w-full h-14 pl-5 pr-10 bg-slate-50 dark:bg-slate-800 border-2 border-transparent focus:border-emerald-500/30 rounded-2xl text-xs font-bold outline-none transition-all appearance-none cursor-pointer"
+                            >
+                              <option value={TipoFaturamento.Venda}>Venda Direta</option>
+                              <option value={TipoFaturamento.Locacao}>Locação Mensal</option>
+                            </select>
+                            <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none text-slate-400">
+                              <RefreshCw size={14} className="group-hover:rotate-180 transition-transform duration-500" />
+                            </div>
+                          </div>
+                        </div>
+
+                        <div className="space-y-2">
+                          <label className="block text-[10px] font-black text-slate-500 uppercase tracking-[0.2em]">Valor Realizado (R$)</label>
+                          <div className="relative">
+                            <CurrencyInput
+                              intlConfig={{ locale: 'pt-BR', currency: 'BRL' }}
+                              decimalSeparator=","
+                              groupSeparator="."
+                              decimalsLimit={2}
+                              placeholder="0,00"
+                              className="w-full h-14 px-5 bg-slate-50 dark:bg-slate-800 border-2 border-transparent focus:border-emerald-500/30 rounded-2xl text-xs font-black outline-none transition-all text-emerald-600 placeholder:text-slate-300"
+                              value={fatValor}
+                              onValueChange={(_value, _name, values) => setFatValor(values?.float || 0)}
+                            />
+                            <div className="absolute right-5 top-1/2 -translate-y-1/2 pointer-events-none">
+                              <TrendingUp size={16} className="text-emerald-500/30" />
+                            </div>
+                          </div>
+                        </div>
+
+                        <div className="space-y-2">
+                          <label className="block text-[10px] font-black text-slate-500 uppercase tracking-[0.2em]">Comissão / IR (R$)</label>
+                          <div className="relative">
+                            <CurrencyInput
+                              intlConfig={{ locale: 'pt-BR', currency: 'BRL' }}
+                              decimalSeparator=","
+                              groupSeparator="."
+                              decimalsLimit={2}
+                              placeholder="0,00"
+                              className="w-full h-14 px-5 bg-slate-50 dark:bg-slate-800 border-2 border-transparent focus:border-rose-500/30 rounded-2xl text-xs font-black outline-none transition-all text-rose-500 placeholder:text-slate-300"
+                              value={fatComissao}
+                              onValueChange={(_value, _name, values) => setFatComissao(values?.float || 0)}
+                            />
+                            <div className="absolute right-5 top-1/2 -translate-y-1/2 pointer-events-none">
+                              <ArrowDownCircle size={16} className="text-rose-500/30" />
+                            </div>
+                          </div>
+                        </div>
+
+                        <div className="space-y-2">
+                          <label className="block text-[10px] font-black text-slate-500 uppercase tracking-[0.2em]">Data da Transação</label>
+                          <div className="relative">
+                            <input 
+                              type="date" 
+                              id="fat-data-v2"
+                              className="w-full h-14 px-5 bg-slate-50 dark:bg-slate-800 border-2 border-transparent focus:border-emerald-500/30 rounded-2xl text-xs font-bold outline-none transition-all text-slate-900 dark:text-white [color-scheme:dark]"
+                            />
+                            <div className="absolute right-5 top-1/2 -translate-y-1/2 pointer-events-none">
+                              <Calendar size={16} className="text-slate-400" />
+                            </div>
+                          </div>
+                        </div>
                       </div>
-                      <div>
-                        <label className="block text-[9px] font-black text-slate-500 uppercase tracking-[0.2em] mb-2">Corretagem (R$)</label>
-                        <CurrencyInput
-                          intlConfig={{ locale: 'pt-BR', currency: 'BRL' }}
-                          decimalSeparator=","
-                          groupSeparator="."
-                          decimalsLimit={2}
-                          placeholder="0,00"
-                          className="w-full px-5 py-4 bg-slate-50 dark:bg-slate-800 border-none rounded-2xl text-xs font-bold outline-none focus:ring-2 focus:ring-emerald-500/10 transition-all text-rose-500"
-                          value={fatComissao}
-                          onValueChange={(_value, _name, values) => setFatComissao(values?.float || 0)}
-                        />
-                      </div>
-                      <div>
-                        <label className="block text-[9px] font-black text-slate-500 uppercase tracking-[0.2em] mb-2">Data da Operação</label>
-                        <input 
-                          type="date" 
-                          id="fat-data-v2"
-                          className="w-full px-5 py-4 bg-slate-50 dark:bg-slate-800 border-none rounded-2xl text-xs font-bold outline-none focus:ring-2 focus:ring-emerald-500/10 transition-all"
-                        />
-                      </div>
+
+                      <button 
+                        onClick={() => {
+                          const tipo = (document.getElementById('fat-tipo-v2') as HTMLSelectElement).value;
+                          const data = (document.getElementById('fat-data-v2') as HTMLInputElement).value;
+                          if (!fatValor || !data) return;
+
+                          addFaturamento({ 
+                            id_imovel: id!, 
+                            tipo: tipo as TipoFaturamento, 
+                            valor: fatValor,
+                            custo_corretagem: fatComissao,
+                            data_operacao: data
+                          });
+
+                          if (tipo === TipoFaturamento.Venda) {
+                            updateImovel(id!, { status_arrematacao: StatusArrematacao.Vendido });
+                          } else if (tipo === TipoFaturamento.Locacao) {
+                            updateImovel(id!, { status_arrematacao: StatusArrematacao.Alugado });
+                          }
+
+                          setShowAddFaturamento(false);
+                          setFatValor(0);
+                          setFatComissao(0);
+                        }}
+                        className="w-full mt-4 py-5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-2xl text-[11px] font-black uppercase tracking-[0.3em] shadow-[0_20px_50px_rgba(16,185,129,0.2)] hover:shadow-[0_20px_60px_rgba(16,185,129,0.3)] transition-all active:scale-95 flex items-center justify-center gap-3"
+                      >
+                        <CheckCircle2 size={18} strokeWidth={3} />
+                        LIQUIDAR OPERAÇÃO & SALVAR
+                      </button>
                     </div>
-                    <button 
-                      onClick={() => {
-                        const tipo = (document.getElementById('fat-tipo-v2') as HTMLSelectElement).value;
-                        const data = (document.getElementById('fat-data-v2') as HTMLInputElement).value;
-                        if (!fatValor || !data) return;
-
-                        addFaturamento({ 
-                          id_imovel: id!, 
-                          tipo: tipo as TipoFaturamento, 
-                          valor: fatValor,
-                          custo_corretagem: fatComissao,
-                          data_operacao: data
-                        });
-
-                        // Se for venda ou locação, atualiza o status do imóvel automaticamente
-                        if (tipo === TipoFaturamento.Venda) {
-                          updateImovel(id!, { status_arrematacao: StatusArrematacao.Vendido });
-                        } else if (tipo === TipoFaturamento.Locacao) {
-                          updateImovel(id!, { status_arrematacao: StatusArrematacao.Alugado });
-                        }
-
-                        setShowAddFaturamento(false);
-                        setFatValor(0);
-                        setFatComissao(0);
-                      }}
-                      className="w-full mt-8 py-5 bg-emerald-600 text-white rounded-[1.5rem] text-[10px] font-black uppercase tracking-[0.25em] shadow-xl shadow-emerald-100 hover:bg-emerald-700 transition-all active:scale-95"
-                    >
-                      Liquidar Operação & Salvar
-                    </button>
                   </motion.div>
                 )}
 
