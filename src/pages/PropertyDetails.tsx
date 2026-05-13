@@ -20,6 +20,7 @@ import {
   Wallet,
   ClipboardCheck,
   TrendingUp,
+  TrendingDown,
   Download,
   Image as ImageIcon,
   File as FileIcon,
@@ -29,7 +30,9 @@ import {
   RefreshCw,
   ShieldCheck,
   FolderOpen,
-  ArrowDownCircle
+  ArrowDownCircle,
+  Info,
+  Activity
 } from 'lucide-react';
 import { useFirestore } from '../hooks/useFirestore';
 import { 
@@ -51,6 +54,21 @@ import { cn } from '../lib/utils';
 import ReactMarkdown from 'react-markdown';
 import CurrencyInput from 'react-currency-input-field';
 import { FilePicker } from '../components/FilePicker';
+import {
+  AreaChart,
+  Area,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  ResponsiveContainer,
+  PieChart,
+  Pie,
+  Cell,
+  Legend,
+  BarChart,
+  Bar
+} from 'recharts';
 
 export default function PropertyDetails() {
   const { id } = useParams();
@@ -59,11 +77,11 @@ export default function PropertyDetails() {
   
   const imovel = properties.find(p => p.id === id);
 
-  const { data: custosAquisicao, add: addCustoAquisicao, remove: removeCustoAquisicao } = useFirestore<CustoAquisicao>('custos_aquisicao');
-  const { data: custosReforma, add: addCustoReforma, remove: removeCustoReforma } = useFirestore<CustoReforma>('custos_reforma');
+  const { data: custosAquisicao, add: addCustoAquisicao, remove: removeCustoAquisicao, update: updateCustoAquisicao } = useFirestore<CustoAquisicao>('custos_aquisicao');
+  const { data: custosReforma, add: addCustoReforma, remove: removeCustoReforma, update: updateCustoReforma } = useFirestore<CustoReforma>('custos_reforma');
   const { data: documentos, add: addDocumento, remove: removeDocumento } = useFirestore<Documento>('documentos');
-  const { data: holding, add: addHolding, remove: removeHolding } = useFirestore<Holding>('holding');
-  const { data: faturamento, add: addFaturamento, remove: removeFaturamento } = useFirestore<Faturamento>('faturamento');
+  const { data: holding, add: addHolding, remove: removeHolding, update: updateHolding } = useFirestore<Holding>('holding');
+  const { data: faturamento, add: addFaturamento, remove: removeFaturamento, update: updateFaturamento } = useFirestore<Faturamento>('faturamento');
 
   const [activeTab, setActiveTab] = useState<'analise' | 'custos' | 'documentos'>('analise');
   const [isEditingLance, setIsEditingLance] = useState(false);
@@ -72,6 +90,7 @@ export default function PropertyDetails() {
   const [showAddFaturamento, setShowAddFaturamento] = useState(false);
   const [showAddAquisicao, setShowAddAquisicao] = useState(false);
   const [showAddHolding, setShowAddHolding] = useState(false);
+  const [editingItem, setEditingItem] = useState<{ id: string, type: 'aquisicao' | 'reforma' | 'holding' | 'faturamento' } | null>(null);
   const [formErrors, setFormErrors] = useState<Record<string, string>>({});
 
   // Local state for monetary inputs
@@ -156,6 +175,48 @@ export default function PropertyDetails() {
   const impostoRenda = lucroBruto > 0 ? lucroBruto * 0.15 : 0;
   const lucroLiquido = lucroBruto - impostoRenda;
   const roiLiquido = totalInvestimento > 0 ? (lucroLiquido / totalInvestimento) * 100 : 0;
+
+  // Calculo de Fluxo de Caixa Acumulado
+  const allEvents = [
+    ...filteredCustosAquisicao.map(c => ({ 
+      date: c.createdAt ? (typeof c.createdAt === 'object' ? c.createdAt.toDate() : new Date(c.createdAt)) : new Date(), 
+      value: -(c.valor || 0), 
+      type: 'Aquisição' 
+    })),
+    ...filteredCustosReforma.map(r => ({ 
+      date: r.data_conclusao ? new Date(r.data_conclusao) : (r.createdAt ? (typeof r.createdAt === 'object' ? r.createdAt.toDate() : new Date(r.createdAt)) : new Date()), 
+      value: -(r.valor_real || r.orcamento || 0), 
+      type: 'Reforma' 
+    })),
+    ...filteredHolding.map(h => ({ 
+      date: h.createdAt ? (typeof h.createdAt === 'object' ? h.createdAt.toDate() : new Date(h.createdAt)) : new Date(), 
+      value: -(h.valor_mensal || 0), 
+      type: 'Operacional' 
+    })),
+    ...filteredFaturamento.map(f => ({ 
+      date: f.data_operacao ? new Date(f.data_operacao) : (f.createdAt ? (typeof f.createdAt === 'object' ? f.createdAt.toDate() : new Date(f.createdAt)) : new Date()), 
+      value: (f.valor || 0) - (f.custo_corretagem || 0), 
+      type: 'Receita' 
+    }))
+  ].sort((a, b) => a.date.getTime() - b.date.getTime());
+
+  let cumulativeValue = 0;
+  const cashFlowTimeline = allEvents.map(e => {
+    cumulativeValue += e.value;
+    return {
+      name: e.date.toLocaleDateString('pt-BR', { month: 'short', year: '2-digit' }),
+      valor: e.value,
+      acumulado: cumulativeValue,
+      tipo: e.type
+    };
+  });
+
+  const costDistribution = [
+    { name: 'Aquisição', value: totalAquisicao, color: '#3b82f6' },
+    { name: 'Benfeitorias', value: totalReforma, color: '#f59e0b' },
+    { name: 'Manutenção', value: totalHolding, color: '#8b5cf6' },
+    { name: 'Taxas/IR', value: totalComissoes + impostoRenda, color: '#ef4444' }
+  ].filter(d => d.value > 0);
 
   const handleGenerateAnalysis = async () => {
     if (!imovel) return;
@@ -505,23 +566,153 @@ export default function PropertyDetails() {
                     </div>
                   </div>
 
-                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-12">
-                    <div className="space-y-2">
-                      <p className="text-[10px] font-black text-slate-500 uppercase tracking-[0.2em]">Investimento Total</p>
-                      <p className="text-2xl font-black text-white tracking-tight">
-                        R$ {totalInvestimento.toLocaleString('pt-BR')}
-                      </p>
-                    </div>
-                    
-                    <div className="space-y-2">
-                      <p className="text-[10px] font-black text-slate-500 uppercase tracking-[0.2em]">Recessão Líquida</p>
-                      <p className="text-2xl font-black text-white tracking-tight">
-                        R$ {faturamentoLiquido.toLocaleString('pt-BR')}
-                      </p>
+                  <div className="grid grid-cols-1 md:grid-cols-12 gap-8 mb-12">
+                    {/* Gráfico de Evolução de ROI / Fluxo de Caixa */}
+                    <div className="md:col-span-8 bg-slate-800/40 p-6 rounded-[2rem] border border-white/5 h-[350px]">
+                      <div className="flex items-center justify-between mb-4">
+                        <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest flex items-center gap-2">
+                          <Activity size={14} className="text-blue-500" />
+                          Fluxo de Caixa Acumulado
+                        </h4>
+                        <div className="text-[9px] font-bold text-emerald-400 uppercase">Projeção Consolidada</div>
+                      </div>
+                      <div className="h-[250px] w-full">
+                        <ResponsiveContainer width="100%" height="100%">
+                          <AreaChart data={cashFlowTimeline}>
+                            <defs>
+                              <linearGradient id="colorVal" x1="0" y1="0" x2="0" y2="1">
+                                <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.3}/>
+                                <stop offset="95%" stopColor="#3b82f6" stopOpacity={0}/>
+                              </linearGradient>
+                            </defs>
+                            <CartesianGrid strokeDasharray="3 3" stroke="#ffffff10" vertical={false} />
+                            <XAxis 
+                              dataKey="name" 
+                              stroke="#ffffff40" 
+                              fontSize={10} 
+                              tickLine={false} 
+                              axisLine={false} 
+                            />
+                            <YAxis 
+                              stroke="#ffffff40" 
+                              fontSize={10} 
+                              tickLine={false} 
+                              axisLine={false} 
+                              tickFormatter={(value) => `R$ ${value >= 1000 ? (value/1000).toFixed(0) + 'k' : value}`}
+                            />
+                            <Tooltip 
+                              contentStyle={{ 
+                                backgroundColor: '#0f172a', 
+                                border: '1px solid #1e293b', 
+                                borderRadius: '1rem',
+                                color: '#f8fafc',
+                                fontSize: '10px'
+                              }} 
+                            />
+                            <Area 
+                              type="monotone" 
+                              dataKey="acumulado" 
+                              stroke="#3b82f6" 
+                              strokeWidth={3} 
+                              fillOpacity={1} 
+                              fill="url(#colorVal)" 
+                            />
+                          </AreaChart>
+                        </ResponsiveContainer>
+                      </div>
                     </div>
 
-                    <div className="space-y-2">
-                      <p className="text-[10px] font-black text-slate-500 uppercase tracking-[0.2em]">Magem de Retorno</p>
+                    {/* Distribuição de Custos */}
+                    <div className="md:col-span-4 bg-slate-800/40 p-6 rounded-[2rem] border border-white/5 flex flex-col justify-between">
+                      <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest flex items-center gap-2 mb-4">
+                        <TrendingDown size={14} className="text-rose-500" />
+                        Composição de Gastos
+                      </h4>
+                      <div className="h-[180px] w-full">
+                        <ResponsiveContainer width="100%" height="100%">
+                          <PieChart>
+                            <Pie
+                              data={costDistribution}
+                              innerRadius={50}
+                              outerRadius={75}
+                              paddingAngle={8}
+                              dataKey="value"
+                              stroke="none"
+                            >
+                              {costDistribution.map((entry, index) => (
+                                <Cell key={`cell-${index}`} fill={entry.color} />
+                              ))}
+                            </Pie>
+                            <Tooltip 
+                              contentStyle={{ 
+                                backgroundColor: '#0f172a', 
+                                border: '1px solid #1e293b', 
+                                borderRadius: '1rem',
+                                color: '#f8fafc',
+                                fontSize: '10px'
+                              }}
+                            />
+                          </PieChart>
+                        </ResponsiveContainer>
+                      </div>
+                      <div className="grid grid-cols-2 gap-y-2 mt-4">
+                        {costDistribution.map(item => (
+                          <div key={item.name} className="flex items-center gap-2">
+                            <div className="size-2 rounded-full" style={{ backgroundColor: item.color }} />
+                            <span className="text-[8px] font-black text-slate-500 uppercase tracking-widest truncate">{item.name}</span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-12">
+                    <div className="space-y-4">
+                      <div className="flex items-center gap-2">
+                        <p className="text-[10px] font-black text-slate-500 uppercase tracking-[0.2em]">Investimento Total</p>
+                        <button 
+                          onClick={() => {
+                            setActiveTab('custos');
+                            setTimeout(() => {
+                              document.getElementById('secao-custos')?.scrollIntoView({ behavior: 'smooth' });
+                            }, 100);
+                          }}
+                          className="p-1 hover:bg-white/10 rounded-md transition-colors text-slate-500"
+                        >
+                          <Plus size={12} strokeWidth={3} />
+                        </button>
+                      </div>
+                      <div className="flex items-center gap-3">
+                        <p className="text-2xl font-black text-white tracking-tight">
+                          R$ {totalInvestimento.toLocaleString('pt-BR')}
+                        </p>
+                        <button 
+                         onClick={() => {
+                            setActiveTab('custos');
+                            setTimeout(() => {
+                              document.getElementById('secao-custos')?.scrollIntoView({ behavior: 'smooth' });
+                            }, 100);
+                          }}
+                          className="size-6 bg-white/5 hover:bg-white/10 rounded-lg flex items-center justify-center text-slate-400 transition-colors"
+                        >
+                          <RefreshCw size={12} />
+                        </button>
+                      </div>
+                      <p className="text-[8px] font-bold text-slate-600 uppercase tracking-widest mt-1 italic">Capital Alocado</p>
+                    </div>
+                    
+                    <div className="space-y-4">
+                      <p className="text-[10px] font-black text-slate-500 uppercase tracking-[0.2em]">Receita Líquida</p>
+                      <div>
+                        <p className="text-2xl font-black text-white tracking-tight text-emerald-400">
+                          R$ {faturamentoLiquido.toLocaleString('pt-BR')}
+                        </p>
+                        <p className="text-[8px] font-bold text-slate-600 uppercase tracking-widest mt-1 italic">Venda - Comissões</p>
+                      </div>
+                    </div>
+
+                    <div className="space-y-4">
+                      <p className="text-[10px] font-black text-slate-500 uppercase tracking-[0.2em]">Margem de Retorno</p>
                       <div className="flex items-baseline gap-3">
                         <p className={cn(
                           "text-3xl font-black tracking-tight",
@@ -529,45 +720,70 @@ export default function PropertyDetails() {
                         )}>
                           {roiLiquido.toFixed(1)}%
                         </p>
-                        <span className="text-[10px] font-bold text-slate-600 uppercase tracking-tighter">ROI LÍQUIDO</span>
+                        <div className="flex flex-col">
+                          <span className="text-[10px] font-bold text-slate-600 uppercase tracking-tighter">ROI LÍQUIDO</span>
+                          <span className="text-[8px] text-emerald-600 font-black">+{((roiLiquido/100) * 1).toFixed(2)}x equity</span>
+                        </div>
                       </div>
                     </div>
 
-                    <div className="space-y-2">
-                      <p className="text-[10px] font-black text-slate-500 uppercase tracking-[0.2em]">Ponto de Equilíbrio</p>
-                      <div className="w-full bg-slate-800 h-2 rounded-full overflow-hidden">
+                    <div className="space-y-4">
+                      <div className="flex items-center justify-between">
+                        <p className="text-[10px] font-black text-slate-500 uppercase tracking-[0.2em]">Ponto de Equilíbrio</p>
+                        <span className="text-[9px] font-black text-blue-500 tracking-widest">
+                          {Math.min(100, Math.round((totalInvestimento / (faturamentoLiquido || totalInvestimento)) * 100))}%
+                        </span>
+                      </div>
+                      <div className="w-full bg-slate-800 h-2.5 rounded-full overflow-hidden border border-white/5">
                         <motion.div 
                           initial={{ width: 0 }}
                           animate={{ width: `${Math.min(100, (totalInvestimento / (faturamentoLiquido || totalInvestimento)) * 100)}%` }}
-                          className="h-full bg-blue-500"
+                          className="h-full bg-gradient-to-r from-blue-600 to-blue-400 rounded-full"
                         />
                       </div>
-                      <p className="text-[9px] font-black text-slate-600 uppercase tracking-widest text-right">Amortização de Ativos</p>
+                      <p className="text-[8px] font-black text-slate-700 uppercase tracking-widest text-right">Amortização de Ativos</p>
                     </div>
                   </div>
 
-                  <div className="mt-12 pt-8 border-t border-slate-800 grid grid-cols-2 md:grid-cols-4 gap-8">
-                    <div className="group/item">
-                      <p className="text-slate-600 text-[9px] font-black uppercase tracking-widest mb-1 group-hover/item:text-slate-400 transition-colors">Aquisição</p>
-                      <p className="text-sm font-black text-slate-300">R$ {totalAquisicao.toLocaleString('pt-BR')}</p>
+                  {/* Detalhamento de Custos Fixos vs Variáveis */}
+                  <div className="mt-12 pt-8 border-t border-slate-800 grid grid-cols-1 md:grid-cols-2 gap-12">
+                    <div>
+                      <h5 className="text-[10px] font-black text-slate-400 uppercase tracking-[0.3em] mb-6 flex items-center gap-2">
+                        <div className="size-1.5 rounded-full bg-blue-500" />
+                        Custos Fixos (Inércia)
+                      </h5>
+                      <div className="space-y-4">
+                        <div className="flex justify-between items-center bg-slate-800/20 p-4 rounded-2xl border border-white/5">
+                          <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Holding / Mensais</span>
+                          <span className="text-sm font-black text-slate-300">R$ {totalHolding.toLocaleString('pt-BR')}</span>
+                        </div>
+                        <div className="flex justify-between items-center bg-slate-800/20 p-4 rounded-2xl border border-white/5">
+                          <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Taxas Arrematação</span>
+                          <span className="text-sm font-black text-slate-300">R$ {(totalAquisicao - (imovel.valor_arrematacao || 0)).toLocaleString('pt-BR')}</span>
+                        </div>
+                      </div>
                     </div>
-                    <div className="group/item">
-                      <p className="text-slate-600 text-[9px] font-black uppercase tracking-widest mb-1 group-hover/item:text-slate-400 transition-colors">Benfeitorias</p>
-                      <p className="text-sm font-black text-slate-300">R$ {totalReforma.toLocaleString('pt-BR')}</p>
-                    </div>
-                    <div className="group/item">
-                      <p className="text-slate-600 text-[9px] font-black uppercase tracking-widest mb-1 group-hover/item:text-slate-400 transition-colors">Custos Operacionais</p>
-                      <p className="text-sm font-black text-slate-300">R$ {totalHolding.toLocaleString('pt-BR')}</p>
-                    </div>
-                    <div className="group/item">
-                      <p className="text-slate-600 text-[9px] font-black uppercase tracking-widest mb-1 group-hover/item:text-slate-400 transition-colors">Intermediação</p>
-                      <p className="text-sm font-black text-rose-400/80">R$ {totalComissoes.toLocaleString('pt-BR')}</p>
+                    <div>
+                      <h5 className="text-[10px] font-black text-slate-400 uppercase tracking-[0.3em] mb-6 flex items-center gap-2">
+                        <div className="size-1.5 rounded-full bg-orange-500" />
+                        Custos Variáveis (Equity)
+                      </h5>
+                      <div className="space-y-4">
+                        <div className="flex justify-between items-center bg-slate-800/20 p-4 rounded-2xl border border-white/5">
+                          <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Benfeitorias</span>
+                          <span className="text-sm font-black text-slate-300">R$ {totalReforma.toLocaleString('pt-BR')}</span>
+                        </div>
+                        <div className="flex justify-between items-center bg-slate-800/20 p-4 rounded-2xl border border-white/5">
+                          <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Impostos sobre Lucro (IR)</span>
+                          <span className="text-sm font-black text-rose-400">R$ {impostoRenda.toLocaleString('pt-BR')}</span>
+                        </div>
+                      </div>
                     </div>
                   </div>
                 </div>
               </div>
 
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+              <div id="secao-custos" className="grid grid-cols-1 lg:grid-cols-2 gap-8">
               {/* Custos de Aquisição */}
             <div className="space-y-6">
               <div className="flex justify-between items-center">
@@ -720,6 +936,39 @@ export default function PropertyDetails() {
                           </div>
                           <div className="flex items-center gap-2">
                             {c.fileUrl && <FileThumbnail url={c.fileUrl} className="w-10 h-10 rounded-xl" />}
+                            
+                            {editingItem?.id === c.id ? (
+                              <div className="flex items-center gap-2 p-1 bg-slate-50 dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700">
+                                <CurrencyInput
+                                  intlConfig={{ locale: 'pt-BR', currency: 'BRL' }}
+                                  decimalSeparator=","
+                                  groupSeparator="."
+                                  decimalsLimit={2}
+                                  placeholder="0,00"
+                                  className="w-24 px-2 py-1 bg-white dark:bg-slate-900 border-none rounded-lg text-[10px] font-bold outline-none ring-1 ring-blue-500/30"
+                                  defaultValue={c.valor}
+                                  onValueChange={(_v, _n, values) => {
+                                    if (values?.float !== undefined) {
+                                      updateCustoAquisicao(c.id!, { valor: values.float });
+                                    }
+                                  }}
+                                />
+                                <button 
+                                  onClick={() => setEditingItem(null)}
+                                  className="p-1 text-emerald-500 hover:bg-emerald-50 rounded-lg transition-colors"
+                                >
+                                  <CheckCircle2 size={14} />
+                                </button>
+                              </div>
+                            ) : (
+                              <button 
+                                onClick={() => setEditingItem({ id: c.id!, type: 'aquisicao' })}
+                                className="p-3 text-slate-300 hover:text-blue-500 hover:bg-blue-50 rounded-xl transition-all active:scale-95"
+                              >
+                                <Plus size={16} className="rotate-45" /> 
+                              </button>
+                            )}
+
                             <button 
                               onClick={() => removeCustoAquisicao(c.id!)} 
                               className="p-3 text-slate-300 hover:text-rose-500 hover:bg-rose-50 rounded-xl transition-all active:scale-95"
@@ -910,9 +1159,37 @@ export default function PropertyDetails() {
                             </div>
                             <div className="space-y-1">
                               <p className="text-[9px] font-black text-slate-400 uppercase tracking-[0.15em]">Realizado</p>
-                              <p className={cn("text-sm font-black", isOverBudget ? "text-rose-600" : "text-emerald-600")}>
-                                R$ {r.valor_real.toLocaleString('pt-BR')}
-                              </p>
+                              {editingItem?.id === r.id ? (
+                                <div className="flex items-center gap-2">
+                                  <CurrencyInput
+                                    intlConfig={{ locale: 'pt-BR', currency: 'BRL' }}
+                                    decimalSeparator=","
+                                    groupSeparator="."
+                                    decimalsLimit={2}
+                                    placeholder="0,00"
+                                    className="w-24 px-2 py-1 bg-white dark:bg-slate-900 border-none rounded-lg text-[10px] font-black outline-none ring-1 ring-blue-500/30 text-emerald-600"
+                                    defaultValue={r.valor_real}
+                                    onValueChange={(_v, _n, values) => {
+                                      if (values?.float !== undefined) {
+                                        updateCustoReforma(r.id!, { valor_real: values.float });
+                                      }
+                                    }}
+                                  />
+                                  <button onClick={() => setEditingItem(null)} className="text-emerald-500"><CheckCircle2 size={14} /></button>
+                                </div>
+                              ) : (
+                                <div className="flex items-center gap-2 group/val">
+                                  <p className={cn("text-sm font-black", isOverBudget ? "text-rose-600" : "text-emerald-600")}>
+                                    R$ {r.valor_real.toLocaleString('pt-BR')}
+                                  </p>
+                                  <button 
+                                    onClick={() => setEditingItem({ id: r.id!, type: 'reforma' })}
+                                    className="opacity-0 group-hover/val:opacity-100 p-1 text-slate-400 hover:text-blue-500 transition-all"
+                                  >
+                                    <Plus size={12} className="rotate-45" />
+                                  </button>
+                                </div>
+                              )}
                             </div>
                           </div>
 
@@ -1069,6 +1346,39 @@ export default function PropertyDetails() {
                           </div>
                           <div className="flex items-center gap-2 text-nowrap">
                             {h.fileUrl && <FileThumbnail url={h.fileUrl} className="w-10 h-10 rounded-xl" />}
+                            
+                            {editingItem?.id === h.id ? (
+                              <div className="flex items-center gap-2 p-1 bg-slate-50 dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700">
+                                <CurrencyInput
+                                  intlConfig={{ locale: 'pt-BR', currency: 'BRL' }}
+                                  decimalSeparator=","
+                                  groupSeparator="."
+                                  decimalsLimit={2}
+                                  placeholder="0,00"
+                                  className="w-24 px-2 py-1 bg-white dark:bg-slate-900 border-none rounded-lg text-[10px] font-bold outline-none ring-1 ring-blue-500/30"
+                                  defaultValue={h.valor_mensal}
+                                  onValueChange={(_v, _n, values) => {
+                                    if (values?.float !== undefined) {
+                                      updateHolding(h.id!, { valor_mensal: values.float });
+                                    }
+                                  }}
+                                />
+                                <button 
+                                  onClick={() => setEditingItem(null)}
+                                  className="p-1 text-emerald-500 hover:bg-emerald-50 rounded-lg transition-colors"
+                                >
+                                  <CheckCircle2 size={14} />
+                                </button>
+                              </div>
+                            ) : (
+                              <button 
+                                onClick={() => setEditingItem({ id: h.id!, type: 'holding' })}
+                                className="p-3 text-slate-300 hover:text-blue-500 hover:bg-blue-50 rounded-xl transition-all active:scale-95"
+                              >
+                                <Plus size={16} className="rotate-45" /> 
+                              </button>
+                            )}
+
                             <button 
                               onClick={() => removeHolding(h.id!)}
                               className="p-3 text-slate-200 hover:text-rose-500 hover:bg-rose-50 rounded-xl transition-all"
