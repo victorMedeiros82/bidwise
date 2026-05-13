@@ -90,7 +90,7 @@ export function useFirestore<T>(collectionName: string, constraints: QueryConstr
     );
 
     return () => unsubscribe();
-  }, [collectionName, JSON.stringify(constraints)]);
+  }, [collectionName, JSON.stringify(constraints), auth.currentUser?.uid]);
 
   const add = async (newData: Omit<T, 'id' | 'createdAt' | 'updatedAt' | 'createdBy'>) => {
     if (!auth.currentUser) throw new Error('User not authenticated');

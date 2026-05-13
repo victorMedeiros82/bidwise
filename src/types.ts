@@ -114,6 +114,7 @@ export interface Imovel {
   valor_arrematacao?: number;
   forma_arrematacao?: FormaArrematacao;
   condicoes_pagamento?: string;
+  valor_financiamento?: number;
 
   createdAt?: any;
   updatedAt?: any;
