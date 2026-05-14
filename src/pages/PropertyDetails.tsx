@@ -33,7 +33,8 @@ import {
   ArrowDownCircle,
   Info,
   Activity,
-  PencilLine
+  PencilLine,
+  Home
 } from 'lucide-react';
 import { useFirestore } from '../hooks/useFirestore';
 import { 
@@ -86,14 +87,29 @@ export default function PropertyDetails() {
   const { data: holding, add: addHolding, remove: removeHolding, update: updateHolding } = useFirestore<Holding>('holding');
   const { data: faturamento, add: addFaturamento, remove: removeFaturamento, update: updateFaturamento } = useFirestore<Faturamento>('faturamento');
 
-  const [activeTab, setActiveTab] = useState<'analise' | 'custos' | 'documentos'>('analise');
+  const [activeTab, setActiveTab] = useState<'analise' | 'custos' | 'documentos'>(() => {
+    if (id) {
+      const saved = localStorage.getItem(`activeTab_${id}`);
+      if (saved === 'analise' || saved === 'custos' || saved === 'documentos') {
+        return saved;
+      }
+    }
+    return 'analise';
+  });
+
+  useEffect(() => {
+    if (id) {
+      localStorage.setItem(`activeTab_${id}`, activeTab);
+    }
+  }, [activeTab, id]);
+
   const [isEditingLance, setIsEditingLance] = useState(false);
   const [analyzing, setAnalyzing] = useState(false);
   const [showAddReforma, setShowAddReforma] = useState(false);
   const [showAddFaturamento, setShowAddFaturamento] = useState(false);
   const [showAddAquisicao, setShowAddAquisicao] = useState(false);
   const [showAddHolding, setShowAddHolding] = useState(false);
-  const [editingItem, setEditingItem] = useState<{ id: string, type: 'aquisicao' | 'reforma' | 'holding' | 'faturamento' } | null>(null);
+  const [editingItem, setEditingItem] = useState<{ id: string, type: 'aquisicao' | 'reforma' | 'holding' | 'faturamento' | 'reforma-orc' | 'reforma-desc' | 'holding-tipo' } | null>(null);
   const [formErrors, setFormErrors] = useState<Record<string, string>>({});
 
   // Local state for monetary inputs
@@ -102,6 +118,8 @@ export default function PropertyDetails() {
   const [reformaDescricao, setReformaDescricao] = useState('');
   const [fatValor, setFatValor] = useState<number | undefined>(0);
   const [fatComissao, setFatComissao] = useState<number | undefined>(0);
+  const [fatTipo, setFatTipo] = useState<TipoFaturamento>(TipoFaturamento.Venda);
+  const [fatFileUrl, setFatFileUrl] = useState('');
   const [aquisicaoValor, setAquisicaoValor] = useState<number | undefined>(0);
   const [holdingValor, setHoldingValor] = useState<number | undefined>(0);
   const [holdingCompetencia, setHoldingCompetencia] = useState('');
@@ -159,12 +177,23 @@ export default function PropertyDetails() {
     if (!fatValor || !id) return;
     await addFaturamento({
       id_imovel: id,
-      tipo: TipoFaturamento.Venda,
+      tipo: fatTipo,
       valor: fatValor,
-      custo_corretagem: fatComissao
+      custo_corretagem: fatComissao,
+      fileUrl: fatFileUrl
     });
+
+    // Auto-update property status
+    const newStatus = fatTipo === TipoFaturamento.Locacao 
+      ? StatusArrematacao.Alugado 
+      : StatusArrematacao.Vendido;
+    
+    await updateImovel(id, { status_arrematacao: newStatus });
+
     setFatValor(0);
     setFatComissao(0);
+    setFatTipo(TipoFaturamento.Venda);
+    setFatFileUrl('');
     setShowAddFaturamento(false);
   };
 
@@ -326,7 +355,12 @@ export default function PropertyDetails() {
       <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6">
         <div>
           <div className="flex items-center gap-3 mb-2">
-            <h1 className="text-4xl font-black text-slate-900 dark:text-white tracking-tighter leading-none">{imovel.endereco}</h1>
+            <div className="flex flex-col">
+              {imovel.codigo && (
+                <span className="text-[10px] font-black text-blue-500 uppercase tracking-[0.3em] mb-1">Cód: {imovel.codigo}</span>
+              )}
+              <h1 className="text-4xl font-black text-slate-900 dark:text-white tracking-tighter leading-none">{imovel.endereco}</h1>
+            </div>
             <div className={cn(
               "px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-widest",
               imovel.status_arrematacao === StatusArrematacao.Arrematado ? "bg-emerald-100 text-emerald-700" :
@@ -346,18 +380,71 @@ export default function PropertyDetails() {
         </div>
         
         <div className="flex items-center gap-3">
-          <button className="flex items-center gap-2 px-6 py-3 bg-white dark:bg-slate-900 border-2 border-slate-900 dark:border-white rounded-2xl text-slate-900 dark:text-white text-[10px] font-black uppercase tracking-widest hover:bg-slate-50 dark:hover:bg-slate-800 transition-all active:scale-95 shadow-sm">
-            <Plus size={16} />
-            Nova Ação
-          </button>
+          <div className="relative group">
+            <button className="flex items-center gap-2 px-6 py-3 bg-slate-900 dark:bg-white text-white dark:text-slate-900 rounded-2xl text-[10px] font-black uppercase tracking-widest hover:bg-slate-800 dark:hover:bg-slate-100 transition-all active:scale-95 shadow-lg shadow-slate-200 dark:shadow-none">
+              <Plus size={16} />
+              Nova Ação
+            </button>
+            <div className="absolute right-0 top-full mt-2 w-56 bg-white dark:bg-slate-900 rounded-2xl shadow-2xl border border-slate-100 dark:border-slate-800 py-2 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-50">
+              <button 
+                onClick={() => { setActiveTab('custos'); setShowAddAquisicao(true); }}
+                className="w-full px-4 py-3 text-left hover:bg-slate-50 dark:hover:bg-slate-800 flex items-center gap-3 transition-colors"
+              >
+                <div className="size-8 bg-blue-50 dark:bg-blue-900/20 rounded-lg flex items-center justify-center text-blue-600">
+                  <Wallet size={16} />
+                </div>
+                <div className="flex flex-col">
+                  <span className="text-[10px] font-black uppercase tracking-widest text-slate-900 dark:text-white">Custo Aquisição</span>
+                  <span className="text-[8px] font-bold text-slate-400 uppercase">ITBI, Escritura, RGI...</span>
+                </div>
+              </button>
+              <button 
+                onClick={() => { setActiveTab('custos'); setShowAddReforma(true); }}
+                className="w-full px-4 py-3 text-left hover:bg-slate-50 dark:hover:bg-slate-800 flex items-center gap-3 transition-colors"
+              >
+                <div className="size-8 bg-orange-50 dark:bg-orange-900/20 rounded-lg flex items-center justify-center text-orange-600">
+                  <Hammer size={16} />
+                </div>
+                <div className="flex flex-col">
+                  <span className="text-[10px] font-black uppercase tracking-widest text-slate-900 dark:text-white">Benfeitorias</span>
+                  <span className="text-[8px] font-bold text-slate-400 uppercase">Reforma, Pintura...</span>
+                </div>
+              </button>
+              <button 
+                onClick={() => { setActiveTab('custos'); setShowAddHolding(true); }}
+                className="w-full px-4 py-3 text-left hover:bg-slate-50 dark:hover:bg-slate-800 flex items-center gap-3 transition-colors"
+              >
+                <div className="size-8 bg-purple-50 dark:bg-purple-900/20 rounded-lg flex items-center justify-center text-purple-600">
+                  <ShieldCheck size={16} />
+                </div>
+                <div className="flex flex-col">
+                  <span className="text-[10px] font-black uppercase tracking-widest text-slate-900 dark:text-white">Gastos Mensais</span>
+                  <span className="text-[8px] font-bold text-slate-400 uppercase">Condomínio, IPTU...</span>
+                </div>
+              </button>
+              <div className="my-2 border-t border-slate-50 dark:border-slate-800" />
+              <button 
+                onClick={() => { setActiveTab('custos'); setShowAddFaturamento(true); }}
+                className="w-full px-4 py-3 text-left hover:bg-emerald-50/50 dark:hover:bg-emerald-900/20 flex items-center gap-3 transition-colors"
+              >
+                <div className="size-8 bg-emerald-50 dark:bg-emerald-900/20 rounded-lg flex items-center justify-center text-emerald-600">
+                  <DollarSign size={16} />
+                </div>
+                <div className="flex flex-col">
+                  <span className="text-[10px] font-black uppercase tracking-widest text-emerald-600">Receitas / Aluguel</span>
+                  <span className="text-[8px] font-bold text-slate-400 uppercase">Venda, Locação, Proventos...</span>
+                </div>
+              </button>
+            </div>
+          </div>
         </div>
       </div>
 
       <div className="flex flex-wrap gap-2 p-1.5 bg-slate-100 dark:bg-slate-900 rounded-[1.25rem] w-fit mb-8 border border-slate-200 dark:border-slate-800 shadow-inner">
         {[
-          { id: 'analise', label: 'Monitoramento', icon: ShieldAlert },
-          { id: 'custos', label: 'Performance', icon: Wallet },
-          { id: 'documentos', label: 'Arquivos', icon: FileText },
+          { id: 'analise', label: 'Análise', icon: ShieldAlert },
+          { id: 'custos', label: 'Custos', icon: Wallet },
+          { id: 'documentos', label: 'Documentos', icon: FileText },
         ].map(tab => (
           <button
             key={tab.id}
@@ -436,6 +523,90 @@ export default function PropertyDetails() {
               </div>
             )}
 
+            {/* Asset Data Section */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              <div className="md:col-span-2 bg-white dark:bg-slate-900 p-8 rounded-[2.5rem] border border-slate-200 dark:border-slate-800 space-y-8">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-4">
+                    <div className="size-12 bg-slate-100 dark:bg-slate-800 rounded-2xl flex items-center justify-center text-slate-600 dark:text-slate-400">
+                      <Home size={24} />
+                    </div>
+                    <div>
+                      <h3 className="text-xl font-black text-slate-900 dark:text-white tracking-tight">Dados do Ativo</h3>
+                      <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Informações estruturais e comerciais</p>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-8">
+                  <div className="space-y-2">
+                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-2">Avaliação de Mercado</label>
+                    <DebouncedCurrencyInput
+                      value={imovel.valor_avaliacao || 0}
+                      onUpdate={(val) => updateImovel(id!, { valor_avaliacao: val })}
+                      className="w-full px-5 py-4 bg-slate-50 dark:bg-slate-800 border-none rounded-2xl text-sm font-bold outline-none ring-2 ring-transparent focus:ring-blue-500/20 transition-all"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-2">Lance Mínimo / Arrematação</label>
+                    <DebouncedCurrencyInput
+                      value={imovel.valor_arrematacao || 0}
+                      onUpdate={(val) => updateImovel(id!, { valor_arrematacao: val })}
+                      className="w-full px-5 py-4 bg-slate-50 dark:bg-slate-800 border-none rounded-2xl text-sm font-bold outline-none ring-2 ring-transparent focus:ring-amber-500/20 transition-all"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-2">Matrícula (RGI)</label>
+                    <DebouncedInput
+                      value={imovel.matricula || ''}
+                      onUpdate={(val) => updateImovel(id!, { matricula: val })}
+                      className="w-full px-5 py-4 bg-slate-50 dark:bg-slate-800 border-none rounded-2xl text-sm font-bold outline-none ring-2 ring-transparent focus:ring-slate-500/20 transition-all font-mono"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-2">Área M²</label>
+                    <DebouncedInput
+                      type="number"
+                      value={imovel.area_m2 || ''}
+                      onUpdate={(val) => updateImovel(id!, { area_m2: parseFloat(val) })}
+                      className="w-full px-5 py-4 bg-slate-50 dark:bg-slate-800 border-none rounded-2xl text-sm font-bold outline-none ring-2 ring-transparent focus:ring-slate-500/20 transition-all font-mono"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              <div className="bg-white dark:bg-slate-900 p-8 rounded-[2.5rem] border border-slate-200 dark:border-slate-800 flex flex-col justify-between">
+                <div className="space-y-6">
+                  <div className="flex items-center gap-3">
+                    <div className="size-10 bg-amber-50 dark:bg-amber-900/20 rounded-xl flex items-center justify-center text-amber-600 dark:text-amber-400">
+                      <Calendar size={20} />
+                    </div>
+                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Status do Ativo</p>
+                  </div>
+                  
+                  <div className="space-y-3">
+                    {Object.values(StatusArrematacao).map(status => (
+                      <button
+                        key={status}
+                        onClick={() => {
+                          if (id) updateImovel(id, { status_arrematacao: status });
+                        }}
+                        className={cn(
+                          "w-full py-4 px-6 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all text-left flex items-center justify-between",
+                          imovel.status_arrematacao === status 
+                            ? "bg-slate-900 dark:bg-white text-white dark:text-slate-900 shadow-xl" 
+                            : "bg-slate-50 dark:bg-slate-800 text-slate-500 hover:bg-slate-100"
+                        )}
+                      >
+                        {status}
+                        {imovel.status_arrematacao === status && <CheckCircle2 size={14} />}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            </div>
+
             <div className="bg-slate-900 dark:bg-slate-900 p-12 rounded-[3.5rem] shadow-2xl relative overflow-hidden border border-white/5">
                 <div className="relative z-10">
                   <div className="flex flex-col md:flex-row items-center justify-between gap-8 mb-12">
@@ -477,7 +648,7 @@ export default function PropertyDetails() {
 
                   <div className="grid grid-cols-1 md:grid-cols-12 gap-8 mb-12">
                     {/* Gráfico de Evolução de ROI / Fluxo de Caixa */}
-                    <div className="md:col-span-8 bg-slate-800/40 p-6 rounded-[2rem] border border-white/5 h-[350px]">
+                    <div className="md:col-span-8 bg-slate-800/40 p-6 rounded-[2rem] border border-white/5 min-h-[350px]">
                       <div className="flex items-center justify-between mb-4">
                         <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest flex items-center gap-2">
                           <Activity size={14} className="text-blue-500" />
@@ -485,8 +656,8 @@ export default function PropertyDetails() {
                         </h4>
                         <div className="text-[9px] font-bold text-emerald-400 uppercase">Projeção Consolidada</div>
                       </div>
-                      <div className="h-[250px] w-full">
-                        <ResponsiveContainer width="100%" height="100%">
+                      <div className="h-[250px] w-full min-w-0">
+                        <ResponsiveContainer width="99%" height="100%">
                           <AreaChart data={cashFlowTimeline}>
                             <defs>
                               <linearGradient id="colorVal" x1="0" y1="0" x2="0" y2="1">
@@ -532,13 +703,13 @@ export default function PropertyDetails() {
                     </div>
 
                     {/* Distribuição de Custos */}
-                    <div className="md:col-span-4 bg-slate-800/40 p-6 rounded-[2rem] border border-white/5 flex flex-col justify-between">
+                    <div className="md:col-span-4 bg-slate-800/40 p-6 rounded-[2rem] border border-white/5 flex flex-col justify-between min-h-[350px]">
                       <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest flex items-center gap-2 mb-4">
                         <TrendingDown size={14} className="text-rose-500" />
                         Composição de Gastos
                       </h4>
-                      <div className="h-[180px] w-full">
-                        <ResponsiveContainer width="100%" height="100%">
+                      <div className="h-[180px] w-full min-w-0">
+                        <ResponsiveContainer width="99%" height="100%">
                           <PieChart>
                             <Pie
                               data={costDistribution}
@@ -852,6 +1023,52 @@ export default function PropertyDetails() {
                   </button>
                 </div>
 
+                {showAddReforma && (
+                  <motion.div 
+                    initial={{ height: 0, opacity: 0 }}
+                    animate={{ height: 'auto', opacity: 1 }}
+                    className="bg-white dark:bg-slate-900 p-8 rounded-[2rem] border-2 border-orange-100 dark:border-slate-800 shadow-2xl space-y-6"
+                  >
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                      <div className="space-y-2 md:col-span-2">
+                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-2">Descrição da Etapa</label>
+                        <input
+                          type="text"
+                          placeholder="Ex: Reforma da Cozinha, Pintura externa..."
+                          className="w-full px-5 py-4 bg-slate-50 dark:bg-slate-800 border-none rounded-2xl text-sm font-bold outline-none ring-2 ring-transparent focus:ring-orange-500/20 transition-all"
+                          value={reformaDescricao}
+                          onChange={(e) => setReformaDescricao(e.target.value)}
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-2">Orçamento Previsto</label>
+                        <CurrencyInput
+                          intlConfig={{ locale: 'pt-BR', currency: 'BRL' }}
+                          decimalSeparator=","
+                          groupSeparator="."
+                          decimalsLimit={2}
+                          placeholder="R$ 0,00"
+                          className="w-full px-5 py-4 bg-slate-50 dark:bg-slate-800 border-none rounded-2xl text-sm font-bold outline-none ring-2 ring-transparent focus:ring-orange-500/20 transition-all"
+                          onValueChange={(_v, _n, values) => setReformaOrc(values?.float)}
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-2">Comprovante (Opcional)</label>
+                        <FilePicker 
+                          onFileSelect={(url) => setReformaFileUrl(url)}
+                          onClear={() => setReformaFileUrl('')}
+                        />
+                      </div>
+                    </div>
+                    <button 
+                      onClick={handleAddReforma}
+                      className="w-full py-4 bg-slate-900 dark:bg-white text-white dark:text-slate-900 rounded-2xl text-[10px] font-black uppercase tracking-[0.2em] hover:bg-slate-800 transition-all shadow-xl shadow-orange-500/10"
+                    >
+                      Registrar Benfeitoria
+                    </button>
+                  </motion.div>
+                )}
+
                 <div className="space-y-3">
                   {filteredCustosReforma.map(r => {
                     const progress = r.valor_real && r.orcamento ? Math.min(100, Math.round((r.valor_real / r.orcamento) * 100)) : 0;
@@ -865,16 +1082,53 @@ export default function PropertyDetails() {
                               <Hammer size={20} />
                             </div>
                             <div>
-                              <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">{r.descricao_etapa}</p>
+                              {editingItem?.id === r.id && editingItem?.type === 'reforma-desc' ? (
+                                <input 
+                                  className="text-[10px] font-black text-slate-700 dark:text-slate-200 uppercase tracking-widest bg-white dark:bg-slate-900 border border-blue-100 dark:border-slate-700 rounded px-1 outline-none w-full"
+                                  value={r.descricao_etapa}
+                                  onChange={(e) => updateCustoReforma(r.id!, { descricao_etapa: e.target.value })}
+                                  onBlur={() => setEditingItem(null)}
+                                  autoFocus
+                                />
+                              ) : (
+                                <div className="flex items-center gap-2 group/meta">
+                                  <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">{r.descricao_etapa}</p>
+                                  <button 
+                                    onClick={() => setEditingItem({ id: r.id!, type: 'reforma-desc' as any })}
+                                    className="opacity-0 group-hover/meta:opacity-100 p-0.5 text-slate-300 hover:text-blue-500"
+                                  >
+                                    <PencilLine size={10} />
+                                  </button>
+                                </div>
+                              )}
                               <div className="flex items-center gap-3">
                                 <div className="space-y-1">
                                   <p className="text-[9px] font-black text-slate-400 uppercase tracking-[0.15em]">Orçamento</p>
-                                  <p className="text-sm font-black text-slate-900 dark:text-white">R$ {r.orcamento.toLocaleString('pt-BR')}</p>
+                                  {editingItem?.id === r.id && editingItem?.type === 'reforma-orc' ? (
+                                    <div className="flex items-center gap-2">
+                                      <DebouncedCurrencyInput
+                                        value={r.orcamento}
+                                        onUpdate={(val) => updateCustoReforma(r.id!, { orcamento: val })}
+                                        className="w-24 px-2 py-1 bg-white dark:bg-slate-900 border-none rounded-lg text-[10px] font-black outline-none ring-1 ring-blue-500/30 text-slate-700"
+                                      />
+                                      <button onClick={() => setEditingItem(null)} className="text-emerald-500"><CheckCircle2 size={14} /></button>
+                                    </div>
+                                  ) : (
+                                    <div className="flex items-center gap-2 group/orc">
+                                      <p className="text-sm font-black text-slate-900 dark:text-white">R$ {r.orcamento.toLocaleString('pt-BR')}</p>
+                                      <button 
+                                        onClick={() => setEditingItem({ id: r.id!, type: 'reforma-orc' as any })}
+                                        className="opacity-0 group-hover/orc:opacity-100 p-1 text-slate-400 hover:text-blue-500 transition-all"
+                                      >
+                                        <PencilLine size={12} />
+                                      </button>
+                                    </div>
+                                  )}
                                 </div>
                                 <span className="w-px h-6 bg-slate-100 dark:bg-slate-800" />
                                 <div className="space-y-1">
                                   <p className="text-[9px] font-black text-slate-400 uppercase tracking-[0.15em]">Realizado</p>
-                                  {editingItem?.id === r.id ? (
+                                  {editingItem?.id === r.id && editingItem?.type === 'reforma' ? (
                                     <div className="flex items-center gap-2">
                                       <DebouncedCurrencyInput
                                         value={r.valor_real}
@@ -941,6 +1195,52 @@ export default function PropertyDetails() {
                   </button>
                 </div>
 
+                {showAddHolding && (
+                  <motion.div 
+                    initial={{ height: 0, opacity: 0 }}
+                    animate={{ height: 'auto', opacity: 1 }}
+                    className="bg-white dark:bg-slate-900 p-8 rounded-[2rem] border-2 border-purple-100 dark:border-slate-800 shadow-2xl space-y-6"
+                  >
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                      <div className="space-y-2">
+                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-2">Valor da Despesa</label>
+                        <CurrencyInput
+                          intlConfig={{ locale: 'pt-BR', currency: 'BRL' }}
+                          decimalSeparator=","
+                          groupSeparator="."
+                          decimalsLimit={2}
+                          placeholder="R$ 0,00"
+                          className="w-full px-5 py-4 bg-slate-50 dark:bg-slate-800 border-none rounded-2xl text-sm font-bold outline-none ring-2 ring-transparent focus:ring-purple-500/20 transition-all"
+                          onValueChange={(_v, _n, values) => setHoldingValor(values?.float)}
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-2">Mês de Competência</label>
+                        <input
+                          type="text"
+                          placeholder="MM/AAAA"
+                          className="w-full px-5 py-4 bg-slate-50 dark:bg-slate-800 border-none rounded-2xl text-sm font-bold outline-none ring-2 ring-transparent focus:ring-purple-500/20 transition-all"
+                          value={holdingCompetencia}
+                          onChange={(e) => setHoldingCompetencia(e.target.value)}
+                        />
+                      </div>
+                      <div className="space-y-2 md:col-span-2">
+                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-2">Comprovante de Pagamento</label>
+                        <FilePicker 
+                          onFileSelect={(url) => setHoldingFileUrl(url)}
+                          onClear={() => setHoldingFileUrl('')}
+                        />
+                      </div>
+                    </div>
+                    <button 
+                      onClick={handleAddHolding}
+                      className="w-full py-4 bg-slate-900 dark:bg-white text-white dark:text-slate-900 rounded-2xl text-[10px] font-black uppercase tracking-[0.2em] hover:bg-slate-800 transition-all shadow-xl shadow-purple-500/10"
+                    >
+                      Registrar Despesa
+                    </button>
+                  </motion.div>
+                )}
+
                 <div className="space-y-3">
                   {filteredHolding.map(h => (
                     <div key={h.id} className="group flex items-center justify-between p-5 bg-white dark:bg-slate-900 rounded-[2rem] border border-slate-100 dark:border-slate-800 hover:shadow-lg transition-all">
@@ -949,7 +1249,34 @@ export default function PropertyDetails() {
                           <Clock size={20} />
                         </div>
                         <div>
-                          <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">{h.tipo_despesa} - {h.competencia}</p>
+                          {editingItem?.id === h.id && editingItem?.type === 'holding-tipo' ? (
+                             <div className="flex items-center gap-2 mb-1">
+                               <input 
+                                 className="text-[10px] font-black text-slate-700 dark:text-slate-200 uppercase tracking-widest bg-white dark:bg-slate-900 border border-blue-100 dark:border-slate-700 rounded px-1 outline-none"
+                                 value={h.tipo_despesa}
+                                 onChange={(e) => updateHolding(h.id!, { tipo_despesa: e.target.value })}
+                                 onBlur={() => setEditingItem(null)}
+                                 autoFocus
+                               />
+                               <span className="text-[10px] text-slate-400">-</span>
+                               <input 
+                                 className="text-[10px] font-black text-slate-700 dark:text-slate-200 uppercase tracking-widest bg-white dark:bg-slate-900 border border-blue-100 dark:border-slate-700 rounded px-1 outline-none w-20"
+                                 value={h.competencia}
+                                 onChange={(e) => updateHolding(h.id!, { competencia: e.target.value })}
+                                 onBlur={() => setEditingItem(null)}
+                               />
+                             </div>
+                          ) : (
+                            <div className="flex items-center gap-2 group/meta">
+                              <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">{h.tipo_despesa} - {h.competencia}</p>
+                              <button 
+                                onClick={() => setEditingItem({ id: h.id!, type: 'holding-tipo' as any })}
+                                className="opacity-0 group-hover/meta:opacity-100 p-0.5 text-slate-300 hover:text-blue-500"
+                              >
+                                <PencilLine size={10} />
+                              </button>
+                            </div>
+                          )}
                           <p className="text-lg font-black text-slate-900 dark:text-white tracking-tight">R$ {h.valor_mensal.toLocaleString('pt-BR')}</p>
                         </div>
                       </div>
@@ -1008,6 +1335,74 @@ export default function PropertyDetails() {
                   </button>
                 </div>
 
+                {showAddFaturamento && (
+                  <motion.div 
+                    initial={{ height: 0, opacity: 0 }}
+                    animate={{ height: 'auto', opacity: 1 }}
+                    className="bg-white dark:bg-slate-900 p-8 rounded-[2rem] border-2 border-emerald-100 dark:border-slate-800 shadow-2xl space-y-6"
+                  >
+                    <div className="flex flex-col sm:flex-row gap-2 mb-4 bg-slate-50 dark:bg-slate-800 p-1 rounded-2xl">
+                      {Object.values(TipoFaturamento).map(tipo => (
+                        <button
+                          key={tipo}
+                          type="button"
+                          onClick={() => setFatTipo(tipo)}
+                          className={cn(
+                            "flex-1 py-3 px-4 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all",
+                            fatTipo === tipo 
+                              ? "bg-slate-900 dark:bg-white text-white dark:text-slate-900 shadow-lg" 
+                              : "text-slate-400 hover:text-slate-600"
+                          )}
+                        >
+                          {tipo}
+                        </button>
+                      ))}
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                      <div className="space-y-2">
+                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-2">
+                          {fatTipo === TipoFaturamento.Locacao ? 'Valor Mensal do Aluguel' : 'Valor da Venda / Liquidação'}
+                        </label>
+                        <CurrencyInput
+                          intlConfig={{ locale: 'pt-BR', currency: 'BRL' }}
+                          decimalSeparator=","
+                          groupSeparator="."
+                          decimalsLimit={2}
+                          placeholder="R$ 0,00"
+                          className="w-full px-5 py-4 bg-slate-50 dark:bg-slate-800 border-none rounded-2xl text-sm font-bold outline-none ring-2 ring-transparent focus:ring-emerald-500/20 transition-all font-black text-emerald-600"
+                          onValueChange={(_v, _n, values) => setFatValor(values?.float)}
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-2">Custos de Corretagem</label>
+                        <CurrencyInput
+                          intlConfig={{ locale: 'pt-BR', currency: 'BRL' }}
+                          decimalSeparator=","
+                          groupSeparator="."
+                          decimalsLimit={2}
+                          placeholder="R$ 0,00"
+                          className="w-full px-5 py-4 bg-slate-50 dark:bg-slate-800 border-none rounded-2xl text-sm font-bold outline-none ring-2 ring-transparent focus:ring-emerald-500/20 transition-all"
+                          onValueChange={(_v, _n, values) => setFatComissao(values?.float)}
+                        />
+                      </div>
+                      <div className="space-y-2 md:col-span-2">
+                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-2">Documento / Contrato (PDF)</label>
+                        <FilePicker 
+                          onFileSelect={(url) => setFatFileUrl(url)}
+                          onClear={() => setFatFileUrl('')}
+                        />
+                      </div>
+                    </div>
+                    <button 
+                      onClick={handleAddFaturamento}
+                      className="w-full py-4 bg-emerald-600 text-white rounded-2xl text-[10px] font-black uppercase tracking-[0.2em] hover:bg-emerald-700 transition-all shadow-xl shadow-emerald-500/20"
+                    >
+                      {fatTipo === TipoFaturamento.Locacao ? 'Registrar Novo Contrato de Aluguel' : 'Registrar Liquidação do Ativo'}
+                    </button>
+                  </motion.div>
+                )}
+
                 <div className="space-y-3">
                   {filteredFaturamento.map(f => (
                     <div key={f.id} className="group flex items-center justify-between p-5 bg-emerald-50/30 dark:bg-emerald-900/10 rounded-[2rem] border border-emerald-100 dark:border-emerald-900/30 hover:shadow-lg transition-all">
@@ -1016,20 +1411,63 @@ export default function PropertyDetails() {
                           <TrendingUp size={20} />
                         </div>
                         <div>
-                          <p className="text-[10px] font-black text-emerald-600 dark:text-emerald-400 uppercase tracking-widest mb-1">{f.tipo}</p>
+                          <p className={cn(
+                            "text-[10px] font-black uppercase tracking-widest mb-1",
+                            f.tipo === TipoFaturamento.Locacao ? "text-blue-600 dark:text-blue-400" : "text-emerald-600 dark:text-emerald-400"
+                          )}>
+                            {f.tipo}
+                          </p>
                           <div className="flex items-baseline gap-2">
-                            <p className="text-lg font-black text-slate-900 dark:text-white tracking-tight">R$ {f.valor.toLocaleString('pt-BR')}</p>
-                            <span className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">LÍQUIDO: R$ {(f.valor - (f.custo_corretagem || 0)).toLocaleString('pt-BR')}</span>
+                             {editingItem?.id === f.id && editingItem?.type === 'faturamento' ? (
+                               <div className="flex items-center gap-4 py-1">
+                                  <div className="space-y-1">
+                                    <label className="text-[8px] font-bold text-slate-400 uppercase">Valor de Venda</label>
+                                    <DebouncedCurrencyInput
+                                      value={f.valor}
+                                      onUpdate={(val) => updateFaturamento(f.id!, { valor: val })}
+                                      className="w-32 px-3 py-1.5 bg-white dark:bg-slate-900 border border-emerald-100 rounded-xl text-xs font-black text-emerald-600 outline-none"
+                                    />
+                                  </div>
+                                  <div className="space-y-1">
+                                    <label className="text-[8px] font-bold text-slate-400 uppercase">Comissões</label>
+                                    <DebouncedCurrencyInput
+                                      value={f.custo_corretagem}
+                                      onUpdate={(val) => updateFaturamento(f.id!, { custo_corretagem: val })}
+                                      className="w-32 px-3 py-1.5 bg-white dark:bg-slate-900 border border-slate-100 rounded-xl text-xs font-black text-rose-500 outline-none"
+                                    />
+                                  </div>
+                                  <button 
+                                    onClick={() => setEditingItem(null)}
+                                    className="p-2 bg-emerald-500 text-white rounded-xl shadow-lg shadow-emerald-500/20"
+                                  >
+                                    <CheckCircle2 size={16} />
+                                  </button>
+                               </div>
+                             ) : (
+                               <>
+                                <p className="text-lg font-black text-slate-900 dark:text-white tracking-tight">R$ {f.valor.toLocaleString('pt-BR')}</p>
+                                <span className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">LÍQUIDO: R$ {(f.valor - (f.custo_corretagem || 0)).toLocaleString('pt-BR')}</span>
+                                {f.fileUrl && <FileThumbnail url={f.fileUrl} className="w-10 h-10 ml-4 rounded-xl" />}
+                                <button 
+                                  onClick={() => setEditingItem({ id: f.id!, type: 'faturamento' })}
+                                  className="ml-2 p-1.5 text-slate-400 hover:text-emerald-500 hover:bg-emerald-50 rounded-lg transition-all"
+                                >
+                                  <PencilLine size={14} />
+                                </button>
+                               </>
+                             )}
                           </div>
                         </div>
                       </div>
-                      <button 
-                        onClick={() => removeFaturamento(f.id!)}
+                      <div className="flex items-center gap-2">
+                        <button 
+                          onClick={() => removeFaturamento(f.id!)}
                         className="p-3 text-slate-300 hover:text-rose-500 hover:bg-rose-50 rounded-xl transition-all"
                       >
                         <Trash2 size={18} />
                       </button>
                     </div>
+                  </div>
                   ))}
                 </div>
               </div>
@@ -1092,7 +1530,50 @@ function DebouncedCurrencyInput({ value, onUpdate, className, placeholder }: { v
         onValueChange={(_v, _n, values) => setLocalValue(values?.float)}
       />
       {isSaving && (
-        <div className="absolute -top-1 -right-1">
+        <div className="absolute -top-1 -right-1 z-10">
+          <RefreshCw size={10} className="animate-spin text-blue-500" />
+        </div>
+      )}
+    </div>
+  );
+}
+
+function DebouncedInput({ value, onUpdate, className, placeholder, type = 'text' }: { value?: string | number, onUpdate: (val: any) => void, className?: string, placeholder?: string, type?: string }) {
+  const [localValue, setLocalValue] = useState<string | number | undefined>(value);
+  const [isSaving, setIsSaving] = useState(false);
+
+  useEffect(() => {
+    setLocalValue(value);
+  }, [value]);
+
+  useEffect(() => {
+    if (localValue === value) return;
+    
+    const timeout = setTimeout(async () => {
+      if (localValue !== undefined) {
+        setIsSaving(true);
+        try {
+          await onUpdate(localValue);
+        } finally {
+          setIsSaving(false);
+        }
+      }
+    }, 800);
+
+    return () => clearTimeout(timeout);
+  }, [localValue, value, onUpdate]);
+
+  return (
+    <div className="relative group">
+      <input
+        type={type}
+        className={className}
+        placeholder={placeholder}
+        value={localValue || ''}
+        onChange={(e) => setLocalValue(e.target.value)}
+      />
+      {isSaving && (
+        <div className="absolute -top-1 -right-1 z-10">
           <RefreshCw size={10} className="animate-spin text-blue-500" />
         </div>
       )}

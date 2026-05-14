@@ -89,6 +89,7 @@ export interface Leilao {
 
 export interface Imovel {
   id?: string;
+  codigo?: string;
   origem: OrigemImovel;
   matricula: string;
   cep?: string;
@@ -164,6 +165,7 @@ export interface Faturamento {
   valor: number;
   data_operacao?: string;
   custo_corretagem?: number;
+  fileUrl?: string;
   createdAt?: any;
   createdBy: string;
 }

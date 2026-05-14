@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { Plus, Search, MapPin, Building2, ChevronRight, Gavel, Trash2, X, ClipboardCheck, Loader2, Info, Calendar, Link as LinkIcon } from 'lucide-react';
+import { Plus, Search, MapPin, Building2, ChevronRight, Gavel, Trash2, X, ClipboardCheck, Loader2, Info, Calendar, Link as LinkIcon, PencilLine } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import CurrencyInput from 'react-currency-input-field';
 import { useFirestore } from '../hooks/useFirestore';
@@ -9,8 +9,9 @@ import { cn } from '../lib/utils';
 
 export default function Properties() {
   const navigate = useNavigate();
-  const { data: properties, add, remove } = useFirestore<Imovel>('imoveis');
+  const { data: properties, add, remove, update } = useFirestore<Imovel>('imoveis');
   
+  const [editingProperty, setEditingProperty] = useState<Imovel | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [filterType, setFilterType] = useState<TipoImovel | 'Todos'>('Todos');
@@ -26,7 +27,8 @@ export default function Properties() {
     estado_conservacao: EstadoConservacao.Regular,
     status_arrematacao: StatusArrematacao.Analise,
     tipo_leilao: TipoLeilao.Judicial,
-    forma_arrematacao: FormaArrematacao.Online
+    forma_arrematacao: FormaArrematacao.Online,
+    codigo: ''
   });
 
   const validateForm = () => {
@@ -72,7 +74,8 @@ export default function Properties() {
 
   const filteredProperties = properties.filter(p => {
     const matchesSearch = p.endereco.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         p.matricula.toLowerCase().includes(searchTerm.toLowerCase());
+                         p.matricula.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         (p.codigo && p.codigo.toLowerCase().includes(searchTerm.toLowerCase()));
     const matchesType = filterType === 'Todos' || p.tipo_imovel === filterType;
     const matchesOrigem = filterOrigem === 'Todos' || p.origem === filterOrigem;
     const matchesStatus = filterStatus === 'Todos' || p.status_arrematacao === filterStatus;
@@ -132,12 +135,20 @@ export default function Properties() {
       link_edital: '',
       valor_avaliacao: 0,
       valor_minimo: 0,
-      condicoes_pagamento: ''
+      condicoes_pagamento: '',
+      codigo: ''
     });
   };
 
   const handleOpenModal = () => {
+    setEditingProperty(null);
     resetForm();
+    setIsModalOpen(true);
+  };
+
+  const handleEditModal = (property: Imovel) => {
+    setEditingProperty(property);
+    setFormData(property);
     setIsModalOpen(true);
   };
 
@@ -146,7 +157,19 @@ export default function Properties() {
     if (!validateForm()) return;
     
     try {
-      await add(formData as any);
+      const dataToSave = { ...formData };
+      
+      if (!dataToSave.codigo) {
+        const timestamp = Date.now().toString(36).toUpperCase();
+        const random = Math.random().toString(36).substring(2, 5).toUpperCase();
+        dataToSave.codigo = `IMV-${timestamp}-${random}`;
+      }
+
+      if (editingProperty?.id) {
+        await update(editingProperty.id, dataToSave);
+      } else {
+        await add(dataToSave as any);
+      }
       setIsModalOpen(false);
       resetForm();
     } catch (err) {
@@ -280,10 +303,17 @@ export default function Properties() {
 
                 <div className="p-6 flex-1 flex flex-col">
                   <div className="mb-4">
-                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1.5 flex items-center gap-1.5">
-                      <MapPin size={10} />
-                      {imovel.bairro} • {imovel.cidade}/{imovel.estado}
-                    </p>
+                    <div className="flex items-center justify-between gap-2 mb-1.5">
+                      <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest flex items-center gap-1.5">
+                        <MapPin size={10} />
+                        {imovel.bairro} • {imovel.cidade}/{imovel.estado}
+                      </p>
+                      {imovel.codigo && (
+                        <p className="text-[8px] font-black text-slate-400 bg-slate-100 dark:bg-slate-800 px-1.5 py-0.5 rounded uppercase tracking-tighter">
+                          {imovel.codigo}
+                        </p>
+                      )}
+                    </div>
                     <h3 className="text-base font-black text-slate-900 dark:text-white leading-tight group-hover:text-blue-600 transition-colors line-clamp-2 min-h-[3rem]">
                       {imovel.endereco}
                     </h3>
@@ -309,6 +339,13 @@ export default function Properties() {
                     )}
 
                     <div className="flex gap-2">
+                       <button
+                        onClick={() => handleEditModal(imovel)}
+                        className="p-3 bg-slate-50 dark:bg-slate-800 text-slate-500 rounded-2xl hover:bg-slate-200 transition-all active:scale-95"
+                        title="Editar Dados Básicos"
+                      >
+                        <PencilLine size={16} />
+                      </button>
                       <button
                         onClick={() => navigate(`/properties/${imovel.id}`)}
                         className="flex-1 flex items-center justify-center gap-2 py-3 bg-slate-900 dark:bg-white text-white dark:text-slate-900 rounded-2xl text-[10px] font-black uppercase tracking-widest hover:bg-slate-800 transition-all active:scale-95 shadow-lg shadow-slate-200 dark:shadow-none"
@@ -372,8 +409,12 @@ export default function Properties() {
               <form onSubmit={handleSubmit} className="flex flex-col h-[90vh] md:h-auto max-h-[90vh] dark:text-slate-200">
                 <div className="flex justify-between items-center p-6 border-b border-slate-100 dark:border-slate-800 shrink-0">
                   <div>
-                    <h2 className="text-xl md:text-2xl font-black text-slate-900 dark:text-white tracking-tight">Cadastrar Imóvel</h2>
-                    <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mt-1">Novo Ativo no Portfólio</p>
+                    <h2 className="text-xl md:text-2xl font-black text-slate-900 dark:text-white tracking-tight">
+                      {editingProperty ? 'Editar Imóvel' : 'Cadastrar Imóvel'}
+                    </h2>
+                    <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mt-1">
+                      {editingProperty ? 'Atualizar Ativo no Portfólio' : 'Novo Ativo no Portfólio'}
+                    </p>
                   </div>
                   <button type="button" onClick={() => setIsModalOpen(false)} className="p-2 bg-slate-50 dark:bg-slate-800 text-slate-400 hover:text-rose-500 rounded-full transition-colors">
                     <X size={20} />
@@ -381,32 +422,50 @@ export default function Properties() {
                 </div>
 
                 <div className="flex-1 overflow-y-auto p-6 space-y-8 scrollbar-hide">
-                  {/* Seção 1: Tipo de Aquisição */}
-                  <section className="space-y-4">
-                    <div className="flex items-center gap-2 mb-1">
-                      <div className="p-1.5 bg-blue-50 dark:bg-blue-900/30 rounded-lg">
-                        <ClipboardCheck size={16} className="text-blue-600 dark:text-blue-400" />
+                  {/* Seção 1: Identificação e Aquisição */}
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <section className="space-y-4">
+                      <div className="flex items-center gap-2 mb-1">
+                        <div className="p-1.5 bg-blue-50 dark:bg-blue-900/30 rounded-lg">
+                          <ClipboardCheck size={16} className="text-blue-600 dark:text-blue-400" />
+                        </div>
+                        <h3 className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Código Único</h3>
                       </div>
-                      <h3 className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Tipo de Aquisição</h3>
-                    </div>
-                    <div className="flex flex-col sm:flex-row gap-2">
-                      {Object.values(OrigemImovel).map(origem => (
-                        <button
-                          key={origem}
-                          type="button"
-                          onClick={() => setFormData({ ...formData, origem })}
-                          className={cn(
-                            "flex-1 py-3 px-4 rounded-xl border text-[10px] font-black uppercase tracking-widest transition-all",
-                            formData.origem === origem 
-                              ? "bg-slate-900 dark:bg-white border-slate-900 dark:border-white text-white dark:text-slate-900 shadow-lg shadow-slate-200 dark:shadow-none" 
-                              : "bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-800 text-slate-500 dark:text-slate-500 hover:border-slate-400"
-                          )}
-                        >
-                          {origem}
-                        </button>
-                      ))}
-                    </div>
-                  </section>
+                      <input
+                        type="text"
+                        placeholder="Automático"
+                        className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-800 border-none rounded-xl text-sm font-black dark:text-slate-200 outline-none"
+                        value={formData.codigo || ''}
+                        onChange={e => setFormData({ ...formData, codigo: e.target.value.toUpperCase() })}
+                      />
+                    </section>
+
+                    <section className="space-y-4">
+                      <div className="flex items-center gap-2 mb-1">
+                        <div className="p-1.5 bg-blue-50 dark:bg-blue-900/30 rounded-lg">
+                          <ClipboardCheck size={16} className="text-blue-600 dark:text-blue-400" />
+                        </div>
+                        <h3 className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Tipo de Aquisição</h3>
+                      </div>
+                      <div className="flex flex-col sm:flex-row gap-2">
+                        {Object.values(OrigemImovel).map(origem => (
+                          <button
+                            key={origem}
+                            type="button"
+                            onClick={() => setFormData({ ...formData, origem })}
+                            className={cn(
+                              "flex-1 py-3 px-4 rounded-xl border text-[10px] font-black uppercase tracking-widest transition-all",
+                              formData.origem === origem 
+                                ? "bg-slate-900 dark:bg-white border-slate-900 dark:border-white text-white dark:text-slate-900 shadow-lg shadow-slate-200 dark:shadow-none" 
+                                : "bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-800 text-slate-500 dark:text-slate-500 hover:border-slate-400"
+                            )}
+                          >
+                            {origem}
+                          </button>
+                        ))}
+                      </div>
+                    </section>
+                  </div>
 
                   {/* Seção 2: Dados do Leilão (Condicional) */}
                   {formData.origem === OrigemImovel.Leilao && (
