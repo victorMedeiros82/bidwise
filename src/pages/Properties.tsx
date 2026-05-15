@@ -4,7 +4,7 @@ import { Plus, Search, MapPin, Building2, ChevronRight, Gavel, Trash2, X, Clipbo
 import { useNavigate } from 'react-router-dom';
 import CurrencyInput from 'react-currency-input-field';
 import { useFirestore } from '../hooks/useFirestore';
-import { Imovel, TipoImovel, SituacaoJuridica, EstadoConservacao, StatusArrematacao, OrigemImovel, TipoLeilao, FormaArrematacao } from '../types';
+import { Imovel, TipoImovel, SituacaoJuridica, EstadoConservacao, StatusArrematacao, OrigemImovel, TipoLeilao, FormaArrematacao, TipoArrematacao } from '../types';
 import { cn } from '../lib/utils';
 
 export default function Properties() {
@@ -17,6 +17,7 @@ export default function Properties() {
   const [filterType, setFilterType] = useState<TipoImovel | 'Todos'>('Todos');
   const [filterOrigem, setFilterOrigem] = useState<OrigemImovel | 'Todos'>('Todos');
   const [filterStatus, setFilterStatus] = useState<StatusArrematacao | 'Todos'>('Todos');
+  const [filterTipoArrematacao, setFilterTipoArrematacao] = useState<TipoArrematacao | 'Todos'>('Todos');
   const [filterLocation, setFilterLocation] = useState('');
   const [searchingCep, setSearchingCep] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -28,7 +29,9 @@ export default function Properties() {
     status_arrematacao: StatusArrematacao.Analise,
     tipo_leilao: TipoLeilao.Judicial,
     forma_arrematacao: FormaArrematacao.Online,
-    codigo: ''
+    codigo: '',
+    tipo_arrematacao: TipoArrematacao.AVista,
+    saldo_devedor: 0
   });
 
   const validateForm = () => {
@@ -79,11 +82,12 @@ export default function Properties() {
     const matchesType = filterType === 'Todos' || p.tipo_imovel === filterType;
     const matchesOrigem = filterOrigem === 'Todos' || p.origem === filterOrigem;
     const matchesStatus = filterStatus === 'Todos' || p.status_arrematacao === filterStatus;
+    const matchesTipoArrematacao = filterTipoArrematacao === 'Todos' || p.tipo_arrematacao === filterTipoArrematacao;
     const matchesLocation = !filterLocation || 
                            (p.cidade?.toLowerCase().includes(filterLocation.toLowerCase()) || 
                             p.estado?.toLowerCase().includes(filterLocation.toLowerCase()));
     
-    return matchesSearch && matchesType && matchesOrigem && matchesStatus && matchesLocation;
+    return matchesSearch && matchesType && matchesOrigem && matchesStatus && matchesTipoArrematacao && matchesLocation;
   });
 
   const handleCepChange = async (cep: string) => {
@@ -136,7 +140,9 @@ export default function Properties() {
       valor_avaliacao: 0,
       valor_minimo: 0,
       condicoes_pagamento: '',
-      codigo: ''
+      codigo: '',
+      tipo_arrematacao: TipoArrematacao.AVista,
+      saldo_devedor: 0
     });
   };
 
@@ -261,12 +267,39 @@ export default function Properties() {
               setSearchTerm('');
               setFilterType('Todos');
               setFilterStatus('Todos');
+              setFilterTipoArrematacao('Todos');
               setFilterLocation('');
             }}
             className="px-4 py-2 text-[10px] font-black text-rose-500 uppercase tracking-widest hover:bg-rose-50 rounded-xl transition-colors"
           >
             Limpar
           </button>
+        </div>
+
+        <div className="flex flex-wrap items-center gap-3 pt-5 border-t border-slate-50 dark:border-slate-800">
+           <div className="flex items-center gap-2 bg-slate-50 dark:bg-slate-800 p-1 rounded-xl">
+              <button
+                onClick={() => setFilterTipoArrematacao('Todos')}
+                className={cn(
+                  "px-4 py-2 rounded-lg text-[9px] font-black uppercase tracking-widest transition-all",
+                  filterTipoArrematacao === 'Todos' ? "bg-white dark:bg-slate-700 text-slate-900 dark:text-white shadow-sm" : "text-slate-400"
+                )}
+              >
+                Todos
+              </button>
+              {Object.values(TipoArrematacao).map(tipo => (
+                <button
+                  key={tipo}
+                  onClick={() => setFilterTipoArrematacao(tipo)}
+                  className={cn(
+                    "px-4 py-2 rounded-lg text-[9px] font-black uppercase tracking-widest transition-all",
+                    filterTipoArrematacao === tipo ? "bg-white dark:bg-slate-700 text-slate-900 dark:text-white shadow-sm" : "text-slate-400"
+                  )}
+                >
+                  {tipo}
+                </button>
+              ))}
+           </div>
         </div>
       </div>
 
@@ -820,7 +853,7 @@ export default function Properties() {
                       </div>
 
                       <div className="space-y-1.5">
-                        <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-widest ml-1">Status Arrematação</label>
+                        <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-widest ml-1">Status Arrematacao</label>
                         <select
                           className="w-full px-4 py-3 border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 rounded-xl outline-none text-sm font-medium dark:text-slate-200 appearance-none shadow-sm"
                           value={formData.status_arrematacao}
@@ -829,6 +862,34 @@ export default function Properties() {
                           {Object.values(StatusArrematacao).map(s => <option key={s} value={s}>{s}</option>)}
                         </select>
                       </div>
+
+                      <div className="space-y-1.5">
+                        <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-widest ml-1 text-blue-500">Tipo de Arrematação</label>
+                        <select
+                          className="w-full px-4 py-3 border border-blue-100 dark:border-blue-900 bg-white dark:bg-slate-800 rounded-xl outline-none text-sm font-black text-blue-600 appearance-none shadow-sm"
+                          value={formData.tipo_arrematacao}
+                          onChange={e => setFormData({...formData, tipo_arrematacao: e.target.value as TipoArrematacao})}
+                        >
+                          <option value="">Selecione...</option>
+                          {Object.values(TipoArrematacao).map(t => <option key={t} value={t}>{t}</option>)}
+                        </select>
+                      </div>
+
+                      {formData.tipo_arrematacao === TipoArrematacao.Financiada && (
+                        <div className="space-y-1.5 col-span-2">
+                          <label className="block text-[10px] font-bold text-rose-500 uppercase tracking-widest ml-1">Saldo Devedor (Financiamento)</label>
+                          <CurrencyInput
+                            intlConfig={{ locale: 'pt-BR', currency: 'BRL' }}
+                            decimalSeparator=","
+                            groupSeparator="."
+                            decimalsLimit={2}
+                            placeholder="R$ 0,00"
+                            className="w-full px-4 py-3 border border-rose-100 dark:border-rose-900 bg-white dark:bg-slate-800 rounded-xl outline-none text-sm font-black text-rose-600"
+                            value={formData.saldo_devedor || ''}
+                            onValueChange={(_v, _n, values) => setFormData({...formData, saldo_devedor: values?.float || 0})}
+                          />
+                        </div>
+                      )}
                     </div>
                   </section>
                 </div>

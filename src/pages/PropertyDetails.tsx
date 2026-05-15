@@ -51,7 +51,8 @@ import {
   OrigemImovel,
   TipoLeilao,
   FormaArrematacao,
-  TipoFaturamento
+  TipoFaturamento,
+  TipoArrematacao
 } from '../types';
 import { cn } from '../lib/utils';
 import { generateRiskAnalysis } from '../services/gemini';
@@ -123,21 +124,26 @@ export default function PropertyDetails() {
   const [aquisicaoValor, setAquisicaoValor] = useState<number | undefined>(0);
   const [holdingValor, setHoldingValor] = useState<number | undefined>(0);
   const [holdingCompetencia, setHoldingCompetencia] = useState('');
+  const [holdingDescricao, setHoldingDescricao] = useState('');
+  const [aquisicaoDescricao, setAquisicaoDescricao] = useState('');
   
   const [aquisicaoFileUrl, setAquisicaoFileUrl] = useState('');
   const [reformaFileUrl, setReformaFileUrl] = useState('');
   const [holdingFileUrl, setHoldingFileUrl] = useState('');
+  const [fatDescricao, setFatDescricao] = useState('');
 
   const handleAddAquisicao = async () => {
     if (!aquisicaoValor || !id) return;
     await addCustoAquisicao({
       id_imovel: id,
       tipo_custo: 'Desembolso Inicial (Entrada/Lance)',
+      descricao: aquisicaoDescricao,
       valor: aquisicaoValor,
       status_pagamento: StatusPagamento.Pago,
       fileUrl: aquisicaoFileUrl
     });
     setAquisicaoValor(0);
+    setAquisicaoDescricao('');
     setAquisicaoFileUrl('');
     setShowAddAquisicao(false);
   };
@@ -163,12 +169,14 @@ export default function PropertyDetails() {
     await addHolding({
       id_imovel: id,
       tipo_despesa: 'Custos Fixos / Holding',
+      descricao: holdingDescricao,
       valor_mensal: holdingValor,
       competencia: holdingCompetencia || new Date().toLocaleDateString('pt-BR', { month: '2-digit', year: 'numeric' }),
       fileUrl: holdingFileUrl
     });
     setHoldingValor(0);
     setHoldingCompetencia('');
+    setHoldingDescricao('');
     setHoldingFileUrl('');
     setShowAddHolding(false);
   };
@@ -178,6 +186,7 @@ export default function PropertyDetails() {
     await addFaturamento({
       id_imovel: id,
       tipo: fatTipo,
+      descricao: fatDescricao,
       valor: fatValor,
       custo_corretagem: fatComissao,
       fileUrl: fatFileUrl
@@ -193,6 +202,7 @@ export default function PropertyDetails() {
     setFatValor(0);
     setFatComissao(0);
     setFatTipo(TipoFaturamento.Venda);
+    setFatDescricao('');
     setFatFileUrl('');
     setShowAddFaturamento(false);
   };
@@ -257,20 +267,27 @@ export default function PropertyDetails() {
   const totalAquisicao = filteredCustosAquisicao.reduce((acc, curr) => acc + (curr.valor || 0), 0);
   const totalReforma = filteredCustosReforma.reduce((acc, curr) => acc + (curr.valor_real || curr.orcamento || 0), 0);
   const totalHolding = filteredHolding.reduce((acc, curr) => acc + (curr.valor_mensal || 0), 0);
-  const totalInvestimento = totalAquisicao + totalReforma + totalHolding;
+  
+  // O Saldo Devedor é o valor financiado que ainda não saiu do bolso (não desembolsado)
+  const saldoDevedor = imovel?.saldo_devedor || 0;
+  
+  // Capital Alocado (Cash-out) é o total de custos menos o que foi financiado/saldo devedor
+  const totalInvestimentoRaw = totalAquisicao + totalReforma + totalHolding;
+  const totalInvestimento = Math.max(0, totalInvestimentoRaw - saldoDevedor);
   
   const faturamentoBruto = filteredFaturamento.reduce((acc, curr) => acc + (curr.valor || 0), 0);
   const totalComissoes = filteredFaturamento.reduce((acc, curr) => acc + (curr.custo_corretagem || 0), 0);
   const faturamentoLiquido = faturamentoBruto - totalComissoes;
   
-  const valorFinanciamento = imovel?.valor_financiamento || 0;
-  
   // Use faturamentoLiquido if > 0, otherwise use eval value (prospective)
   const baseReceita = faturamentoLiquido > 0 ? faturamentoLiquido : (imovel.valor_avaliacao || imovel.valor_arrematacao || 0);
   
-  const lucroBruto = baseReceita - totalInvestimento - valorFinanciamento;
+  // O lucro bruto considera a receita menos o custo TOTAL da operação (desembolsado + saldo devedor)
+  const lucroBruto = baseReceita - totalInvestimentoRaw;
   const impostoRenda = lucroBruto > 0 ? lucroBruto * 0.15 : 0;
   const lucroLiquido = lucroBruto - impostoRenda;
+  
+  // ROI sobre o capital próprio (Cash-on-Cash Return)
   const roiLiquido = totalInvestimento > 0 ? (lucroLiquido / totalInvestimento) * 100 : 0;
 
   // Calculo de Fluxo de Caixa Acumulado
@@ -309,7 +326,7 @@ export default function PropertyDetails() {
   });
 
   const costDistribution = [
-    { name: 'Aquisição', value: totalAquisicao, color: '#3b82f6' },
+    { name: 'Aquisição', value: Math.max(0, totalAquisicao - saldoDevedor), color: '#3b82f6' },
     { name: 'Benfeitorias', value: totalReforma, color: '#f59e0b' },
     { name: 'Manutenção', value: totalHolding, color: '#8b5cf6' },
     { name: 'Taxas/IR', value: totalComissoes + impostoRenda, color: '#ef4444' }
@@ -572,6 +589,43 @@ export default function PropertyDetails() {
                       className="w-full px-5 py-4 bg-slate-50 dark:bg-slate-800 border-none rounded-2xl text-sm font-bold outline-none ring-2 ring-transparent focus:ring-slate-500/20 transition-all font-mono"
                     />
                   </div>
+                  <div className="space-y-2">
+                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-2">Tipo de Arrematação</label>
+                    <div className="flex gap-2 bg-slate-50 dark:bg-slate-800 p-1 rounded-2xl">
+                      {Object.values(TipoArrematacao).map(tipo => (
+                        <button
+                          key={tipo}
+                          onClick={() => updateImovel(id!, { tipo_arrematacao: tipo })}
+                          className={cn(
+                            "flex-1 py-3 px-4 rounded-xl text-[9px] font-black uppercase tracking-widest transition-all",
+                            imovel.tipo_arrematacao === tipo 
+                              ? "bg-slate-900 dark:bg-white text-white dark:text-slate-900 shadow-lg" 
+                              : "text-slate-400 hover:text-slate-600"
+                          )}
+                        >
+                          {tipo}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                  {imovel.tipo_arrematacao === TipoArrematacao.Financiada && (
+                    <motion.div 
+                      initial={{ opacity: 0, height: 0 }}
+                      animate={{ opacity: 1, height: 'auto' }}
+                      className="space-y-2"
+                    >
+                      <label className="text-[10px] font-black text-rose-500 uppercase tracking-widest px-2 flex items-center gap-1">
+                        <TrendingDown size={10} />
+                        Saldo Devedor (Financiamento)
+                      </label>
+                      <DebouncedCurrencyInput
+                        value={imovel.saldo_devedor || 0}
+                        onUpdate={(val) => updateImovel(id!, { saldo_devedor: val })}
+                        className="w-full px-5 py-4 bg-rose-50 dark:bg-rose-900/10 border-none rounded-2xl text-sm font-black outline-none ring-2 ring-transparent focus:ring-rose-500/20 transition-all text-rose-600"
+                        placeholder="R$ 0,00"
+                      />
+                    </motion.div>
+                  )}
                 </div>
               </div>
 
@@ -636,7 +690,7 @@ export default function PropertyDetails() {
                         </p>
                         <span className="w-1 h-1 rounded-full bg-slate-800" />
                         <p className="text-[9px] font-bold text-blue-500 uppercase tracking-widest">
-                          Dívida: R$ {valorFinanciamento.toLocaleString('pt-BR')}
+                          Dívida: R$ {saldoDevedor.toLocaleString('pt-BR')}
                         </p>
                         <span className="w-1 h-1 rounded-full bg-slate-800" />
                         <p className="text-[9px] font-bold text-rose-500 uppercase tracking-widest">
@@ -840,8 +894,8 @@ export default function PropertyDetails() {
                     </div>
                     <div className="w-full md:w-auto">
                       <DebouncedCurrencyInput
-                        value={imovel.valor_financiamento || 0}
-                        onUpdate={(val) => updateImovel(id!, { valor_financiamento: val })}
+                        value={imovel.saldo_devedor || 0}
+                        onUpdate={(val) => updateImovel(id!, { saldo_devedor: val })}
                         className="w-full md:w-32 px-4 py-2 bg-slate-900/50 border border-slate-800 rounded-xl text-xs font-black text-blue-400 outline-none focus:border-blue-500/50 transition-all text-right"
                       />
                     </div>
@@ -933,7 +987,7 @@ export default function PropertyDetails() {
                           groupSeparator="."
                           decimalsLimit={2}
                           placeholder="R$ 0,00"
-                          className="w-full px-5 py-4 bg-slate-50 dark:bg-slate-800 border-none rounded-2xl text-sm font-bold outline-none ring-2 ring-transparent focus:ring-blue-500/20 transition-all"
+                          className="w-full px-5 py-4 bg-slate-50 dark:bg-slate-800 border-none rounded-2xl text-sm font-black outline-none ring-2 ring-transparent focus:ring-blue-500/20 transition-all text-blue-600"
                           onValueChange={(_v, _n, values) => setAquisicaoValor(values?.float)}
                         />
                       </div>
@@ -942,6 +996,16 @@ export default function PropertyDetails() {
                         <FilePicker 
                           onFileSelect={(url) => setAquisicaoFileUrl(url)}
                           onClear={() => setAquisicaoFileUrl('')}
+                        />
+                      </div>
+                      <div className="space-y-2 md:col-span-2">
+                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-2">Descrição / Observação</label>
+                        <input
+                          type="text"
+                          placeholder="Ex: Entrada do contrato assinado em..."
+                          className="w-full px-5 py-4 bg-slate-50 dark:bg-slate-800 border-none rounded-2xl text-sm font-black outline-none ring-2 ring-transparent focus:ring-blue-500/20 transition-all"
+                          value={aquisicaoDescricao}
+                          onChange={(e) => setAquisicaoDescricao(e.target.value)}
                         />
                       </div>
                     </div>
@@ -962,7 +1026,12 @@ export default function PropertyDetails() {
                           <DollarSign size={20} />
                         </div>
                         <div>
-                          <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">{c.tipo_custo}</p>
+                          <div className="flex flex-col">
+                            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">{c.tipo_custo}</p>
+                            {c.descricao && (
+                              <p className="text-[9px] font-bold text-slate-500 italic mb-1">"{c.descricao}"</p>
+                            )}
+                          </div>
                           <p className="text-lg font-black text-slate-900 dark:text-white tracking-tight">R$ {c.valor.toLocaleString('pt-BR')}</p>
                         </div>
                       </div>
@@ -1035,7 +1104,7 @@ export default function PropertyDetails() {
                         <input
                           type="text"
                           placeholder="Ex: Reforma da Cozinha, Pintura externa..."
-                          className="w-full px-5 py-4 bg-slate-50 dark:bg-slate-800 border-none rounded-2xl text-sm font-bold outline-none ring-2 ring-transparent focus:ring-orange-500/20 transition-all"
+                          className="w-full px-5 py-4 bg-slate-50 dark:bg-slate-800 border-none rounded-2xl text-sm font-black outline-none ring-2 ring-transparent focus:ring-orange-500/20 transition-all"
                           value={reformaDescricao}
                           onChange={(e) => setReformaDescricao(e.target.value)}
                         />
@@ -1048,7 +1117,7 @@ export default function PropertyDetails() {
                           groupSeparator="."
                           decimalsLimit={2}
                           placeholder="R$ 0,00"
-                          className="w-full px-5 py-4 bg-slate-50 dark:bg-slate-800 border-none rounded-2xl text-sm font-bold outline-none ring-2 ring-transparent focus:ring-orange-500/20 transition-all"
+                          className="w-full px-5 py-4 bg-slate-50 dark:bg-slate-800 border-none rounded-2xl text-sm font-black outline-none ring-2 ring-transparent focus:ring-orange-500/20 transition-all"
                           onValueChange={(_v, _n, values) => setReformaOrc(values?.float)}
                         />
                       </div>
@@ -1210,7 +1279,7 @@ export default function PropertyDetails() {
                           groupSeparator="."
                           decimalsLimit={2}
                           placeholder="R$ 0,00"
-                          className="w-full px-5 py-4 bg-slate-50 dark:bg-slate-800 border-none rounded-2xl text-sm font-bold outline-none ring-2 ring-transparent focus:ring-purple-500/20 transition-all"
+                          className="w-full px-5 py-4 bg-slate-50 dark:bg-slate-800 border-none rounded-2xl text-sm font-black outline-none ring-2 ring-transparent focus:ring-purple-500/20 transition-all text-purple-600"
                           onValueChange={(_v, _n, values) => setHoldingValor(values?.float)}
                         />
                       </div>
@@ -1219,9 +1288,19 @@ export default function PropertyDetails() {
                         <input
                           type="text"
                           placeholder="MM/AAAA"
-                          className="w-full px-5 py-4 bg-slate-50 dark:bg-slate-800 border-none rounded-2xl text-sm font-bold outline-none ring-2 ring-transparent focus:ring-purple-500/20 transition-all"
+                          className="w-full px-5 py-4 bg-slate-50 dark:bg-slate-800 border-none rounded-2xl text-sm font-black outline-none ring-2 ring-transparent focus:ring-purple-500/20 transition-all"
                           value={holdingCompetencia}
                           onChange={(e) => setHoldingCompetencia(e.target.value)}
+                        />
+                      </div>
+                      <div className="space-y-2 md:col-span-2">
+                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-2">Descrição / Observação</label>
+                        <input
+                          type="text"
+                          placeholder="Ex: Pagamento condomínio apto..."
+                          className="w-full px-5 py-4 bg-slate-50 dark:bg-slate-800 border-none rounded-2xl text-sm font-black outline-none ring-2 ring-transparent focus:ring-purple-500/20 transition-all"
+                          value={holdingDescricao}
+                          onChange={(e) => setHoldingDescricao(e.target.value)}
                         />
                       </div>
                       <div className="space-y-2 md:col-span-2">
@@ -1267,6 +1346,7 @@ export default function PropertyDetails() {
                                />
                              </div>
                           ) : (
+                          <div className="flex flex-col">
                             <div className="flex items-center gap-2 group/meta">
                               <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">{h.tipo_despesa} - {h.competencia}</p>
                               <button 
@@ -1276,6 +1356,10 @@ export default function PropertyDetails() {
                                 <PencilLine size={10} />
                               </button>
                             </div>
+                            {h.descricao && (
+                              <p className="text-[9px] font-bold text-slate-500 italic mb-1">"{h.descricao}"</p>
+                            )}
+                          </div>
                           )}
                           <p className="text-lg font-black text-slate-900 dark:text-white tracking-tight">R$ {h.valor_mensal.toLocaleString('pt-BR')}</p>
                         </div>
@@ -1370,7 +1454,10 @@ export default function PropertyDetails() {
                           groupSeparator="."
                           decimalsLimit={2}
                           placeholder="R$ 0,00"
-                          className="w-full px-5 py-4 bg-slate-50 dark:bg-slate-800 border-none rounded-2xl text-sm font-bold outline-none ring-2 ring-transparent focus:ring-emerald-500/20 transition-all font-black text-emerald-600"
+                          className={cn(
+                            "w-full px-5 py-4 bg-slate-50 dark:bg-slate-800 border-none rounded-2xl text-sm font-black outline-none ring-2 ring-transparent transition-all",
+                            fatTipo === TipoFaturamento.Locacao ? "focus:ring-blue-500/20 text-blue-600" : "focus:ring-emerald-500/20 text-emerald-600"
+                          )}
                           onValueChange={(_v, _n, values) => setFatValor(values?.float)}
                         />
                       </div>
@@ -1382,8 +1469,18 @@ export default function PropertyDetails() {
                           groupSeparator="."
                           decimalsLimit={2}
                           placeholder="R$ 0,00"
-                          className="w-full px-5 py-4 bg-slate-50 dark:bg-slate-800 border-none rounded-2xl text-sm font-bold outline-none ring-2 ring-transparent focus:ring-emerald-500/20 transition-all"
+                          className="w-full px-5 py-4 bg-slate-50 dark:bg-slate-800 border-none rounded-2xl text-sm font-bold outline-none ring-2 ring-transparent focus:ring-emerald-500/20 transition-all font-black text-rose-500"
                           onValueChange={(_v, _n, values) => setFatComissao(values?.float)}
+                        />
+                      </div>
+                      <div className="space-y-2 md:col-span-2">
+                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-2">Descrição / Observação</label>
+                        <input
+                          type="text"
+                          placeholder={fatTipo === TipoFaturamento.Locacao ? 'Ex: Contrato de 12 meses com fiador...' : 'Ex: Venda via corretor X...'}
+                          className="w-full px-5 py-4 bg-slate-50 dark:bg-slate-800 border-none rounded-2xl text-sm font-bold outline-none ring-2 ring-transparent focus:ring-emerald-500/20 transition-all font-black"
+                          value={fatDescricao}
+                          onChange={(e) => setFatDescricao(e.target.value)}
                         />
                       </div>
                       <div className="space-y-2 md:col-span-2">
@@ -1411,12 +1508,17 @@ export default function PropertyDetails() {
                           <TrendingUp size={20} />
                         </div>
                         <div>
-                          <p className={cn(
-                            "text-[10px] font-black uppercase tracking-widest mb-1",
-                            f.tipo === TipoFaturamento.Locacao ? "text-blue-600 dark:text-blue-400" : "text-emerald-600 dark:text-emerald-400"
-                          )}>
-                            {f.tipo}
-                          </p>
+                          <div className="flex flex-col">
+                            <p className={cn(
+                              "text-[10px] font-black uppercase tracking-widest mb-1",
+                              f.tipo === TipoFaturamento.Locacao ? "text-blue-600 dark:text-blue-400" : "text-emerald-600 dark:text-emerald-400"
+                            )}>
+                              {f.tipo}
+                            </p>
+                            {f.descricao && (
+                              <p className="text-[9px] font-bold text-slate-500 italic mb-1">"{f.descricao}"</p>
+                            )}
+                          </div>
                           <div className="flex items-baseline gap-2">
                              {editingItem?.id === f.id && editingItem?.type === 'faturamento' ? (
                                <div className="flex items-center gap-4 py-1">

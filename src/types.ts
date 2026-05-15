@@ -87,6 +87,11 @@ export interface Leilao {
   createdBy: string;
 }
 
+export enum TipoArrematacao {
+  AVista = 'À Vista',
+  Financiada = 'Financiada'
+}
+
 export interface Imovel {
   id?: string;
   codigo?: string;
@@ -116,6 +121,8 @@ export interface Imovel {
   forma_arrematacao?: FormaArrematacao;
   condicoes_pagamento?: string;
   valor_financiamento?: number;
+  tipo_arrematacao?: TipoArrematacao;
+  saldo_devedor?: number;
 
   createdAt?: any;
   updatedAt?: any;
@@ -126,6 +133,7 @@ export interface CustoAquisicao {
   id?: string;
   id_imovel: string;
   tipo_custo: string;
+  descricao?: string;
   valor: number;
   data_vencimento?: string;
   status_pagamento: StatusPagamento;
@@ -151,6 +159,7 @@ export interface Holding {
   id?: string;
   id_imovel: string;
   tipo_despesa: string;
+  descricao?: string;
   valor_mensal: number;
   competencia: string;
   fileUrl?: string;
@@ -162,6 +171,7 @@ export interface Faturamento {
   id?: string;
   id_imovel: string;
   tipo: TipoFaturamento;
+  descricao?: string;
   valor: number;
   data_operacao?: string;
   custo_corretagem?: number;
