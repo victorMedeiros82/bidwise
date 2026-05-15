@@ -15,6 +15,8 @@ export default function Properties() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [filterType, setFilterType] = useState<TipoImovel | 'Todos'>('Todos');
+  const [filterSituacaoJuridica, setFilterSituacaoJuridica] = useState<SituacaoJuridica | 'Todos'>('Todos');
+  const [filterEstadoConservacao, setFilterEstadoConservacao] = useState<EstadoConservacao | 'Todos'>('Todos');
   const [filterOrigem, setFilterOrigem] = useState<OrigemImovel | 'Todos'>('Todos');
   const [filterStatus, setFilterStatus] = useState<StatusArrematacao | 'Todos'>('Todos');
   const [filterTipoArrematacao, setFilterTipoArrematacao] = useState<TipoArrematacao | 'Todos'>('Todos');
@@ -80,6 +82,8 @@ export default function Properties() {
                          p.matricula.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          (p.codigo && p.codigo.toLowerCase().includes(searchTerm.toLowerCase()));
     const matchesType = filterType === 'Todos' || p.tipo_imovel === filterType;
+    const matchesSituacao = filterSituacaoJuridica === 'Todos' || p.situacao_juridica === filterSituacaoJuridica;
+    const matchesConservacao = filterEstadoConservacao === 'Todos' || p.estado_conservacao === filterEstadoConservacao;
     const matchesOrigem = filterOrigem === 'Todos' || p.origem === filterOrigem;
     const matchesStatus = filterStatus === 'Todos' || p.status_arrematacao === filterStatus;
     const matchesTipoArrematacao = filterTipoArrematacao === 'Todos' || p.tipo_arrematacao === filterTipoArrematacao;
@@ -87,7 +91,7 @@ export default function Properties() {
                            (p.cidade?.toLowerCase().includes(filterLocation.toLowerCase()) || 
                             p.estado?.toLowerCase().includes(filterLocation.toLowerCase()));
     
-    return matchesSearch && matchesType && matchesOrigem && matchesStatus && matchesTipoArrematacao && matchesLocation;
+    return matchesSearch && matchesType && matchesSituacao && matchesConservacao && matchesOrigem && matchesStatus && matchesTipoArrematacao && matchesLocation;
   });
 
   const handleCepChange = async (cep: string) => {
@@ -251,6 +255,24 @@ export default function Properties() {
             {Object.values(TipoImovel).map(t => <option key={t} value={t}>{t}</option>)}
           </select>
 
+          <select 
+            value={filterSituacaoJuridica}
+            onChange={(e) => setFilterSituacaoJuridica(e.target.value as any)}
+            className="bg-slate-50 dark:bg-slate-800 border-none rounded-xl text-[10px] font-black uppercase tracking-widest text-slate-600 dark:text-slate-300 px-4 py-2.5 outline-none focus:ring-2 focus:ring-slate-900/5 appearance-none min-w-[140px]"
+          >
+            <option value="Todos">Situação Jurídica: Todos</option>
+            {Object.values(SituacaoJuridica).map(s => <option key={s} value={s}>{s}</option>)}
+          </select>
+
+          <select 
+            value={filterEstadoConservacao}
+            onChange={(e) => setFilterEstadoConservacao(e.target.value as any)}
+            className="bg-slate-50 dark:bg-slate-800 border-none rounded-xl text-[10px] font-black uppercase tracking-widest text-slate-600 dark:text-slate-300 px-4 py-2.5 outline-none focus:ring-2 focus:ring-slate-900/5 appearance-none min-w-[140px]"
+          >
+            <option value="Todos">Conservação: Todos</option>
+            {Object.values(EstadoConservacao).map(e => <option key={e} value={e}>{e}</option>)}
+          </select>
+
           <div className="relative flex-1 min-w-[200px]">
             <MapPin size={14} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" />
             <input
@@ -266,6 +288,8 @@ export default function Properties() {
             onClick={() => {
               setSearchTerm('');
               setFilterType('Todos');
+              setFilterSituacaoJuridica('Todos');
+              setFilterEstadoConservacao('Todos');
               setFilterStatus('Todos');
               setFilterTipoArrematacao('Todos');
               setFilterLocation('');
@@ -411,7 +435,10 @@ export default function Properties() {
                 onClick={() => {
                   setSearchTerm('');
                   setFilterType('Todos');
+                  setFilterSituacaoJuridica('Todos');
+                  setFilterEstadoConservacao('Todos');
                   setFilterStatus('Todos');
+                  setFilterTipoArrematacao('Todos');
                   setFilterLocation('');
                 }}
                 className="px-8 py-3 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white rounded-2xl text-[10px] font-black uppercase tracking-[0.2em] shadow-sm hover:shadow-md transition-all"

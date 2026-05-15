@@ -711,7 +711,7 @@ export default function PropertyDetails() {
                         <div className="text-[9px] font-bold text-emerald-400 uppercase">Projeção Consolidada</div>
                       </div>
                       <div className="h-[250px] w-full min-w-0">
-                        <ResponsiveContainer width="99%" height="100%">
+                        <ResponsiveContainer width="100%" height="100%" minWidth={0}>
                           <AreaChart data={cashFlowTimeline}>
                             <defs>
                               <linearGradient id="colorVal" x1="0" y1="0" x2="0" y2="1">
@@ -763,7 +763,7 @@ export default function PropertyDetails() {
                         Composição de Gastos
                       </h4>
                       <div className="h-[180px] w-full min-w-0">
-                        <ResponsiveContainer width="99%" height="100%">
+                        <ResponsiveContainer width="100%" height="100%" minWidth={0}>
                           <PieChart>
                             <Pie
                               data={costDistribution}
@@ -1019,6 +1019,12 @@ export default function PropertyDetails() {
                )}
 
                <div className="space-y-3">
+                 {filteredCustosAquisicao.length > 0 && (
+                   <div className="flex items-center justify-between px-2 py-1">
+                     <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Desembolsos (Cash-out)</span>
+                     <span className="text-[10px] font-black text-slate-900 dark:text-white">R$ {totalAquisicao.toLocaleString('pt-BR')}</span>
+                   </div>
+                 )}
                  {filteredCustosAquisicao.map(c => (
                     <div key={c.id} className="group flex items-center justify-between p-5 bg-white dark:bg-slate-900 rounded-[2rem] border border-slate-100 dark:border-slate-800 hover:shadow-lg transition-all">
                       <div className="flex items-center gap-4">
@@ -1070,6 +1076,37 @@ export default function PropertyDetails() {
                       </div>
                     </div>
                  ))}
+
+                  {imovel.tipo_arrematacao === TipoArrematacao.Financiada && (imovel.saldo_devedor || 0) > 0 && (
+                    <div className="flex flex-col gap-3">
+                       <div className="flex items-center justify-between px-2 py-1 mt-4 border-t border-slate-100 dark:border-slate-800 pt-6">
+                         <span className="text-[9px] font-black text-blue-500 uppercase tracking-[0.2em]">Fluxo de Financiamento</span>
+                         <span className="text-[10px] font-black text-blue-600 dark:text-blue-400">Total: R$ {(imovel.saldo_devedor || 0).toLocaleString('pt-BR')}</span>
+                       </div>
+                       <div className="group relative flex items-center justify-between p-6 bg-blue-50/20 dark:bg-blue-900/10 rounded-[2.5rem] border-2 border-dashed border-blue-100 dark:border-blue-900/20">
+                          <div className="flex items-center gap-5">
+                            <div className="size-14 bg-blue-100 dark:bg-blue-900/40 rounded-2xl flex items-center justify-center text-blue-600 dark:text-blue-400">
+                              <TrendingDown size={24} />
+                            </div>
+                            <div>
+                              <div className="flex items-center gap-2 mb-1.5">
+                                <p className="text-[10px] font-black text-blue-600 dark:text-blue-400 uppercase tracking-widest">Saldo Devedor em Aberto</p>
+                                <span className="px-2 py-0.5 rounded-full bg-blue-100 dark:bg-blue-900/50 text-[8px] font-black uppercase text-blue-600 dark:text-blue-400 shadow-sm">Ativo</span>
+                              </div>
+                              <p className="text-[9px] font-bold text-slate-500 leading-relaxed max-w-[200px]">Este valor não compõe o desembolso inicial (Cash-out), sendo pago via parcelamento.</p>
+                              <p className="text-2xl font-black text-slate-900 dark:text-white tracking-tighter mt-2">R$ {(imovel.saldo_devedor || 0).toLocaleString('pt-BR')}</p>
+                            </div>
+                          </div>
+                          
+                          <div className="absolute top-4 right-6">
+                             <div className="flex items-center gap-1.5 text-[8px] font-black text-blue-500/50 uppercase tracking-tighter">
+                                <Activity size={10} />
+                                Alavancagem Bancária
+                             </div>
+                          </div>
+                       </div>
+                    </div>
+                  )}
                </div>
             </div>
 
