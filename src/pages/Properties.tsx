@@ -396,26 +396,26 @@ export default function Properties() {
                     )}
 
                     <div className="flex gap-2">
-                       <button
-                        onClick={() => handleEditModal(imovel)}
-                        className="p-3 bg-slate-50 dark:bg-slate-800 text-slate-500 rounded-2xl hover:bg-slate-200 transition-all active:scale-95"
-                        title="Editar Dados Básicos"
-                      >
-                        <PencilLine size={16} />
-                      </button>
                       <button
                         onClick={() => navigate(`/properties/${imovel.id}`)}
-                        className="flex-1 flex items-center justify-center gap-2 py-3 bg-slate-900 dark:bg-white text-white dark:text-slate-900 rounded-2xl text-[10px] font-black uppercase tracking-widest hover:bg-slate-800 transition-all active:scale-95 shadow-lg shadow-slate-200 dark:shadow-none"
+                        className="flex-1 flex items-center justify-center gap-2 py-4 bg-slate-900 dark:bg-white text-white dark:text-slate-900 rounded-2xl text-xs font-black uppercase tracking-widest hover:bg-slate-800 transition-all active:scale-95 shadow-lg shadow-slate-200 dark:shadow-none"
                       >
                         Gerenciar Ativo
-                        <ChevronRight size={14} strokeWidth={3} />
+                        <ChevronRight size={16} strokeWidth={3} />
+                      </button>
+                      <button
+                        onClick={() => handleEditModal(imovel)}
+                        className="p-4 bg-slate-50 dark:bg-slate-800 text-slate-500 rounded-2xl hover:bg-slate-200 transition-all active:scale-95"
+                        title="Editar Dados Básicos"
+                      >
+                        <PencilLine size={18} />
                       </button>
                       <button
                         onClick={(e) => { e.stopPropagation(); remove(imovel.id!); }}
-                        className="p-3 bg-rose-50 text-rose-500 rounded-2xl hover:bg-rose-500 hover:text-white transition-all active:scale-95"
+                        className="p-4 bg-rose-50 text-rose-500 rounded-2xl hover:bg-rose-500 hover:text-white transition-all active:scale-95"
                         title="Arquivar"
                       >
-                        <Trash2 size={16} />
+                        <Trash2 size={18} />
                       </button>
                     </div>
                   </div>
