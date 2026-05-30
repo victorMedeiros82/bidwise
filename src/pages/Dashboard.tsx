@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { motion } from 'motion/react';
 import { 
   TrendingUp, 
@@ -11,11 +12,14 @@ import {
   BarChart2,
   Calendar,
   ChevronRight,
-  Activity
+  Activity,
+  ChevronDown,
+  ChevronUp,
+  Info
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useFirestore } from '../hooks/useFirestore';
-import { Imovel, Faturamento, StatusArrematacao } from '../types';
+import { Imovel, Faturamento, StatusArrematacao, OrigemImovel, CustoAquisicao, CustoReforma, Holding, TipoArrematacao } from '../types';
 import { 
   PieChart, 
   Pie, 
@@ -34,6 +38,9 @@ export default function Dashboard() {
   const navigate = useNavigate();
   const { data: properties } = useFirestore<Imovel>('imoveis');
   const { data: billing } = useFirestore<Faturamento>('faturamento');
+  const { data: custosAquisicao } = useFirestore<CustoAquisicao>('custos_aquisicao');
+  const { data: custosReforma } = useFirestore<CustoReforma>('custos_reforma');
+  const { data: holding } = useFirestore<Holding>('holding');
 
   // Basic Stats
   const totalProperties = properties.length;
@@ -50,14 +57,134 @@ export default function Dashboard() {
   const nextWeek = new Date(now.getTime() + 10 * 24 * 60 * 60 * 1000); // 10 days for more visibility
 
   const upcomingAuctions = properties
-    .filter(p => p.origem === 'Leilão' && p.data_leilao && new Date(p.data_leilao) >= now)
+    .filter(p => (p.origem === OrigemImovel.LeilaoJudicial || p.origem === OrigemImovel.LeilaoExtrajudicial) && p.data_leilao && new Date(p.data_leilao) >= now)
     .sort((a, b) => new Date(a.data_leilao!).getTime() - new Date(b.data_leilao!).getTime())
     .slice(0, 4);
 
-  // Financials
-  const totalInvoiced = billing.reduce((sum, item) => sum + item.valor, 0);
-  const totalCommission = billing.reduce((sum, item) => sum + (item.custo_corretagem || 0), 0);
-  const netProfit = totalInvoiced - totalCommission;
+  // Financials - Dynamic Portfolio-wide Calculation
+  let totalInvested = 0;
+  let totalInvoiced = 0;
+  let netProfit = 0;
+
+  const propertyIdsSet = new Set(properties.map(p => p.id));
+  
+  properties.forEach(p => {
+    const isAcquired = p.status_arrematacao === StatusArrematacao.Arrematado || 
+                       p.status_arrematacao === StatusArrematacao.Vendido || 
+                       p.status_arrematacao === StatusArrematacao.Alugado;
+
+    // Incorporate both the arrematacao base value and specific acquisition expenses
+    const baseAquisicao = p.valor_arrematacao || 0;
+    const pAquisicao = baseAquisicao + custosAquisicao.filter(c => c.id_imovel === p.id).reduce((sum, c) => sum + (c.valor || 0), 0);
+    const pReforma = custosReforma.filter(r => r.id_imovel === p.id).reduce((sum, r) => sum + (r.valor_real || r.orcamento || 0), 0);
+    const pHolding = holding.filter(h => h.id_imovel === p.id).reduce((sum, h) => sum + (h.valor_mensal || 0), 0);
+    const pBilling = billing.filter(f => f.id_imovel === p.id);
+    
+    const pBillingBruto = pBilling.reduce((sum, f) => sum + (f.valor || 0), 0);
+    const pComissoes = pBilling.reduce((sum, f) => sum + (f.custo_corretagem || 0), 0);
+    const pFaturamentoLiquido = pBillingBruto - pComissoes;
+
+    if (isAcquired) {
+      const pSaldoDevedor = p.tipo_arrematacao === TipoArrematacao.Financiada ? (p.saldo_devedor || 0) : 0;
+      const pTotalInvestido = (pAquisicao - pSaldoDevedor) + pReforma + pHolding;
+      totalInvested += pTotalInvestido;
+      totalInvoiced += pBillingBruto;
+
+      if (pFaturamentoLiquido > 0) {
+        // Sold or Alugado Property
+        const baseReceita = pFaturamentoLiquido;
+        const custosBaseIR = pAquisicao + pReforma;
+        const lucroBruto = baseReceita - custosBaseIR;
+        const impostoRenda = lucroBruto > 0 ? lucroBruto * 0.15 : 0;
+        const lucroLiquido = baseReceita - custosBaseIR - pHolding - impostoRenda;
+        netProfit += lucroLiquido;
+      } else {
+        // Ongoing property with accumulated costs
+        const totalCustosPendente = pTotalInvestido;
+        netProfit -= totalCustosPendente;
+      }
+    }
+  });
+
+  // Handle orphan faturamentos if any
+  const orphanBilling = billing.filter(f => !f.id_imovel || !propertyIdsSet.has(f.id_imovel));
+  const orphanBillingBruto = orphanBilling.reduce((sum, f) => sum + (f.valor || 0), 0);
+  const orphanComissoes = orphanBilling.reduce((sum, f) => sum + (f.custo_corretagem || 0), 0);
+  
+  totalInvoiced += orphanBillingBruto;
+  netProfit += (orphanBillingBruto - orphanComissoes);
+
+  const portfolioRoi = totalInvested > 0 ? (netProfit / totalInvested) * 100 : 0;
+  const hasOrphanBilling = orphanBilling.length > 0;
+  const orphanNetProfit = orphanBillingBruto - orphanComissoes;
+
+  const [showCalculationDetails, setShowCalculationDetails] = useState(false);
+
+  // Detailed breakdowns for each property
+  const detailedProperties: Array<{
+    id: string;
+    codigo: string;
+    endereco: string;
+    status: string;
+    valorArrematacao: number;
+    custosExtras: number;
+    totalInvested: number;
+    faturamentoLiquido: number;
+    impostoRenda: number;
+    lucroLiquido: number;
+    roi: number;
+  }> = [];
+
+  properties.forEach(p => {
+    const isAcquired = p.status_arrematacao === StatusArrematacao.Arrematado || 
+                       p.status_arrematacao === StatusArrematacao.Vendido || 
+                       p.status_arrematacao === StatusArrematacao.Alugado;
+
+    const baseAquisicao = p.valor_arrematacao || 0;
+    const pAquisicaoExt = custosAquisicao.filter(c => c.id_imovel === p.id).reduce((sum, c) => sum + (c.valor || 0), 0);
+    const pAquisicao = baseAquisicao + pAquisicaoExt;
+    const pReforma = custosReforma.filter(r => r.id_imovel === p.id).reduce((sum, r) => sum + (r.valor_real || r.orcamento || 0), 0);
+    const pHolding = holding.filter(h => h.id_imovel === p.id).reduce((sum, h) => sum + (h.valor_mensal || 0), 0);
+    const pBilling = billing.filter(f => f.id_imovel === p.id);
+    
+    const pBillingBruto = pBilling.reduce((sum, f) => sum + (f.valor || 0), 0);
+    const pComissoes = pBilling.reduce((sum, f) => sum + (f.custo_corretagem || 0), 0);
+    const pFaturamentoLiquido = pBillingBruto - pComissoes;
+
+    if (isAcquired) {
+      const pSaldoDevedor = p.tipo_arrematacao === TipoArrematacao.Financiada ? (p.saldo_devedor || 0) : 0;
+      const pTotalInvestido = (pAquisicao - pSaldoDevedor) + pReforma + pHolding;
+      let pLucroLiquido = 0;
+      let pImpostoRenda = 0;
+
+      if (pFaturamentoLiquido > 0) {
+        // Sold or Alugado Property
+        const custosBaseIR = pAquisicao + pReforma;
+        const lucroBruto = pFaturamentoLiquido - custosBaseIR;
+        pImpostoRenda = lucroBruto > 0 ? lucroBruto * 0.15 : 0;
+        pLucroLiquido = pFaturamentoLiquido - custosBaseIR - pHolding - pImpostoRenda;
+      } else {
+        // Ongoing property with accumulated costs
+        pLucroLiquido = -pTotalInvestido;
+      }
+
+      const pRoi = pTotalInvestido > 0 ? (pLucroLiquido / pTotalInvestido) * 100 : 0;
+
+      detailedProperties.push({
+        id: p.id || '',
+        codigo: p.codigo || 'S/C',
+        endereco: p.endereco,
+        status: p.status_arrematacao || '',
+        valorArrematacao: baseAquisicao,
+        custosExtras: (pAquisicaoExt - pSaldoDevedor) + pReforma + pHolding,
+        totalInvested: pTotalInvestido,
+        faturamentoLiquido: pFaturamentoLiquido,
+        impostoRenda: pImpostoRenda,
+        lucroLiquido: pLucroLiquido,
+        roi: pRoi
+      });
+    }
+  });
 
   // Chart Data
   const pieData = [
@@ -78,11 +205,11 @@ export default function Dashboard() {
       <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
         <div>
           <h1 className="text-3xl font-black text-slate-900 dark:text-white tracking-tighter leading-none mb-2">Dashboard</h1>
-          <p className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-[0.25em]">Gestão Consolidada de Ativos Imobiliários</p>
+          <p className="text-xs font-black text-slate-400 dark:text-slate-500 uppercase tracking-[0.25em]">Gestão Consolidada de Ativos Imobiliários</p>
         </div>
         <div className="flex items-center gap-2 bg-white dark:bg-slate-900 p-1 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm">
-          <div className="px-4 py-2 bg-slate-900 dark:bg-white text-white dark:text-slate-900 rounded-lg text-[9px] font-black uppercase tracking-widest">Global</div>
-          <div className="px-4 py-2 text-slate-400 text-[9px] font-black uppercase tracking-widest cursor-pointer hover:text-slate-600">Mensal</div>
+          <div className="px-4 py-2 bg-slate-900 dark:bg-white text-white dark:text-slate-900 rounded-lg text-xs font-black uppercase tracking-widest">Global</div>
+          <div className="px-4 py-2 text-slate-400 text-xs font-black uppercase tracking-widest cursor-pointer hover:text-slate-600">Mensal</div>
         </div>
       </div>
 
@@ -93,42 +220,54 @@ export default function Dashboard() {
         <motion.div 
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          className="md:col-span-8 bg-slate-900 dark:bg-white p-8 rounded-[2.5rem] shadow-2xl relative overflow-hidden flex flex-col justify-between min-h-[320px]"
+          className="md:col-span-8 bg-slate-900 dark:bg-white p-8 rounded-[2.5rem] shadow-2xl relative overflow-hidden flex flex-col justify-between min-h-[340px]"
         >
           <div className="relative z-10">
             <div className="flex items-center gap-3 mb-6">
               <div className="size-10 bg-white/10 dark:bg-black/5 rounded-2xl flex items-center justify-center text-white dark:text-black">
                 <BarChart2 size={20} />
               </div>
-              <p className="text-[10px] font-black text-white/50 dark:text-black/40 uppercase tracking-[0.3em]">Capital Realizado</p>
+              <p className="text-xs font-black text-white/50 dark:text-black/40 uppercase tracking-[0.3em]">Capital Realizado</p>
             </div>
             
             <h2 className="text-6xl md:text-7xl font-black text-white dark:text-slate-900 tracking-tighter leading-[0.8] mb-4">
-              R$ {totalInvoiced.toLocaleString('pt-BR')}
+              R$ {totalInvested.toLocaleString('pt-BR')}
             </h2>
             <div className="flex items-center gap-4">
-              <div className="flex items-center gap-1.5 px-3 py-1.5 bg-emerald-500/20 text-emerald-400 rounded-full border border-emerald-500/30">
+              <div className={cn(
+                "flex items-center gap-1.5 px-3 py-1.5 rounded-full border",
+                portfolioRoi >= 0 
+                  ? "bg-emerald-500/20 text-emerald-400 border-emerald-500/30" 
+                  : "bg-rose-500/20 text-rose-400 border-rose-500/30"
+              )}>
                 <TrendingUp size={14} />
-                <span className="text-[10px] font-black tracking-tight">+12.5%</span>
+                <span className="text-xs font-black tracking-tight">ROI: {portfolioRoi >= 0 ? '+' : ''}{portfolioRoi.toFixed(1)}%</span>
               </div>
-              <p className="text-[9px] font-bold text-white/40 dark:text-black/30 uppercase tracking-widest italic">Comparado ao último trimestre</p>
+              <p className="text-[10px] font-bold text-white/40 dark:text-black/30 uppercase tracking-widest italic">Total investido em Arrematação, Custos de Aquisição, Reformas e Holding</p>
             </div>
           </div>
 
           <div className="relative z-10 flex items-center justify-between mt-8 pt-8 border-t border-white/10 dark:border-black/5">
-            <div className="flex items-center gap-8">
+            <div className="flex flex-wrap items-center gap-8">
               <div>
-                <p className="text-[8px] font-black text-white/40 dark:text-black/30 uppercase tracking-widest mb-1">Lucro Líquido</p>
-                <p className="text-xl font-bold text-white dark:text-slate-900">R$ {netProfit.toLocaleString('pt-BR')}</p>
+                <p className="text-[10px] font-black text-white/40 dark:text-black/30 uppercase tracking-widest mb-1">Faturamento Bruto</p>
+                <p className="text-xl font-bold text-white dark:text-slate-900">R$ {totalInvoiced.toLocaleString('pt-BR')}</p>
               </div>
               <div>
-                <p className="text-[8px] font-black text-white/40 dark:text-black/30 uppercase tracking-widest mb-1">Total Ativos</p>
+                <p className="text-[10px] font-black text-white/40 dark:text-black/30 uppercase tracking-widest mb-1">Lucro Líquido</p>
+                <p className={cn(
+                  "text-xl font-bold",
+                  netProfit >= 0 ? "text-emerald-400" : "text-rose-400"
+                )}>R$ {netProfit.toLocaleString('pt-BR')}</p>
+              </div>
+              <div>
+                <p className="text-[10px] font-black text-white/40 dark:text-black/30 uppercase tracking-widest mb-1">Total Ativos</p>
                 <p className="text-xl font-bold text-white dark:text-slate-900">{totalProperties}</p>
               </div>
             </div>
             <button 
               onClick={() => navigate('/properties')}
-              className="px-6 py-3 bg-white/10 dark:bg-black/5 hover:bg-white/20 dark:hover:bg-black/10 rounded-2xl text-[10px] font-black text-white dark:text-black uppercase tracking-[0.2em] transition-all"
+              className="px-6 py-3 bg-white/10 dark:bg-black/5 hover:bg-white/20 dark:hover:bg-black/10 rounded-2xl text-xs font-black text-white dark:text-black uppercase tracking-[0.2em] transition-all"
             >
               Ver Detalhes
             </button>
@@ -139,68 +278,29 @@ export default function Dashboard() {
           <div className="absolute -bottom-24 -right-12 w-64 h-64 bg-emerald-500/10 rounded-full blur-[100px] pointer-events-none" />
         </motion.div>
 
-        {/* Small Stats Column */}
-        <div className="md:col-span-4 grid grid-rows-2 gap-6">
-          <motion.div 
-            initial={{ opacity: 0, x: 20 }}
-            animate={{ opacity: 1, x: 0 }}
-            transition={{ delay: 0.1 }}
-            className="bg-white dark:bg-slate-900 p-6 rounded-[2rem] border border-slate-200 dark:border-slate-800 shadow-sm flex flex-col justify-between"
-          >
-            <div className="flex items-center justify-between">
-              <div className="size-10 bg-blue-50 dark:bg-blue-900/20 rounded-2xl flex items-center justify-center text-blue-600 border border-blue-100 dark:border-blue-800">
-                <Hammer size={20} />
-              </div>
-              <p className="text-[10px] font-black text-blue-600 uppercase tracking-widest">+ {totalArrematados} Arrematados</p>
-            </div>
-            <div>
-              <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">Checklist Operacional</p>
-              <h3 className="text-2xl font-black text-slate-900 dark:text-white tracking-tight">Gestão Direta</h3>
-            </div>
-          </motion.div>
-
-          <motion.div 
-            initial={{ opacity: 0, x: 20 }}
-            animate={{ opacity: 1, x: 0 }}
-            transition={{ delay: 0.2 }}
-            className="bg-white dark:bg-slate-900 p-6 rounded-[2rem] border border-slate-200 dark:border-slate-800 shadow-sm flex flex-col justify-between"
-          >
-            <div className="flex items-center justify-between">
-              <div className="size-10 bg-orange-50 dark:bg-orange-900/20 rounded-2xl flex items-center justify-center text-orange-600 border border-orange-100 dark:border-orange-800">
-                <Target size={20} />
-              </div>
-              <p className="text-[10px] font-black text-orange-600 uppercase tracking-widest">{totalEmAnalise} Oportunidades</p>
-            </div>
-            <div>
-              <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">Pipeline de Aquisição</p>
-              <h3 className="text-2xl font-black text-slate-900 dark:text-white tracking-tight">Em Análise</h3>
-            </div>
-          </motion.div>
-        </div>
-
-        {/* Secondary Bento Row */}
+        {/* Mix de Ativos */}
         <motion.div 
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.3 }}
-          className="md:col-span-4 bg-white dark:bg-slate-900 p-8 rounded-[2.5rem] border border-slate-200 dark:border-slate-800 shadow-sm min-h-[380px]"
+          transition={{ delay: 0.1 }}
+          className="md:col-span-4 bg-white dark:bg-slate-900 p-8 rounded-[2.5rem] border border-slate-200 dark:border-slate-800 shadow-sm min-h-[340px] flex flex-col justify-between"
         >
-          <div className="flex items-center justify-between mb-8">
+          <div className="flex items-center justify-between mb-4">
             <h3 className="text-xs font-black text-slate-900 dark:text-white uppercase tracking-[0.2em] flex items-center gap-2">
               <Activity size={14} className="text-blue-500" />
               Mix de Ativos
             </h3>
           </div>
           
-          <div className="h-[220px] w-full min-w-0">
+          <div className="h-[150px] w-full min-w-0">
             <ResponsiveContainer width="100%" height="100%" minWidth={0}>
               <PieChart>
                 <Pie
                   data={pieData}
                   cx="50%"
                   cy="50%"
-                  innerRadius={50}
-                  outerRadius={85}
+                  innerRadius={40}
+                  outerRadius={65}
                   paddingAngle={8}
                   dataKey="value"
                   stroke="none"
@@ -227,28 +327,230 @@ export default function Dashboard() {
             {pieData.map(item => (
               <div key={item.name} className="text-center">
                 <p className="text-[16px] font-black text-slate-900 dark:text-white">{item.value}</p>
-                <p className="text-[7px] font-black text-slate-400 uppercase tracking-widest truncate">{item.name}</p>
+                <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest truncate">{item.name}</p>
               </div>
             ))}
           </div>
         </motion.div>
 
-        {/* Upcoming Radar - Agenda Style */}
+        {/* Accordion breakdown for ROI Calculation Transparency */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.15 }}
+          className="md:col-span-12 bg-white dark:bg-slate-900 rounded-[2.5rem] border border-slate-200 dark:border-slate-800 shadow-sm overflow-hidden"
+        >
+          <button
+            onClick={() => setShowCalculationDetails(!showCalculationDetails)}
+            className="w-full flex items-center justify-between p-8 hover:bg-slate-50 dark:hover:bg-slate-800/20 transition-colors text-left"
+          >
+            <div className="flex items-center gap-3">
+              <div className="size-10 rounded-2xl bg-slate-100 dark:bg-slate-800 flex items-center justify-center text-slate-700 dark:text-slate-300">
+                <Info size={18} />
+              </div>
+              <div>
+                <span className="text-[10px] font-black text-blue-500 uppercase tracking-[0.2em] mb-0.5 block">Transparência Financeira</span>
+                <h3 className="text-sm font-black text-slate-900 dark:text-white uppercase tracking-wider">
+                  Como o ROI de {portfolioRoi.toFixed(1)}% é calculado? (Memória de Cálculo)
+                </h3>
+              </div>
+            </div>
+            <div className="text-slate-400 p-2 bg-slate-150 dark:bg-slate-850 rounded-xl">
+              {showCalculationDetails ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
+            </div>
+          </button>
+
+          {showCalculationDetails && (
+            <div className="px-8 pb-8 pt-2 border-t border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/50 space-y-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 text-xs text-slate-650 dark:text-slate-400 leading-relaxed font-sans">
+                <div className="space-y-3">
+                  <p className="font-bold text-slate-800 dark:text-slate-200 uppercase tracking-wider text-[10px] flex items-center gap-2">
+                    <span className="w-1.5 h-1.5 rounded-full bg-blue-500" /> A Fórmula do ROI do Portfólio
+                  </p>
+                  <p>
+                    O <strong className="text-slate-900 dark:text-white font-black">ROI (Retorno sobre Investimento)</strong> consolidado do seu portfólio completo é calculado nos padrões tradicionais de avaliação corporativa:
+                  </p>
+                  <div className="p-4 bg-slate-900 text-slate-100 rounded-xl font-mono text-center text-xs font-black border border-slate-800 shadow-inner">
+                    ROI = (Lucro Líquido Global / Capital Realizado) * 100
+                  </div>
+                  <p className="text-[11px] leading-relaxed">
+                    Esse indicador calcula a proporção total de retorno líquido obtida sobre cada real de capital empregado no negócio de arrematações.
+                  </p>
+                </div>
+
+                <div className="space-y-3">
+                  <p className="font-bold text-slate-800 dark:text-slate-200 uppercase tracking-wider text-[10px] flex items-center gap-2">
+                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" /> O que compõe cada valor?
+                  </p>
+                  <ul className="list-disc pl-4 space-y-2">
+                    <li>
+                      <strong className="text-slate-900 dark:text-white">Capital Realizado:</strong> Representa o capital de fato investido. É a soma de: <span className="italic font-semibold">Valor de Lance + Custos Extras de Aquisição + Reformas Executadas + Custos de Holding (Condomínio, IPTU)</span> dos imóveis arrematados.
+                    </li>
+                    <li>
+                      <strong className="text-slate-900 dark:text-white">Lucro Líquido:</strong> Para imóveis vendidos/locados, subtrai-se os custos de holding, a base tributável (lucro × IR de 15%) e comissões da receita líquida. Para imóveis ainda em andamento, desconta-se todos os custos investidos como fluxo de caixa negativo temporário (<span className="text-rose-500 font-bold">ROI parcial negativo</span>) até sua rentabilização.
+                    </li>
+                  </ul>
+                </div>
+              </div>
+
+              <div className="overflow-x-auto rounded-3xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-950 shadow-sm mt-4">
+                <table className="w-full text-left border-collapse text-xs">
+                  <thead>
+                    <tr className="bg-slate-50 dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 text-[10px] font-black uppercase tracking-wider text-slate-400 select-none">
+                      <th className="p-4 pl-6">IMÓVEL / ENDEREÇO</th>
+                      <th className="p-4 text-center">STATUS</th>
+                      <th className="p-4 text-right">VALOR LANCE</th>
+                      <th className="p-4 text-right">OUTROS CUSTOS</th>
+                      <th className="p-4 text-right">CAP. REALIZADO</th>
+                      <th className="p-4 text-right">FATUR. LÍQUIDO</th>
+                      <th className="p-4 text-right">LUCRO LÍQUIDO</th>
+                      <th className="p-4 text-right pr-6">ROI</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-100 dark:divide-slate-800/60 font-sans">
+                    {detailedProperties.map((p) => (
+                      <tr 
+                        key={p.id} 
+                        onClick={() => navigate(`/properties/${p.id}`)}
+                        className="hover:bg-slate-50 dark:hover:bg-slate-900/40 transition-colors cursor-pointer group"
+                      >
+                        <td className="p-4 pl-6 font-bold text-slate-900 dark:text-white group-hover:text-blue-500 transition-colors">
+                          <div className="flex flex-col">
+                            <span className="text-xs uppercase tracking-wider">{p.codigo || 'S/Código'}</span>
+                            <span className="text-[10px] text-slate-400 font-normal truncate max-w-[220px] mt-0.5">{p.endereco}</span>
+                          </div>
+                        </td>
+                        <td className="p-4 text-center">
+                          <span className={cn(
+                            "px-2.5 py-1 rounded-full text-[9px] font-black uppercase tracking-wider border",
+                            p.status === StatusArrematacao.Vendido 
+                              ? "bg-blue-500/10 text-blue-500 border-blue-500/20" 
+                              : p.status === StatusArrematacao.Alugado
+                              ? "bg-emerald-500/10 text-emerald-500 border-emerald-500/20"
+                              : "bg-amber-500/10 text-amber-500 border-amber-500/20"
+                          )}>
+                            {p.status}
+                          </span>
+                        </td>
+                        <td className="p-4 text-right font-mono text-slate-600 dark:text-slate-400">
+                          R$ {p.valorArrematacao.toLocaleString('pt-BR')}
+                        </td>
+                        <td className="p-4 text-right font-mono text-slate-600 dark:text-slate-400">
+                          R$ {p.custosExtras.toLocaleString('pt-BR')}
+                        </td>
+                        <td className="p-4 text-right font-mono font-bold text-slate-900 dark:text-white">
+                          R$ {p.totalInvested.toLocaleString('pt-BR')}
+                        </td>
+                        <td className="p-4 text-right font-mono text-slate-900 dark:text-white">
+                          R$ {p.faturamentoLiquido.toLocaleString('pt-BR')}
+                        </td>
+                        <td className={cn(
+                          "p-4 text-right font-mono font-bold",
+                          p.lucroLiquido >= 0 ? "text-emerald-500" : "text-rose-500"
+                        )}>
+                          R$ {p.lucroLiquido.toLocaleString('pt-BR')}
+                        </td>
+                        <td className="p-4 text-right pr-6">
+                          <span className={cn(
+                            "px-2.5 py-1 rounded-lg text-[10px] font-black font-mono inline-block min-w-[64px] text-center",
+                            p.roi >= 0 
+                              ? "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400" 
+                              : "bg-rose-500/10 text-rose-600 dark:text-rose-400"
+                          )}>
+                            {p.roi >= 0 ? '+' : ''}{p.roi.toFixed(1)}%
+                          </span>
+                        </td>
+                      </tr>
+                    ))}
+
+                    {/* Orfãos / Pendentes sem imóvel cadastrado se houver */}
+                    {hasOrphanBilling && (
+                      <tr className="bg-amber-50/10 dark:bg-amber-950/5 border-t-2 border-dashed border-amber-200 dark:border-amber-900/30">
+                        <td className="p-4 pl-6 font-bold text-amber-600 dark:text-amber-400" colSpan={2}>
+                          <div className="flex flex-col">
+                            <span className="text-xs uppercase tracking-tight">Faturamentos Sem Imóvel Vinculado</span>
+                            <span className="text-[10px] text-slate-400 font-normal">Valores de comissão ou venda recebidos sem id_imovel ativo no banco</span>
+                          </div>
+                        </td>
+                        <td className="p-4 text-right font-mono text-slate-400">—</td>
+                        <td className="p-4 text-right font-mono text-slate-400">—</td>
+                        <td className="p-4 text-right font-mono text-slate-400 font-bold">R$ 0</td>
+                        <td className="p-4 text-right font-mono text-emerald-500 font-bold">
+                          R$ {orphanBillingBruto.toLocaleString('pt-BR')}
+                        </td>
+                        <td className="p-4 text-right font-mono text-emerald-500 font-bold">
+                          R$ {(orphanBillingBruto - orphanComissoes).toLocaleString('pt-BR')}
+                        </td>
+                        <td className="p-4 text-right pr-6 text-amber-600 dark:text-amber-450 font-mono text-[10px] font-black">
+                          Sem Base Custo (Inexistente)
+                        </td>
+                      </tr>
+                    )}
+
+                    {/* Totais Gerais */}
+                    <tr className="bg-slate-50 dark:bg-slate-900/60 font-bold border-t-2 border-slate-200 dark:border-slate-800">
+                      <td className="p-4 pl-6 uppercase text-slate-950 dark:text-white" colSpan={2}>
+                        Total Consolidado
+                      </td>
+                      <td className="p-4 text-right font-mono text-slate-700 dark:text-slate-350">
+                        R$ {detailedProperties.reduce((sum, p) => sum + p.valorArrematacao, 0).toLocaleString('pt-BR')}
+                      </td>
+                      <td className="p-4 text-right font-mono text-slate-700 dark:text-slate-350">
+                        R$ {detailedProperties.reduce((sum, p) => sum + p.custosExtras, 0).toLocaleString('pt-BR')}
+                      </td>
+                      <td className="p-4 text-right font-mono text-slate-950 dark:text-white font-black text-xs">
+                        R$ {totalInvested.toLocaleString('pt-BR')}
+                      </td>
+                      <td className="p-4 text-right font-mono text-emerald-600 dark:text-emerald-400 font-black text-xs">
+                        R$ {totalInvoiced.toLocaleString('pt-BR')}
+                      </td>
+                      <td className={cn(
+                        "p-4 text-right font-mono font-black text-xs",
+                        netProfit >= 0 ? "text-emerald-600 dark:text-emerald-400" : "text-rose-500"
+                      )}>
+                        R$ {netProfit.toLocaleString('pt-BR')}
+                      </td>
+                      <td className="p-4 text-right pr-6">
+                        <span className={cn(
+                          "px-3 py-1 rounded-full text-xs font-black font-mono text-white inline-block min-w-[76px] text-center",
+                          portfolioRoi >= 0 
+                            ? "bg-emerald-500" 
+                            : "bg-rose-500"
+                        )}>
+                          {portfolioRoi >= 0 ? '+' : ''}{portfolioRoi.toFixed(1)}%
+                        </span>
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+
+              <div className="flex items-start gap-3 p-4 rounded-2xl bg-amber-500/10 border border-amber-500/20 text-[11px] text-amber-700 dark:text-amber-400 leading-normal font-medium">
+                <Info size={16} className="shrink-0 mt-0.5 text-amber-500" />
+                <span>
+                  <strong>Aviso Importante:</strong> Se o ROI do indicador principal apresentar porcentagens anormalmente elevadas, por favor revise o cadastro dos seus imóveis com faturamento. É provável que um imóvel de alta receita tenha sido cadastrado com <strong>Valor de Lance / Arrematação zerado ou sem despesas de aquisição</strong>, gerando uma taxa matemática inflada sobre custo irreal de investimento na divisão de ROI.
+                </span>
+              </div>
+            </div>
+          )}
+        </motion.div>
+
+        {/* Upcoming Radar - Agenda Style - Expanded to Full Width (12 cols) */}
         <motion.div 
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.4 }}
-          className="md:col-span-8 bg-white dark:bg-slate-900 p-8 rounded-[2.5rem] border border-slate-200 dark:border-slate-800 shadow-sm"
+          transition={{ delay: 0.2 }}
+          className="md:col-span-12 bg-white dark:bg-slate-900 p-8 rounded-[2.5rem] border border-slate-200 dark:border-slate-800 shadow-sm"
         >
           <div className="flex items-center justify-between mb-8">
             <h3 className="text-xs font-black text-slate-900 dark:text-white uppercase tracking-[0.2em] flex items-center gap-2">
               <Calendar size={14} className="text-emerald-500" />
               Próximos Leilões (Radar)
             </h3>
-            <button className="text-[9px] font-black text-blue-500 uppercase tracking-widest hover:underline">Calendário Completo</button>
+            <button className="text-xs font-black text-blue-500 uppercase tracking-widest hover:underline">Calendário Completo</button>
           </div>
 
-          <div className="space-y-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {upcomingAuctions.length > 0 ? (
               upcomingAuctions.map((auction, idx) => (
                 <div 
@@ -258,23 +560,23 @@ export default function Dashboard() {
                 >
                   <div className="flex items-center gap-4">
                     <div className="size-12 rounded-2xl bg-white dark:bg-slate-700 flex flex-col items-center justify-center border border-slate-200 dark:border-slate-600 group-hover:bg-emerald-500 group-hover:border-emerald-500 transition-colors">
-                      <p className="text-[10px] font-black text-emerald-500 group-hover:text-white leading-none">
+                      <p className="text-xs font-black text-emerald-500 group-hover:text-white leading-none">
                         {new Date(auction.data_leilao!).toLocaleDateString('pt-BR', { day: '2-digit' })}
                       </p>
-                      <p className="text-[8px] font-black text-slate-400 group-hover:text-white/60 uppercase">
+                      <p className="text-[10px] font-black text-slate-400 group-hover:text-white/60 uppercase">
                         {new Date(auction.data_leilao!).toLocaleDateString('pt-BR', { month: 'short' })}
                       </p>
                     </div>
                     <div>
                       <h4 className="text-sm font-black tracking-tight mb-1">{auction.endereco}</h4>
                       <div className="flex items-center gap-2">
-                        <span className="text-[8px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest group-hover:text-white/40">{auction.comarca}</span>
+                        <span className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest group-hover:text-white/40">{auction.comarca}</span>
                         <span className="w-1 h-1 rounded-full bg-slate-300 group-hover:bg-white/20" />
-                        <span className="text-[8px] font-black text-emerald-500 dark:text-emerald-400 group-hover:text-white/70">Mín: R$ {auction.valor_minimo?.toLocaleString('pt-BR')}</span>
+                        <span className="text-[10px] font-black text-emerald-500 dark:text-emerald-400 group-hover:text-white/70">Mín: R$ {auction.valor_minimo?.toLocaleString('pt-BR')}</span>
                       </div>
                     </div>
                   </div>
-                  <div className="mt-4 md:mt-0 flex items-center justify-end gap-3 font-mono text-[10px] font-bold">
+                  <div className="mt-4 md:mt-0 flex items-center justify-end gap-3 font-mono text-xs font-bold">
                     <Clock size={12} className="text-slate-400 group-hover:text-white/40" />
                     {new Date(auction.data_leilao!).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
                     <ChevronRight size={14} className="opacity-0 group-hover:opacity-100 transition-opacity ml-2" />
@@ -282,9 +584,9 @@ export default function Dashboard() {
                 </div>
               ))
             ) : (
-              <div className="flex flex-col items-center justify-center py-12 text-slate-400">
+              <div className="col-span-1 md:col-span-2 flex flex-col items-center justify-center py-12 text-slate-400">
                 <Gavel size={40} strokeWidth={1} className="mb-4 opacity-20" />
-                <p className="text-[9px] font-black uppercase tracking-widest">Nenhum leilão agendado no radar</p>
+                <p className="text-xs font-black uppercase tracking-widest">Nenhum leilão agendado no radar</p>
               </div>
             )}
           </div>

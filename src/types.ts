@@ -65,9 +65,11 @@ export enum TipoFaturamento {
 }
 
 export enum OrigemImovel {
-  Leilao = 'Leilão',
-  CompraDireta = 'Compra Direta',
-  Outro = 'Outro'
+  LeilaoExtrajudicial = 'Leilão extrajudicial',
+  LeilaoJudicial = 'Leilão Judicial',
+  VendaOnline = 'Venda online',
+  CompraDireta = 'Compra direta',
+  Mercado = 'Mercado'
 }
 
 export interface Leilao {

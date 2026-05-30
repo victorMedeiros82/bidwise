@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { Plus, Search, MapPin, Building2, ChevronRight, Gavel, Trash2, X, ClipboardCheck, Loader2, Info, Calendar, Link as LinkIcon, PencilLine } from 'lucide-react';
+import { Plus, Search, MapPin, Building2, ChevronRight, ChevronDown, Gavel, Trash2, X, ClipboardCheck, Loader2, Info, Calendar, Link as LinkIcon, PencilLine } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import CurrencyInput from 'react-currency-input-field';
 import { useFirestore } from '../hooks/useFirestore';
@@ -24,7 +24,7 @@ export default function Properties() {
   const [searchingCep, setSearchingCep] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [formData, setFormData] = useState<Partial<Imovel>>({
-    origem: OrigemImovel.Leilao,
+    origem: OrigemImovel.LeilaoExtrajudicial,
     tipo_imovel: TipoImovel.Apartamento,
     situacao_juridica: SituacaoJuridica.ExecucaoFiscal,
     estado_conservacao: EstadoConservacao.Regular,
@@ -47,14 +47,20 @@ export default function Properties() {
     if (!formData.cidade?.trim()) newErrors.cidade = 'Cidade é obrigatória';
     if (!formData.estado?.trim() || formData.estado.length !== 2) newErrors.estado = 'UF inválida';
 
-    if (formData.origem === OrigemImovel.Leilao) {
-      if (!formData.processo?.trim()) {
-        newErrors.processo = 'Número do processo é obrigatório';
-      } else if (formData.processo.length < 10) {
-        newErrors.processo = 'Número do processo parece ser inválido';
-      }
+    const isLeilaoJudicial = formData.origem === OrigemImovel.LeilaoJudicial;
+    const isLeilaoExtrajudicial = formData.origem === OrigemImovel.LeilaoExtrajudicial;
+    const isLeilao = isLeilaoJudicial || isLeilaoExtrajudicial;
 
-      if (!formData.comarca?.trim()) newErrors.comarca = 'Comarca é obrigatória';
+    if (isLeilao) {
+      if (isLeilaoJudicial) {
+        if (!formData.processo?.trim()) {
+          newErrors.processo = 'Número do processo é obrigatório';
+        } else if (formData.processo.length < 10) {
+          newErrors.processo = 'Número do processo parece ser inválido';
+        }
+
+        if (!formData.comarca?.trim()) newErrors.comarca = 'Comarca é obrigatória';
+      }
       
       if (!formData.data_leilao) {
         newErrors.data_leilao = 'Data do leilão é obrigatória';
@@ -123,7 +129,7 @@ export default function Properties() {
 
   const resetForm = () => {
     setFormData({
-      origem: OrigemImovel.Leilao,
+      origem: OrigemImovel.LeilaoExtrajudicial,
       tipo_imovel: TipoImovel.Apartamento,
       situacao_juridica: SituacaoJuridica.ExecucaoFiscal,
       estado_conservacao: EstadoConservacao.Regular,
@@ -211,14 +217,47 @@ export default function Properties() {
       {/* Quick Stats Summary */}
       <section className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         {[
-          { label: 'Total Geral', val: properties.length, color: 'text-slate-900', bg: 'bg-white' },
-          { label: 'Em Análise', val: properties.filter(p => p.status_arrematacao === StatusArrematacao.Analise).length, color: 'text-amber-500', bg: 'bg-amber-50/50' },
-          { label: 'Arrematados', val: properties.filter(p => p.status_arrematacao === StatusArrematacao.Arrematado).length, color: 'text-emerald-500', bg: 'bg-emerald-50/50' },
-          { label: 'Reprovados', val: properties.filter(p => p.status_arrematacao === StatusArrematacao.Reprovado).length, color: 'text-rose-500', bg: 'bg-rose-50/50' }
+          { 
+            label: 'Total Geral', 
+            val: properties.length, 
+            color: 'text-slate-900 dark:text-white', 
+            icon: <Building2 className="text-slate-500 dark:text-slate-400" size={18} />, 
+            iconBg: 'bg-slate-50 dark:bg-slate-800 border-slate-100 dark:border-slate-700/50',
+            bg: 'bg-white dark:bg-slate-900' 
+          },
+          { 
+            label: 'Em Análise', 
+            val: properties.filter(p => p.status_arrematacao === StatusArrematacao.Analise).length, 
+            color: 'text-amber-500 dark:text-amber-400', 
+            icon: <Search className="text-amber-500 dark:text-amber-400" size={18} />, 
+            iconBg: 'bg-amber-50 dark:bg-amber-950/20 border-amber-100/50 dark:border-amber-900/30',
+            bg: 'bg-white dark:bg-slate-900' 
+          },
+          { 
+            label: 'Arrematados', 
+            val: properties.filter(p => p.status_arrematacao === StatusArrematacao.Arrematado).length, 
+            color: 'text-emerald-500 dark:text-emerald-400', 
+            icon: <Gavel className="text-emerald-500 dark:text-emerald-400" size={18} />, 
+            iconBg: 'bg-emerald-50 dark:bg-emerald-950/20 border-emerald-100/50 dark:border-emerald-900/30',
+            bg: 'bg-white dark:bg-slate-900' 
+          },
+          { 
+            label: 'Reprovados', 
+            val: properties.filter(p => p.status_arrematacao === StatusArrematacao.Reprovado).length, 
+            color: 'text-rose-500 dark:text-rose-400', 
+            icon: <X className="text-rose-500 dark:text-rose-400" size={18} />, 
+            iconBg: 'bg-rose-50 dark:bg-rose-950/20 border-rose-100/50 dark:border-rose-900/30',
+            bg: 'bg-white dark:bg-slate-900' 
+          }
         ].map((stat, i) => (
-          <div key={i} className={cn("p-5 rounded-2xl border border-slate-100 dark:border-slate-800 shadow-sm", stat.bg)}>
-            <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1">{stat.label}</p>
-            <h3 className={cn("text-2xl font-black tracking-tighter", stat.color)}>{stat.val}</h3>
+          <div key={i} className={cn("p-6 rounded-[2rem] border border-slate-100 dark:border-slate-800/80 shadow-sm flex items-center justify-between transition-all hover:shadow-md hover:border-slate-200 dark:hover:border-slate-700/80", stat.bg)}>
+            <div className="space-y-1">
+              <p className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-[0.2em]">{stat.label}</p>
+              <h3 className={cn("text-3xl font-black tracking-tight", stat.color)}>{stat.val}</h3>
+            </div>
+            <div className={cn("size-10 rounded-2xl flex items-center justify-center border font-semibold", stat.iconBg)}>
+              {stat.icon}
+            </div>
           </div>
         ))}
       </section>
@@ -240,7 +279,7 @@ export default function Properties() {
           <select 
             value={filterStatus}
             onChange={(e) => setFilterStatus(e.target.value as any)}
-            className="bg-slate-50 dark:bg-slate-800 border-none rounded-xl text-[10px] font-black uppercase tracking-widest text-slate-600 dark:text-slate-300 px-4 py-2.5 outline-none focus:ring-2 focus:ring-slate-900/5 appearance-none min-w-[140px]"
+            className="bg-slate-50 dark:bg-slate-800 border-none rounded-xl text-xs font-black uppercase tracking-widest text-slate-600 dark:text-slate-300 px-4 py-2.5 outline-none focus:ring-2 focus:ring-slate-900/5 appearance-none min-w-[140px]"
           >
             <option value="Todos">Status: Todos</option>
             {Object.values(StatusArrematacao).map(s => <option key={s} value={s}>{s}</option>)}
@@ -249,7 +288,7 @@ export default function Properties() {
           <select 
             value={filterType}
             onChange={(e) => setFilterType(e.target.value as any)}
-            className="bg-slate-50 dark:bg-slate-800 border-none rounded-xl text-[10px] font-black uppercase tracking-widest text-slate-600 dark:text-slate-300 px-4 py-2.5 outline-none focus:ring-2 focus:ring-slate-900/5 appearance-none min-w-[140px]"
+            className="bg-slate-50 dark:bg-slate-800 border-none rounded-xl text-xs font-black uppercase tracking-widest text-slate-600 dark:text-slate-300 px-4 py-2.5 outline-none focus:ring-2 focus:ring-slate-900/5 appearance-none min-w-[140px]"
           >
             <option value="Todos">Categoria: Todos</option>
             {Object.values(TipoImovel).map(t => <option key={t} value={t}>{t}</option>)}
@@ -258,7 +297,7 @@ export default function Properties() {
           <select 
             value={filterSituacaoJuridica}
             onChange={(e) => setFilterSituacaoJuridica(e.target.value as any)}
-            className="bg-slate-50 dark:bg-slate-800 border-none rounded-xl text-[10px] font-black uppercase tracking-widest text-slate-600 dark:text-slate-300 px-4 py-2.5 outline-none focus:ring-2 focus:ring-slate-900/5 appearance-none min-w-[140px]"
+            className="bg-slate-50 dark:bg-slate-800 border-none rounded-xl text-xs font-black uppercase tracking-widest text-slate-600 dark:text-slate-300 px-4 py-2.5 outline-none focus:ring-2 focus:ring-slate-900/5 appearance-none min-w-[140px]"
           >
             <option value="Todos">Situação Jurídica: Todos</option>
             {Object.values(SituacaoJuridica).map(s => <option key={s} value={s}>{s}</option>)}
@@ -267,7 +306,7 @@ export default function Properties() {
           <select 
             value={filterEstadoConservacao}
             onChange={(e) => setFilterEstadoConservacao(e.target.value as any)}
-            className="bg-slate-50 dark:bg-slate-800 border-none rounded-xl text-[10px] font-black uppercase tracking-widest text-slate-600 dark:text-slate-300 px-4 py-2.5 outline-none focus:ring-2 focus:ring-slate-900/5 appearance-none min-w-[140px]"
+            className="bg-slate-50 dark:bg-slate-800 border-none rounded-xl text-xs font-black uppercase tracking-widest text-slate-600 dark:text-slate-300 px-4 py-2.5 outline-none focus:ring-2 focus:ring-slate-900/5 appearance-none min-w-[140px]"
           >
             <option value="Todos">Conservação: Todos</option>
             {Object.values(EstadoConservacao).map(e => <option key={e} value={e}>{e}</option>)}
@@ -278,7 +317,7 @@ export default function Properties() {
             <input
               type="text"
               placeholder="Localidade (Cidade ou UF)"
-              className="w-full bg-slate-50 dark:bg-slate-800 border-none rounded-xl text-[10px] font-black uppercase tracking-widest text-slate-600 dark:text-slate-300 pl-11 pr-4 py-2.5 outline-none focus:ring-2 focus:ring-slate-900/5"
+              className="w-full bg-slate-50 dark:bg-slate-800 border-none rounded-xl text-xs font-black uppercase tracking-widest text-slate-600 dark:text-slate-300 pl-11 pr-4 py-2.5 outline-none focus:ring-2 focus:ring-slate-900/5"
               value={filterLocation}
               onChange={(e) => setFilterLocation(e.target.value)}
             />
@@ -294,7 +333,7 @@ export default function Properties() {
               setFilterTipoArrematacao('Todos');
               setFilterLocation('');
             }}
-            className="px-4 py-2 text-[10px] font-black text-rose-500 uppercase tracking-widest hover:bg-rose-50 rounded-xl transition-colors"
+            className="px-4 py-2 text-xs font-black text-rose-500 uppercase tracking-widest hover:bg-rose-50 rounded-xl transition-colors"
           >
             Limpar
           </button>
@@ -305,7 +344,7 @@ export default function Properties() {
               <button
                 onClick={() => setFilterTipoArrematacao('Todos')}
                 className={cn(
-                  "px-4 py-2 rounded-lg text-[9px] font-black uppercase tracking-widest transition-all",
+                  "px-4 py-2 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all",
                   filterTipoArrematacao === 'Todos' ? "bg-white dark:bg-slate-700 text-slate-900 dark:text-white shadow-sm" : "text-slate-400"
                 )}
               >
@@ -316,7 +355,7 @@ export default function Properties() {
                   key={tipo}
                   onClick={() => setFilterTipoArrematacao(tipo)}
                   className={cn(
-                    "px-4 py-2 rounded-lg text-[9px] font-black uppercase tracking-widest transition-all",
+                    "px-4 py-2 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all",
                     filterTipoArrematacao === tipo ? "bg-white dark:bg-slate-700 text-slate-900 dark:text-white shadow-sm" : "text-slate-400"
                   )}
                 >
@@ -347,7 +386,7 @@ export default function Properties() {
                   
                   {/* Status Badge */}
                   <div className={cn(
-                    "absolute top-4 right-4 px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-widest shadow-sm border",
+                    "absolute top-4 right-4 px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest shadow-sm border",
                     imovel.status_arrematacao === StatusArrematacao.Arrematado 
                       ? "bg-emerald-500 border-emerald-400 text-white" 
                       : imovel.status_arrematacao === StatusArrematacao.Analise 
@@ -361,12 +400,12 @@ export default function Properties() {
                 <div className="p-6 flex-1 flex flex-col">
                   <div className="mb-4">
                     <div className="flex items-center justify-between gap-2 mb-1.5">
-                      <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest flex items-center gap-1.5">
+                      <p className="text-xs font-bold text-slate-400 uppercase tracking-widest flex items-center gap-1.5">
                         <MapPin size={10} />
                         {imovel.bairro} • {imovel.cidade}/{imovel.estado}
                       </p>
                       {imovel.codigo && (
-                        <p className="text-[8px] font-black text-slate-400 bg-slate-100 dark:bg-slate-800 px-1.5 py-0.5 rounded uppercase tracking-tighter">
+                        <p className="text-[10px] font-black text-slate-400 bg-slate-100 dark:bg-slate-800 px-1.5 py-0.5 rounded uppercase tracking-tighter">
                           {imovel.codigo}
                         </p>
                       )}
@@ -378,22 +417,26 @@ export default function Properties() {
 
                   <div className="grid grid-cols-2 gap-4 py-4 border-y border-slate-50 dark:border-slate-800 mb-6">
                     <div className="space-y-0.5">
-                      <p className="text-[9px] font-bold text-slate-400 uppercase tracking-tighter">Área Útil</p>
+                      <p className="text-[10px] font-bold text-slate-400 uppercase tracking-tighter">Área Útil</p>
                       <p className="text-xs font-black text-slate-700 dark:text-slate-300">{imovel.area_m2} m²</p>
                     </div>
                     <div className="space-y-0.5 text-right">
-                      <p className="text-[9px] font-bold text-slate-400 uppercase tracking-tighter">Categoria</p>
+                      <p className="text-[10px] font-bold text-slate-400 uppercase tracking-tighter">Categoria</p>
                       <p className="text-xs font-black text-slate-700 dark:text-slate-300">{imovel.tipo_imovel}</p>
                     </div>
                   </div>
 
                   <div className="mt-auto space-y-3">
-                    {imovel.origem === OrigemImovel.Leilao && imovel.valor_minimo && (
+                    {imovel.valor_minimo ? (
                       <div className="flex items-center justify-between p-3 bg-slate-50 dark:bg-slate-800 rounded-2xl group-hover:bg-amber-50 dark:group-hover:bg-amber-900/10 transition-colors">
-                        <p className="text-[10px] font-black text-slate-400 group-hover:text-amber-600 uppercase tracking-widest">Lance Mínimo</p>
+                        <p className="text-xs font-black text-slate-400 group-hover:text-amber-600 uppercase tracking-widest">
+                          {imovel.origem === OrigemImovel.LeilaoJudicial || imovel.origem === OrigemImovel.LeilaoExtrajudicial 
+                            ? "Lance Mínimo" 
+                            : "Valor da Aquisição"}
+                        </p>
                         <p className="text-sm font-black text-slate-900 dark:text-white group-hover:text-amber-600">R$ {imovel.valor_minimo.toLocaleString('pt-BR')}</p>
                       </div>
-                    )}
+                    ) : null}
 
                     <div className="flex gap-2">
                       <button
@@ -441,7 +484,7 @@ export default function Properties() {
                   setFilterTipoArrematacao('Todos');
                   setFilterLocation('');
                 }}
-                className="px-8 py-3 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white rounded-2xl text-[10px] font-black uppercase tracking-[0.2em] shadow-sm hover:shadow-md transition-all"
+                className="px-8 py-3 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white rounded-2xl text-xs font-black uppercase tracking-[0.2em] shadow-sm hover:shadow-md transition-all"
               >
                 Limpar Filtros
               </button>
@@ -472,7 +515,7 @@ export default function Properties() {
                     <h2 className="text-xl md:text-2xl font-black text-slate-900 dark:text-white tracking-tight">
                       {editingProperty ? 'Editar Imóvel' : 'Cadastrar Imóvel'}
                     </h2>
-                    <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mt-1">
+                    <p className="text-xs font-bold text-slate-500 uppercase tracking-widest mt-1">
                       {editingProperty ? 'Atualizar Ativo no Portfólio' : 'Novo Ativo no Portfólio'}
                     </p>
                   </div>
@@ -489,7 +532,7 @@ export default function Properties() {
                         <div className="p-1.5 bg-blue-50 dark:bg-blue-900/30 rounded-lg">
                           <ClipboardCheck size={16} className="text-blue-600 dark:text-blue-400" />
                         </div>
-                        <h3 className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Código Único</h3>
+                        <h3 className="text-xs font-bold text-slate-500 uppercase tracking-widest">Código Único</h3>
                       </div>
                       <input
                         type="text"
@@ -505,30 +548,29 @@ export default function Properties() {
                         <div className="p-1.5 bg-blue-50 dark:bg-blue-900/30 rounded-lg">
                           <ClipboardCheck size={16} className="text-blue-600 dark:text-blue-400" />
                         </div>
-                        <h3 className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Tipo de Aquisição</h3>
+                        <h3 className="text-xs font-bold text-slate-500 uppercase tracking-widest">Tipo de Aquisição</h3>
                       </div>
-                      <div className="flex flex-col sm:flex-row gap-2">
-                        {Object.values(OrigemImovel).map(origem => (
-                          <button
-                            key={origem}
-                            type="button"
-                            onClick={() => setFormData({ ...formData, origem })}
-                            className={cn(
-                              "flex-1 py-3 px-4 rounded-xl border text-[10px] font-black uppercase tracking-widest transition-all",
-                              formData.origem === origem 
-                                ? "bg-slate-900 dark:bg-white border-slate-900 dark:border-white text-white dark:text-slate-900 shadow-lg shadow-slate-200 dark:shadow-none" 
-                                : "bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-800 text-slate-500 dark:text-slate-500 hover:border-slate-400"
-                            )}
-                          >
-                            {origem}
-                          </button>
-                        ))}
+                      <div className="relative">
+                        <select
+                          className="w-full px-4 py-3 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl outline-none text-sm font-medium dark:text-slate-200 appearance-none shadow-sm pr-10 focus:ring-2 focus:ring-blue-500/15"
+                          value={formData.origem || ''}
+                          onChange={e => setFormData({ ...formData, origem: e.target.value as OrigemImovel })}
+                        >
+                          {Object.values(OrigemImovel).map(origem => (
+                            <option key={origem} value={origem}>
+                              {origem.charAt(0).toUpperCase() + origem.slice(1)}
+                            </option>
+                          ))}
+                        </select>
+                        <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none text-slate-400 dark:text-slate-500">
+                          <ChevronDown size={16} />
+                        </div>
                       </div>
                     </section>
                   </div>
 
                   {/* Seção 2: Dados do Leilão (Condicional) */}
-                  {formData.origem === OrigemImovel.Leilao && (
+                  {(formData.origem === OrigemImovel.LeilaoJudicial || formData.origem === OrigemImovel.LeilaoExtrajudicial) && (
                     <motion.section 
                       initial={{ opacity: 0, y: 10 }}
                       animate={{ opacity: 1, y: 0 }}
@@ -538,48 +580,52 @@ export default function Properties() {
                         <div className="p-1.5 bg-indigo-50 dark:bg-indigo-900/30 rounded-lg">
                           <Gavel size={16} className="text-indigo-600 dark:text-indigo-400" />
                         </div>
-                        <h3 className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Dados do Processo</h3>
+                        <h3 className="text-xs font-bold text-slate-500 uppercase tracking-widest">Dados do Processo</h3>
                       </div>
                       
                       <div className="space-y-4">
-                        <div className="space-y-1.5">
-                          <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-widest ml-1">Número do Processo</label>
-                          <input
-                            type="text"
-                            placeholder="0000000-00.0000.0.00.0000"
-                            className={cn(
-                              "w-full px-4 py-3 bg-white dark:bg-slate-800 border rounded-xl outline-none text-sm font-medium dark:text-slate-200 transition-all focus:ring-2",
-                              errors.processo ? "border-rose-500 focus:ring-rose-500/10" : "border-slate-200 dark:border-slate-700 focus:ring-indigo-500/10"
-                            )}
-                            value={formData.processo || ''}
-                            onChange={e => {
-                              setFormData({...formData, processo: e.target.value});
-                              if (errors.processo) setErrors({...errors, processo: ''});
-                            }}
-                          />
-                          {errors.processo && <p className="text-[10px] text-rose-500 font-bold mt-1 ml-1">{errors.processo}</p>}
-                        </div>
+                        {formData.origem === OrigemImovel.LeilaoJudicial && (
+                          <>
+                            <div className="space-y-1.5">
+                              <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-widest ml-1">Número do Processo</label>
+                              <input
+                                type="text"
+                                placeholder="0000000-00.0000.0.00.0000"
+                                className={cn(
+                                  "w-full px-4 py-3 bg-white dark:bg-slate-800 border rounded-xl outline-none text-sm font-medium dark:text-slate-200 transition-all focus:ring-2",
+                                  errors.processo ? "border-rose-500 focus:ring-rose-500/10" : "border-slate-200 dark:border-slate-700 focus:ring-indigo-500/10"
+                                )}
+                                value={formData.processo || ''}
+                                onChange={e => {
+                                  setFormData({...formData, processo: e.target.value});
+                                  if (errors.processo) setErrors({...errors, processo: ''});
+                                }}
+                              />
+                              {errors.processo && <p className="text-[10px] text-rose-500 font-bold mt-1 ml-1">{errors.processo}</p>}
+                            </div>
+
+                            <div className="space-y-1.5">
+                              <label className="block text-xs font-bold text-slate-500 uppercase tracking-widest ml-1">Comarca / Vara</label>
+                              <input
+                                type="text"
+                                className={cn(
+                                  "w-full px-4 py-3 bg-white dark:bg-slate-800 border rounded-xl outline-none text-sm font-medium dark:text-slate-200",
+                                  errors.comarca ? "border-rose-500" : "border-slate-200 dark:border-slate-700"
+                                )}
+                                value={formData.comarca || ''}
+                                onChange={e => {
+                                  setFormData({...formData, comarca: e.target.value});
+                                  if (errors.comarca) setErrors({...errors, comarca: ''});
+                                }}
+                              />
+                              {errors.comarca && <p className="text-[10px] text-rose-500 font-bold mt-1 ml-1">{errors.comarca}</p>}
+                            </div>
+                          </>
+                        )}
 
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                           <div className="space-y-1.5">
-                            <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-widest ml-1">Comarca / Vara</label>
-                            <input
-                              type="text"
-                              className={cn(
-                                "w-full px-4 py-3 bg-white dark:bg-slate-800 border rounded-xl outline-none text-sm font-medium dark:text-slate-200",
-                                errors.comarca ? "border-rose-500" : "border-slate-200 dark:border-slate-700"
-                              )}
-                              value={formData.comarca || ''}
-                              onChange={e => {
-                                setFormData({...formData, comarca: e.target.value});
-                                if (errors.comarca) setErrors({...errors, comarca: ''});
-                              }}
-                            />
-                            {errors.comarca && <p className="text-[10px] text-rose-500 font-bold mt-1 ml-1">{errors.comarca}</p>}
-                          </div>
-
-                          <div className="space-y-1.5">
-                            <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-widest ml-1">Data do Leilão</label>
+                            <label className="block text-xs font-bold text-slate-500 uppercase tracking-widest ml-1">Data do Leilão</label>
                             <input
                               type="datetime-local"
                               className={cn(
@@ -594,23 +640,9 @@ export default function Properties() {
                             />
                             {errors.data_leilao && <p className="text-[10px] text-rose-500 font-bold mt-1 ml-1">{errors.data_leilao}</p>}
                           </div>
-                        </div>
-
-                        <div className="grid grid-cols-2 gap-4">
-                          <div className="space-y-1.5">
-                            <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-widest ml-1">Tipo de Leilão</label>
-                            <select
-                              className="w-full px-4 py-3 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl outline-none text-sm font-medium dark:text-slate-200 appearance-none shadow-sm"
-                              value={formData.tipo_leilao}
-                              onChange={e => setFormData({...formData, tipo_leilao: e.target.value as TipoLeilao})}
-                            >
-                              <option value={TipoLeilao.Judicial}>Judicial</option>
-                              <option value={TipoLeilao.Extrajudicial}>Extrajudicial</option>
-                            </select>
-                          </div>
 
                           <div className="space-y-1.5">
-                            <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-widest ml-1">Forma</label>
+                            <label className="block text-xs font-bold text-slate-500 uppercase tracking-widest ml-1">Forma</label>
                             <select
                               className="w-full px-4 py-3 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl outline-none text-sm font-medium dark:text-slate-200 appearance-none shadow-sm"
                               value={formData.forma_arrematacao}
@@ -625,7 +657,7 @@ export default function Properties() {
 
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                           <div className="space-y-1.5">
-                            <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-widest ml-1">Avaliação</label>
+                            <label className="block text-xs font-bold text-slate-500 uppercase tracking-widest ml-1">Avaliação</label>
                             <div className="relative">
                               <span className={cn(
                                 "absolute left-4 top-1/2 -translate-y-1/2 text-xs font-bold border-r pr-3 transition-colors",
@@ -652,7 +684,7 @@ export default function Properties() {
                           </div>
 
                           <div className="space-y-1.5">
-                            <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-widest ml-1">Lance Mínimo</label>
+                            <label className="block text-xs font-bold text-slate-500 uppercase tracking-widest ml-1">Lance Mínimo</label>
                             <div className="relative">
                               <span className={cn(
                                 "absolute left-4 top-1/2 -translate-y-1/2 text-xs font-bold border-r pr-3 transition-colors",
@@ -680,7 +712,7 @@ export default function Properties() {
                         </div>
 
                         <div className="space-y-1.5">
-                          <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-widest ml-1">Link do Edital</label>
+                          <label className="block text-xs font-bold text-slate-500 uppercase tracking-widest ml-1">Link do Edital</label>
                           <div className="relative">
                             <LinkIcon size={14} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" />
                             <input
@@ -696,13 +728,86 @@ export default function Properties() {
                     </motion.section>
                   )}
 
+                  {(formData.origem === OrigemImovel.VendaOnline || 
+                    formData.origem === OrigemImovel.CompraDireta || 
+                    formData.origem === OrigemImovel.Mercado) && (
+                    <motion.section 
+                      initial={{ opacity: 0, y: 10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      className="p-5 bg-slate-50/50 dark:bg-slate-800/30 rounded-2xl border border-slate-100 dark:border-slate-800 space-y-5"
+                    >
+                      <div className="flex items-center gap-2 mb-1">
+                        <div className="p-1.5 bg-emerald-50 dark:bg-emerald-950/20 rounded-lg">
+                          <Gavel size={16} className="text-emerald-600 dark:text-emerald-400" />
+                        </div>
+                        <h3 className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-widest">Informaçoes de Valor</h3>
+                      </div>
+                      
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <div className="space-y-1.5">
+                          <label className="block text-xs font-bold text-slate-500 uppercase tracking-widest ml-1">Valor de Compra / Pedido</label>
+                          <div className="relative">
+                            <span className={cn(
+                              "absolute left-4 top-1/2 -translate-y-1/2 text-xs font-bold border-r pr-3 transition-colors",
+                              errors.valor_minimo ? "text-rose-500 border-rose-200" : "text-slate-400 border-slate-100 dark:border-slate-700"
+                            )}>R$</span>
+                            <CurrencyInput
+                              intlConfig={{ locale: 'pt-BR', currency: 'BRL' }}
+                              decimalSeparator=","
+                              groupSeparator="."
+                              decimalsLimit={2}
+                              placeholder="0,00"
+                              className={cn(
+                                "w-full pl-14 pr-4 py-3 bg-white dark:bg-slate-800 border rounded-xl outline-none text-sm font-black dark:text-slate-200 transition-all focus:ring-2 focus:ring-emerald-500/10",
+                                errors.valor_minimo ? "border-rose-500" : "border-slate-200 dark:border-slate-700"
+                              )}
+                              value={formData.valor_minimo || ''}
+                              onValueChange={(_v, _n, values) => {
+                                setFormData({...formData, valor_minimo: values?.float || 0});
+                                if (errors.valor_minimo) setErrors({...errors, valor_minimo: ''});
+                              }}
+                            />
+                          </div>
+                          {errors.valor_minimo && <p className="text-[10px] text-rose-500 font-bold mt-1 ml-1">{errors.valor_minimo}</p>}
+                        </div>
+
+                        <div className="space-y-1.5">
+                          <label className="block text-xs font-bold text-slate-500 uppercase tracking-widest ml-1">Valor de Avaliação</label>
+                          <div className="relative">
+                            <span className={cn(
+                              "absolute left-4 top-1/2 -translate-y-1/2 text-xs font-bold border-r pr-3 transition-colors",
+                              errors.valor_avaliacao ? "text-rose-500 border-rose-200" : "text-slate-400 border-slate-100 dark:border-slate-700"
+                            )}>R$</span>
+                            <CurrencyInput
+                              intlConfig={{ locale: 'pt-BR', currency: 'BRL' }}
+                              decimalSeparator=","
+                              groupSeparator="."
+                              decimalsLimit={2}
+                              placeholder="0,00"
+                              className={cn(
+                                "w-full pl-14 pr-4 py-3 bg-white dark:bg-slate-800 border rounded-xl outline-none text-sm font-black dark:text-slate-200 transition-all focus:ring-2 focus:ring-emerald-500/10",
+                                errors.valor_avaliacao ? "border-rose-500" : "border-slate-200 dark:border-slate-700"
+                              )}
+                              value={formData.valor_avaliacao || ''}
+                              onValueChange={(_v, _n, values) => {
+                                setFormData({...formData, valor_avaliacao: values?.float || 0});
+                                if (errors.valor_avaliacao) setErrors({...errors, valor_avaliacao: ''});
+                              }}
+                            />
+                          </div>
+                          {errors.valor_avaliacao && <p className="text-[10px] text-rose-500 font-bold mt-1 ml-1">{errors.valor_avaliacao}</p>}
+                        </div>
+                      </div>
+                    </motion.section>
+                  )}
+
                   {/* Seção 3: Localização */}
                   <section className="space-y-6">
                     <div className="flex items-center gap-2 mb-1">
                       <div className="p-1.5 bg-rose-50 dark:bg-rose-900/30 rounded-lg">
                         <MapPin size={16} className="text-rose-600 dark:text-rose-400" />
                       </div>
-                      <h3 className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Localização do Ativo</h3>
+                      <h3 className="text-xs font-bold text-slate-500 uppercase tracking-widest">Localização do Ativo</h3>
                     </div>
 
                     <div className="grid grid-cols-1 sm:grid-cols-4 gap-5">

@@ -5,7 +5,7 @@
       "description": "Dados do imóvel arrematado ou em análise (inclui dados de leilão se aplicável)",
       "type": "object",
       "properties": {
-        "origem": { "type": "string", "enum": ["Leilão", "Compra Direta", "Outro"], "description": "Origem do imóvel" },
+        "origem": { "type": "string", "enum": ["Leilão extrajudicial", "Leilão Judicial", "Venda online", "Compra direta", "Mercado"], "description": "Origem do imóvel" },
         "matricula": { "type": "string", "description": "Matrícula RGI" },
         "endereco": { "type": "string", "description": "Endereço Completo" },
         "cep": { "type": "string" },
@@ -19,6 +19,9 @@
         "analise_risco": { "type": "string", "description": "Relatório de análise de risco gerado por IA" },
         "status_arrematacao": { "type": "string", "enum": ["Análise", "Arrematado", "Vendido", "Alugado", "Perdido", "Cancelado", "Reprovado"] },
         "valor_arrematacao": { "type": "number", "description": "Valor total do lance no leilão" },
+        "codigo": { "type": "string" },
+        "tipo_arrematacao": { "type": "string", "enum": ["À Vista", "Financiada"] },
+        "saldo_devedor": { "type": "number" },
         
         "processo": { "type": "string", "description": "Número do Processo (Leilão)" },
         "comarca": { "type": "string", "description": "Comarca / Vara (Leilão)" },

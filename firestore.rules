@@ -40,7 +40,7 @@ service cloud.firestore {
 
     function isValidImovel(data) {
       return (!('id_leilao' in data) || (data.id_leilao is string && isValidId(data.id_leilao))) &&
-             data.origem in ['Leilão', 'Compra Direta', 'Outro'] &&
+             data.origem in ['Leilão extrajudicial', 'Leilão Judicial', 'Venda online', 'Compra direta', 'Mercado'] &&
              data.matricula is string && data.matricula.size() <= 100 &&
              data.endereco is string && data.endereco.size() <= 500 &&
              data.area_m2 is number &&
@@ -49,7 +49,22 @@ service cloud.firestore {
              data.estado_conservacao in ['Ótimo', 'Bom', 'Regular', 'Ruim', 'Demolido'] &&
              (!('status_arrematacao' in data) || data.status_arrematacao in ['Análise', 'Arrematado', 'Vendido', 'Alugado', 'Perdido', 'Cancelado', 'Reprovado']) &&
              (!('valor_arrematacao' in data) || data.valor_arrematacao is number) &&
-             (!('analise_risco' in data) || data.analise_risco is string);
+             (!('analise_risco' in data) || data.analise_risco is string) &&
+             (!('cep' in data) || (data.cep is string && data.cep.size() <= 20)) &&
+             (!('bairro' in data) || (data.bairro is string && data.bairro.size() <= 200)) &&
+             (!('cidade' in data) || (data.cidade is string && data.cidade.size() <= 200)) &&
+             (!('estado' in data) || (data.estado is string && data.estado.size() <= 10)) &&
+             (!('codigo' in data) || (data.codigo is string && data.codigo.size() <= 100)) &&
+             (!('processo' in data) || (data.processo is string && data.processo.size() <= 100)) &&
+             (!('comarca' in data) || (data.comarca is string && data.comarca.size() <= 200)) &&
+             (!('tipo_leilao' in data) || data.tipo_leilao in ['Judicial', 'Extrajudicial']) &&
+             (!('data_leilao' in data) || (data.data_leilao is string && data.data_leilao.size() <= 100)) &&
+             (!('link_edital' in data) || (data.link_edital is string && data.link_edital.size() <= 2000)) &&
+             (!('valor_avaliacao' in data) || data.valor_avaliacao is number) &&
+             (!('valor_minimo' in data) || data.valor_minimo is number) &&
+             (!('condicoes_pagamento' in data) || (data.condicoes_pagamento is string && data.condicoes_pagamento.size() <= 2000)) &&
+             (!('tipo_arrematacao' in data) || data.tipo_arrematacao in ['À Vista', 'Financiada']) &&
+             (!('saldo_devedor' in data) || data.saldo_devedor is number);
     }
 
     function isValidCustoAquisicao(data) {

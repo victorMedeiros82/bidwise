@@ -264,34 +264,47 @@ export default function PropertyDetails() {
   if (!imovel) return <div className="p-8 text-center text-slate-600">Imóvel não encontrado.</div>;
 
   // Consolidação Financeira
-  const totalAquisicao = filteredCustosAquisicao.reduce((acc, curr) => acc + (curr.valor || 0), 0);
+  const valorArrematacaoBase = imovel.valor_arrematacao || 0;
+  const totalAquisicao = valorArrematacaoBase + filteredCustosAquisicao.reduce((acc, curr) => acc + (curr.valor || 0), 0);
   const totalReforma = filteredCustosReforma.reduce((acc, curr) => acc + (curr.valor_real || curr.orcamento || 0), 0);
   const totalHolding = filteredHolding.reduce((acc, curr) => acc + (curr.valor_mensal || 0), 0);
   
   // O Saldo Devedor é o valor financiado que ainda não saiu do bolso (não desembolsado)
   const saldoDevedor = imovel?.saldo_devedor || 0;
   
-  // Capital Alocado (Cash-out) é o total de custos menos o que foi financiado/saldo devedor
-  const totalInvestimentoRaw = totalAquisicao + totalReforma + totalHolding;
-  const totalInvestimento = Math.max(0, totalInvestimentoRaw - saldoDevedor);
+  // Capital Alocado (Cash-out) é o total de custos reais desembolsados (não inclui saldo devedor)
+  // De acordo com as instruções: Entrada (Lance - Saldo Devedor para Financiada), Custos com documentação (em totalAquisicao), reforma (totalReforma) e holding (totalHolding)
+  const totalInvestimento = (totalAquisicao - (imovel.tipo_arrematacao === TipoArrematacao.Financiada ? saldoDevedor : 0)) + totalReforma + totalHolding;
   
   const faturamentoBruto = filteredFaturamento.reduce((acc, curr) => acc + (curr.valor || 0), 0);
   const totalComissoes = filteredFaturamento.reduce((acc, curr) => acc + (curr.custo_corretagem || 0), 0);
   const faturamentoLiquido = faturamentoBruto - totalComissoes;
   
-  // Use faturamentoLiquido if > 0, otherwise use eval value (prospective)
-  const baseReceita = faturamentoLiquido > 0 ? faturamentoLiquido : (imovel.valor_avaliacao || imovel.valor_arrematacao || 0);
+  // 1. Valor de avaliação, quando não houver venda
+  const baseReceita = faturamentoLiquido > 0 ? faturamentoLiquido : (imovel.valor_avaliacao || 0);
   
-  // O lucro bruto considera a receita menos o custo TOTAL da operação (desembolsado + saldo devedor)
-  const lucroBruto = baseReceita - totalInvestimentoRaw;
+  // 2. Diminuir todos os custos para se chegar ao lucro bruto (Entrada, Saldo devedor, Custos com documentação, Incentivo à desocupação, reforma, dívidas condominiais propter rem)
+  // Nota: Entrada e custos com documentação já estão somados em totalAquisicao.
+  // Como totalAquisicao já inclui o valor total da arrematação (que engloba o saldo devedor/financiado), somar o saldo devedor novamente gerava uma dupla contagem indevida do valor financiado.
+  const custosBaseIR = totalAquisicao + totalReforma;
+  const lucroBruto = baseReceita - custosBaseIR;
+  
+  // 3. O lucro bruto será a base de cálculo para o IR. Deduzir 15%
   const impostoRenda = lucroBruto > 0 ? lucroBruto * 0.15 : 0;
-  const lucroLiquido = lucroBruto - impostoRenda;
+  
+  // 4. Custos com manutenção (totalHolding: IPTU, condomínio, energia, água) diminuem o lucro líquido, porém não entram no cálculo de IR
+  const lucroLiquido = baseReceita - custosBaseIR - totalHolding - impostoRenda;
   
   // ROI sobre o capital próprio (Cash-on-Cash Return)
   const roiLiquido = totalInvestimento > 0 ? (lucroLiquido / totalInvestimento) * 100 : 0;
 
   // Calculo de Fluxo de Caixa Acumulado
   const allEvents = [
+    ...(valorArrematacaoBase > 0 ? [{
+      date: imovel.createdAt ? (typeof imovel.createdAt === 'object' ? imovel.createdAt.toDate() : new Date(imovel.createdAt)) : new Date(),
+      value: -valorArrematacaoBase,
+      type: 'Arrematação / Lance'
+    }] : []),
     ...filteredCustosAquisicao.map(c => ({ 
       date: c.createdAt ? (typeof c.createdAt === 'object' ? c.createdAt.toDate() : new Date(c.createdAt)) : new Date(), 
       value: -(c.valor || 0), 
@@ -326,7 +339,7 @@ export default function PropertyDetails() {
   });
 
   const costDistribution = [
-    { name: 'Aquisição', value: Math.max(0, totalAquisicao - saldoDevedor), color: '#3b82f6' },
+    { name: 'Aquisição', value: totalAquisicao, color: '#3b82f6' },
     { name: 'Benfeitorias', value: totalReforma, color: '#f59e0b' },
     { name: 'Manutenção', value: totalHolding, color: '#8b5cf6' },
     { name: 'Taxas/IR', value: totalComissoes + impostoRenda, color: '#ef4444' }
@@ -374,12 +387,12 @@ export default function PropertyDetails() {
           <div className="flex items-center gap-3 mb-2">
             <div className="flex flex-col">
               {imovel.codigo && (
-                <span className="text-[10px] font-black text-blue-500 uppercase tracking-[0.3em] mb-1">Cód: {imovel.codigo}</span>
+                <span className="text-xs font-black text-blue-500 uppercase tracking-[0.3em] mb-1">Cód: {imovel.codigo}</span>
               )}
               <h1 className="text-4xl font-black text-slate-900 dark:text-white tracking-tighter leading-none">{imovel.endereco}</h1>
             </div>
             <div className={cn(
-              "px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-widest",
+              "px-3 py-1 rounded-full text-xs font-black uppercase tracking-widest",
               imovel.status_arrematacao === StatusArrematacao.Arrematado ? "bg-emerald-100 text-emerald-700" :
               imovel.status_arrematacao === StatusArrematacao.Analise ? "bg-blue-100 text-blue-700" :
               "bg-slate-100 text-slate-700"
@@ -387,7 +400,7 @@ export default function PropertyDetails() {
               {imovel.status_arrematacao}
             </div>
           </div>
-          <div className="flex items-center gap-4 text-slate-400 dark:text-slate-500 font-bold text-[10px] uppercase tracking-widest">
+          <div className="flex items-center gap-4 text-slate-400 dark:text-slate-500 font-bold text-xs uppercase tracking-widest">
             <span className="flex items-center gap-1.5"><MapPin size={14} className="text-slate-300" /> {imovel.bairro || 'Sem Bairro'} - {imovel.cidade}/{imovel.estado}</span>
             <span className="w-1 h-1 rounded-full bg-slate-200" />
             <span className="flex items-center gap-1.5"><Building2 size={14} className="text-slate-300" /> {imovel.tipo_imovel}</span>
@@ -398,7 +411,7 @@ export default function PropertyDetails() {
         
         <div className="flex items-center gap-3">
           <div className="relative group">
-            <button className="flex items-center gap-2 px-6 py-3 bg-slate-900 dark:bg-white text-white dark:text-slate-900 rounded-2xl text-[10px] font-black uppercase tracking-widest hover:bg-slate-800 dark:hover:bg-slate-100 transition-all active:scale-95 shadow-lg shadow-slate-200 dark:shadow-none">
+            <button className="flex items-center gap-2 px-6 py-3 bg-slate-900 dark:bg-white text-white dark:text-slate-900 rounded-2xl text-xs font-black uppercase tracking-widest hover:bg-slate-800 dark:hover:bg-slate-100 transition-all active:scale-95 shadow-lg shadow-slate-200 dark:shadow-none">
               <Plus size={16} />
               Nova Ação
             </button>
@@ -411,8 +424,8 @@ export default function PropertyDetails() {
                   <Wallet size={16} />
                 </div>
                 <div className="flex flex-col">
-                  <span className="text-[10px] font-black uppercase tracking-widest text-slate-900 dark:text-white">Custo Aquisição</span>
-                  <span className="text-[8px] font-bold text-slate-400 uppercase">ITBI, Escritura, RGI...</span>
+                  <span className="text-xs font-black uppercase tracking-widest text-slate-900 dark:text-white">Custo Aquisição</span>
+                  <span className="text-[10px] font-bold text-slate-400 uppercase">ITBI, Escritura, RGI...</span>
                 </div>
               </button>
               <button 
@@ -423,8 +436,8 @@ export default function PropertyDetails() {
                   <Hammer size={16} />
                 </div>
                 <div className="flex flex-col">
-                  <span className="text-[10px] font-black uppercase tracking-widest text-slate-900 dark:text-white">Benfeitorias</span>
-                  <span className="text-[8px] font-bold text-slate-400 uppercase">Reforma, Pintura...</span>
+                  <span className="text-xs font-black uppercase tracking-widest text-slate-900 dark:text-white">Benfeitorias</span>
+                  <span className="text-[10px] font-bold text-slate-400 uppercase">Reforma, Pintura...</span>
                 </div>
               </button>
               <button 
@@ -435,8 +448,8 @@ export default function PropertyDetails() {
                   <ShieldCheck size={16} />
                 </div>
                 <div className="flex flex-col">
-                  <span className="text-[10px] font-black uppercase tracking-widest text-slate-900 dark:text-white">Gastos Mensais</span>
-                  <span className="text-[8px] font-bold text-slate-400 uppercase">Condomínio, IPTU...</span>
+                  <span className="text-xs font-black uppercase tracking-widest text-slate-900 dark:text-white">Gastos Mensais</span>
+                  <span className="text-[10px] font-bold text-slate-400 uppercase">Condomínio, IPTU...</span>
                 </div>
               </button>
               <div className="my-2 border-t border-slate-50 dark:border-slate-800" />
@@ -448,8 +461,8 @@ export default function PropertyDetails() {
                   <DollarSign size={16} />
                 </div>
                 <div className="flex flex-col">
-                  <span className="text-[10px] font-black uppercase tracking-widest text-emerald-600">Receitas / Aluguel</span>
-                  <span className="text-[8px] font-bold text-slate-400 uppercase">Venda, Locação, Proventos...</span>
+                  <span className="text-xs font-black uppercase tracking-widest text-emerald-600">Receitas / Aluguel</span>
+                  <span className="text-[10px] font-bold text-slate-400 uppercase">Venda, Locação, Proventos...</span>
                 </div>
               </button>
             </div>
@@ -467,7 +480,7 @@ export default function PropertyDetails() {
             key={tab.id}
             onClick={() => setActiveTab(tab.id as any)}
             className={cn(
-              "relative flex items-center gap-2.5 px-6 py-3 rounded-xl text-[10px] font-black uppercase tracking-[0.15em] transition-all duration-300",
+              "relative flex items-center gap-2.5 px-6 py-3 rounded-xl text-xs font-black uppercase tracking-[0.15em] transition-all duration-300",
               activeTab === tab.id ? "text-slate-900 dark:text-white" : "text-slate-500 hover:text-slate-700 dark:hover:text-slate-300"
             )}
           >
@@ -505,13 +518,13 @@ export default function PropertyDetails() {
                     </div>
                     <div>
                       <h3 className="text-xl font-black text-slate-900 dark:text-white tracking-tight">Análise de Risco Estratégica</h3>
-                      <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Processado pelo Gemini AI</p>
+                      <p className="text-xs font-black text-slate-400 uppercase tracking-widest">Processado pelo Gemini AI</p>
                     </div>
                   </div>
                   <button 
                     onClick={handleGenerateAnalysis}
                     disabled={analyzing}
-                    className="flex items-center gap-2 px-4 py-2 bg-slate-900 dark:bg-white text-white dark:text-slate-900 rounded-xl text-[10px] font-black uppercase tracking-widest hover:opacity-90 transition-all disabled:opacity-50"
+                    className="flex items-center gap-2 px-4 py-2 bg-slate-900 dark:bg-white text-white dark:text-slate-900 rounded-xl text-xs font-black uppercase tracking-widest hover:opacity-90 transition-all disabled:opacity-50"
                   >
                     {analyzing ? <RefreshCw size={14} className="animate-spin" /> : <RefreshCw size={14} />}
                     Recalcular
@@ -550,14 +563,14 @@ export default function PropertyDetails() {
                     </div>
                     <div>
                       <h3 className="text-xl font-black text-slate-900 dark:text-white tracking-tight">Dados do Ativo</h3>
-                      <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Informações estruturais e comerciais</p>
+                      <p className="text-xs font-black text-slate-400 uppercase tracking-widest">Informações estruturais e comerciais</p>
                     </div>
                   </div>
                 </div>
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-8">
                   <div className="space-y-2">
-                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-2">Avaliação de Mercado</label>
+                    <label className="text-xs font-black text-slate-400 uppercase tracking-widest px-2">Avaliação de Mercado</label>
                     <DebouncedCurrencyInput
                       value={imovel.valor_avaliacao || 0}
                       onUpdate={(val) => updateImovel(id!, { valor_avaliacao: val })}
@@ -565,7 +578,7 @@ export default function PropertyDetails() {
                     />
                   </div>
                   <div className="space-y-2">
-                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-2">Lance Mínimo / Arrematação</label>
+                    <label className="text-xs font-black text-slate-400 uppercase tracking-widest px-2">Lance Mínimo / Arrematação</label>
                     <DebouncedCurrencyInput
                       value={imovel.valor_arrematacao || 0}
                       onUpdate={(val) => updateImovel(id!, { valor_arrematacao: val })}
@@ -573,7 +586,7 @@ export default function PropertyDetails() {
                     />
                   </div>
                   <div className="space-y-2">
-                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-2">Matrícula (RGI)</label>
+                    <label className="text-xs font-black text-slate-400 uppercase tracking-widest px-2">Matrícula (RGI)</label>
                     <DebouncedInput
                       value={imovel.matricula || ''}
                       onUpdate={(val) => updateImovel(id!, { matricula: val })}
@@ -581,7 +594,7 @@ export default function PropertyDetails() {
                     />
                   </div>
                   <div className="space-y-2">
-                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-2">Área M²</label>
+                    <label className="text-xs font-black text-slate-400 uppercase tracking-widest px-2">Área M²</label>
                     <DebouncedInput
                       type="number"
                       value={imovel.area_m2 || ''}
@@ -590,14 +603,14 @@ export default function PropertyDetails() {
                     />
                   </div>
                   <div className="space-y-2">
-                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-2">Tipo de Arrematação</label>
+                    <label className="text-xs font-black text-slate-400 uppercase tracking-widest px-2">Tipo de Arrematação</label>
                     <div className="flex gap-2 bg-slate-50 dark:bg-slate-800 p-1 rounded-2xl">
                       {Object.values(TipoArrematacao).map(tipo => (
                         <button
                           key={tipo}
                           onClick={() => updateImovel(id!, { tipo_arrematacao: tipo })}
                           className={cn(
-                            "flex-1 py-3 px-4 rounded-xl text-[9px] font-black uppercase tracking-widest transition-all",
+                            "flex-1 py-3 px-4 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all",
                             imovel.tipo_arrematacao === tipo 
                               ? "bg-slate-900 dark:bg-white text-white dark:text-slate-900 shadow-lg" 
                               : "text-slate-400 hover:text-slate-600"
@@ -614,7 +627,7 @@ export default function PropertyDetails() {
                       animate={{ opacity: 1, height: 'auto' }}
                       className="space-y-2"
                     >
-                      <label className="text-[10px] font-black text-rose-500 uppercase tracking-widest px-2 flex items-center gap-1">
+                      <label className="text-xs font-black text-rose-500 uppercase tracking-widest px-2 flex items-center gap-1">
                         <TrendingDown size={10} />
                         Saldo Devedor (Financiamento)
                       </label>
@@ -635,7 +648,7 @@ export default function PropertyDetails() {
                     <div className="size-10 bg-amber-50 dark:bg-amber-900/20 rounded-xl flex items-center justify-center text-amber-600 dark:text-amber-400">
                       <Calendar size={20} />
                     </div>
-                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Status do Ativo</p>
+                    <p className="text-xs font-black text-slate-400 uppercase tracking-widest">Status do Ativo</p>
                   </div>
                   
                   <div className="space-y-3">
@@ -646,7 +659,7 @@ export default function PropertyDetails() {
                           if (id) updateImovel(id, { status_arrematacao: status });
                         }}
                         className={cn(
-                          "w-full py-4 px-6 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all text-left flex items-center justify-between",
+                          "w-full py-4 px-6 rounded-2xl text-xs font-black uppercase tracking-widest transition-all text-left flex items-center justify-between",
                           imovel.status_arrematacao === status 
                             ? "bg-slate-900 dark:bg-white text-white dark:text-slate-900 shadow-xl" 
                             : "bg-slate-50 dark:bg-slate-800 text-slate-500 hover:bg-slate-100"
@@ -669,13 +682,13 @@ export default function PropertyDetails() {
                         <Activity size={32} />
                       </div>
                       <div>
-                        <p className="text-[10px] font-black text-blue-500 uppercase tracking-[0.4em] mb-1">Performance Estratégica</p>
+                        <p className="text-xs font-black text-blue-500 uppercase tracking-[0.4em] mb-1">Performance Estratégica</p>
                         <h2 className="text-4xl font-black text-white tracking-tighter">Balanço de Ativo</h2>
                       </div>
                     </div>
 
                     <div className="text-right">
-                      <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1">
+                      <p className="text-xs font-black text-slate-500 uppercase tracking-widest mb-1">
                         {faturamentoLiquido > 0 ? 'Lucro Líquido Realizado' : 'Lucro Líquido Projetado'}
                       </p>
                       <p className={cn(
@@ -685,15 +698,15 @@ export default function PropertyDetails() {
                         R$ {lucroLiquido.toLocaleString('pt-BR')}
                       </p>
                       <div className="flex items-center justify-end gap-3 mt-2">
-                        <p className="text-[9px] font-bold text-slate-500 uppercase tracking-widest">
+                        <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">
                           Bruto: R$ {lucroBruto.toLocaleString('pt-BR')}
                         </p>
                         <span className="w-1 h-1 rounded-full bg-slate-800" />
-                        <p className="text-[9px] font-bold text-blue-500 uppercase tracking-widest">
+                        <p className="text-[10px] font-bold text-blue-500 uppercase tracking-widest">
                           Dívida: R$ {saldoDevedor.toLocaleString('pt-BR')}
                         </p>
                         <span className="w-1 h-1 rounded-full bg-slate-800" />
-                        <p className="text-[9px] font-bold text-rose-500 uppercase tracking-widest">
+                        <p className="text-[10px] font-bold text-rose-500 uppercase tracking-widest">
                           IR (15%): - R$ {impostoRenda.toLocaleString('pt-BR')}
                         </p>
                       </div>
@@ -704,11 +717,11 @@ export default function PropertyDetails() {
                     {/* Gráfico de Evolução de ROI / Fluxo de Caixa */}
                     <div className="md:col-span-8 bg-slate-800/40 p-6 rounded-[2rem] border border-white/5 min-h-[350px]">
                       <div className="flex items-center justify-between mb-4">
-                        <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest flex items-center gap-2">
+                        <h4 className="text-xs font-black text-slate-400 uppercase tracking-widest flex items-center gap-2">
                           <Activity size={14} className="text-blue-500" />
                           Fluxo de Caixa Acumulado
                         </h4>
-                        <div className="text-[9px] font-bold text-emerald-400 uppercase">Projeção Consolidada</div>
+                        <div className="text-[10px] font-bold text-emerald-400 uppercase">Projeção Consolidada</div>
                       </div>
                       <div className="h-[250px] w-full min-w-0">
                         <ResponsiveContainer width="100%" height="100%" minWidth={0}>
@@ -758,7 +771,7 @@ export default function PropertyDetails() {
 
                     {/* Distribuição de Custos */}
                     <div className="md:col-span-4 bg-slate-800/40 p-6 rounded-[2rem] border border-white/5 flex flex-col justify-between min-h-[350px]">
-                      <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest flex items-center gap-2 mb-4">
+                      <h4 className="text-xs font-black text-slate-400 uppercase tracking-widest flex items-center gap-2 mb-4">
                         <TrendingDown size={14} className="text-rose-500" />
                         Composição de Gastos
                       </h4>
@@ -793,7 +806,7 @@ export default function PropertyDetails() {
                         {costDistribution.map(item => (
                           <div key={item.name} className="flex items-center gap-2">
                             <div className="size-2 rounded-full" style={{ backgroundColor: item.color }} />
-                            <span className="text-[8px] font-black text-slate-500 uppercase tracking-widest truncate">{item.name}</span>
+                            <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest truncate">{item.name}</span>
                           </div>
                         ))}
                       </div>
@@ -803,7 +816,7 @@ export default function PropertyDetails() {
                   <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-12">
                     <div className="space-y-4">
                       <div className="flex items-center gap-2">
-                        <p className="text-[10px] font-black text-slate-500 uppercase tracking-[0.2em]">Capital Alocado (Cash-out)</p>
+                        <p className="text-xs font-black text-slate-500 uppercase tracking-[0.2em]">Capital Alocado (Cash-out)</p>
                         <button 
                           onClick={() => {
                             setActiveTab('custos');
@@ -838,17 +851,17 @@ export default function PropertyDetails() {
                     </div>
                     
                     <div className="space-y-4">
-                      <p className="text-[10px] font-black text-slate-500 uppercase tracking-[0.2em]">Receita Líquida</p>
+                      <p className="text-xs font-black text-slate-500 uppercase tracking-[0.2em]">Receita Líquida</p>
                       <div>
                         <p className="text-2xl font-black text-white tracking-tight text-emerald-400">
                           R$ {faturamentoLiquido.toLocaleString('pt-BR')}
                         </p>
-                        <p className="text-[8px] font-bold text-slate-600 uppercase tracking-widest mt-1 italic">Venda - Comissões</p>
+                        <p className="text-[10px] font-bold text-slate-600 uppercase tracking-widest mt-1 italic">Venda - Comissões</p>
                       </div>
                     </div>
 
                     <div className="space-y-4">
-                      <p className="text-[10px] font-black text-slate-500 uppercase tracking-[0.2em]">Margem de Retorno</p>
+                      <p className="text-xs font-black text-slate-500 uppercase tracking-[0.2em]">Margem de Retorno</p>
                       <div className="flex items-baseline gap-3">
                         <p className={cn(
                           "text-3xl font-black tracking-tight",
@@ -857,16 +870,16 @@ export default function PropertyDetails() {
                           {roiLiquido.toFixed(1)}%
                         </p>
                         <div className="flex flex-col">
-                          <span className="text-[10px] font-bold text-slate-600 uppercase tracking-tighter">ROI LÍQUIDO</span>
-                          <span className="text-[8px] text-emerald-600 font-black">+{((roiLiquido/100) * 1).toFixed(2)}x equity</span>
+                          <span className="text-xs font-bold text-slate-600 uppercase tracking-tighter">ROI LÍQUIDO</span>
+                          <span className="text-[10px] text-emerald-600 font-black">+{((roiLiquido/100) * 1).toFixed(2)}x equity</span>
                         </div>
                       </div>
                     </div>
 
                     <div className="space-y-4">
                       <div className="flex items-center justify-between">
-                        <p className="text-[10px] font-black text-slate-500 uppercase tracking-[0.2em]">Ponto de Equilíbrio</p>
-                        <span className="text-[9px] font-black text-blue-500 tracking-widest">
+                        <p className="text-xs font-black text-slate-500 uppercase tracking-[0.2em]">Ponto de Equilíbrio</p>
+                        <span className="text-[10px] font-black text-blue-500 tracking-widest">
                           {Math.min(100, Math.round((totalInvestimento / (faturamentoLiquido || totalInvestimento)) * 100))}%
                         </span>
                       </div>
@@ -903,33 +916,33 @@ export default function PropertyDetails() {
 
                   <div className="mt-12 pt-8 border-t border-slate-800 grid grid-cols-1 md:grid-cols-2 gap-12">
                     <div>
-                      <h5 className="text-[10px] font-black text-slate-400 uppercase tracking-[0.3em] mb-6 flex items-center gap-2">
+                      <h5 className="text-xs font-black text-slate-400 uppercase tracking-[0.3em] mb-6 flex items-center gap-2">
                         <div className="size-1.5 rounded-full bg-blue-500" />
                         Custos Fixos (Inércia)
                       </h5>
                       <div className="space-y-4">
                         <div className="flex justify-between items-center bg-slate-800/20 p-4 rounded-2xl border border-white/5">
-                          <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Holding / Mensais</span>
+                          <span className="text-xs font-bold text-slate-500 uppercase tracking-widest">Holding / Mensais</span>
                           <span className="text-sm font-black text-slate-300">R$ {totalHolding.toLocaleString('pt-BR')}</span>
                         </div>
                         <div className="flex justify-between items-center bg-slate-800/20 p-4 rounded-2xl border border-white/5">
-                          <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Taxas Arrematação</span>
+                          <span className="text-xs font-bold text-slate-500 uppercase tracking-widest">Taxas Arrematação</span>
                           <span className="text-sm font-black text-slate-300">R$ {(totalAquisicao - (imovel.valor_arrematacao || 0)).toLocaleString('pt-BR')}</span>
                         </div>
                       </div>
                     </div>
                     <div>
-                      <h5 className="text-[10px] font-black text-slate-400 uppercase tracking-[0.3em] mb-6 flex items-center gap-2">
+                      <h5 className="text-xs font-black text-slate-400 uppercase tracking-[0.3em] mb-6 flex items-center gap-2">
                         <div className="size-1.5 rounded-full bg-orange-500" />
                         Custos Variáveis (Equity)
                       </h5>
                       <div className="space-y-4">
                         <div className="flex justify-between items-center bg-slate-800/20 p-4 rounded-2xl border border-white/5">
-                          <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Benfeitorias</span>
+                          <span className="text-xs font-bold text-slate-500 uppercase tracking-widest">Benfeitorias</span>
                           <span className="text-sm font-black text-slate-300">R$ {totalReforma.toLocaleString('pt-BR')}</span>
                         </div>
                         <div className="flex justify-between items-center bg-slate-800/20 p-4 rounded-2xl border border-white/5">
-                          <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Impostos sobre Lucro (IR)</span>
+                          <span className="text-xs font-bold text-slate-500 uppercase tracking-widest">Impostos sobre Lucro (IR)</span>
                           <span className="text-sm font-black text-rose-400">R$ {impostoRenda.toLocaleString('pt-BR')}</span>
                         </div>
                       </div>

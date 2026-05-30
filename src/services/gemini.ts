@@ -1,5 +1,5 @@
 import { GoogleGenAI } from "@google/genai";
-import { Imovel } from "../types";
+import { Imovel, OrigemImovel } from "../types";
 
 const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY! });
 
@@ -17,7 +17,8 @@ export async function generateRiskAnalysis(
     faturamentoLiquido: number;
   }
 ) {
-  const leilaoInfo = imovel.origem === 'Leilão' && imovel.processo ? `
+  const isLeilao = imovel.origem === OrigemImovel.LeilaoJudicial || imovel.origem === OrigemImovel.LeilaoExtrajudicial;
+  const leilaoInfo = isLeilao ? `
     DADOS DO LEILÃO INTEGRADOS:
     - Processo: ${imovel.processo}
     - Comarca: ${imovel.comarca}

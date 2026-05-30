@@ -40,6 +40,9 @@ import Dashboard from './pages/Dashboard';
 import Properties from './pages/Properties';
 import PropertyDetails from './pages/PropertyDetails';
 
+// Components
+import AuthErrorAlert from './components/AuthErrorAlert';
+
 function Sidebar({ isOpen, onClose, darkMode, onToggleDarkMode }: { isOpen: boolean, onClose: () => void, darkMode: boolean, onToggleDarkMode: () => void }) {
   const location = useLocation();
   const navItems = [
@@ -158,12 +161,12 @@ function LoginPage() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [name, setName] = useState('');
-  const [error, setError] = useState('');
+  const [error, setError] = useState<any | null>(null);
   const [loading, setLoading] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setError('');
+    setError(null);
     setLoading(true);
 
     try {
@@ -175,15 +178,20 @@ function LoginPage() {
       }
     } catch (err: any) {
       console.error(err);
-      if (err.code === 'auth/user-not-found' || err.code === 'auth/wrong-password' || err.code === 'auth/invalid-credential') {
-        setError('E-mail ou senha incorretos.');
-      } else if (err.code === 'auth/email-already-in-use') {
-        setError('Este e-mail já está em uso.');
-      } else if (err.code === 'auth/weak-password') {
-        setError('A senha deve ter pelo menos 6 caracteres.');
-      } else {
-        setError('Ocorreu um erro ao tentar acessar o sistema.');
-      }
+      setError(err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleGoogleSignIn = async () => {
+    setError(null);
+    setLoading(true);
+    try {
+      await signInWithGoogle();
+    } catch (err: any) {
+      console.error("Google Auth Error:", err);
+      setError(err);
     } finally {
       setLoading(false);
     }
@@ -202,7 +210,7 @@ function LoginPage() {
         
         <h1 className="text-3xl font-bold mb-2 text-slate-900 dark:text-white tracking-tight">PropMaestro</h1>
         <p className="text-sm text-slate-600 dark:text-slate-400 mb-10 font-medium">
-          {isLogin ? 'Bem-vindo de volta ao seu centro de gestão.' : 'Crie sua conta de broker autorizado.'}
+          {isLogin ? 'Bem-vindo de volta ao seu centro de gestão.' : 'Crie sua conta de broker autorizados.'}
         </p>
 
         <form onSubmit={handleSubmit} className="space-y-4 text-left">
@@ -244,20 +252,16 @@ function LoginPage() {
             />
           </div>
 
-          {error && (
-            <motion.p 
-              initial={{ opacity: 0, y: -10 }}
-              animate={{ opacity: 1, y: 0 }}
-              className="text-xs font-bold text-rose-500 bg-rose-50 dark:bg-rose-900/20 p-4 rounded-xl border border-rose-100 dark:border-rose-900/30"
-            >
-              {error}
-            </motion.p>
-          )}
+          <AnimatePresence>
+            {error && (
+              <AuthErrorAlert error={error} onClear={() => setError(null)} />
+            )}
+          </AnimatePresence>
 
           <button
             type="submit"
             disabled={loading}
-            className="w-full bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 text-white py-4 rounded-2xl font-bold transition-all shadow-lg shadow-blue-500/25 active:scale-[0.98] flex items-center justify-center gap-2"
+            className="w-full bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 text-white py-4 rounded-2xl font-bold transition-all shadow-lg shadow-blue-500/25 active:scale-[0.98] flex items-center justify-center gap-2 cursor-pointer"
           >
             {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : (isLogin ? 'Entrar no Sistema' : 'Criar minha Conta')}
           </button>
@@ -270,20 +274,33 @@ function LoginPage() {
         </div>
 
         <button
-          onClick={signInWithGoogle}
+          onClick={handleGoogleSignIn}
           disabled={loading}
-          className="w-full flex items-center justify-center gap-3 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 px-6 py-4 rounded-2xl font-bold text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700 transition-all active:scale-[0.98] shadow-sm group"
+          className="w-full flex items-center justify-center gap-3 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 px-6 py-4 rounded-2xl font-bold text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700 transition-all active:scale-[0.98] shadow-sm group cursor-pointer"
         >
           <img src="https://www.google.com/favicon.ico" alt="Google" className="w-5 h-5 grayscale group-hover:grayscale-0 transition-all font-medium" />
           Acessar com Google
         </button>
+
+        <p className="mt-4 text-[11px] text-slate-400 dark:text-slate-500 font-medium leading-relaxed">
+          Dica: Se o login do Google falhar no iFrame, clique para abrir em uma{" "}
+          <a
+            href={window.location.href}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-blue-500 hover:underline font-bold"
+          >
+            nova aba
+          </a>{" "}
+          fora do iFrame, ou use e-mail e senha.
+        </p>
         
         <button
           onClick={() => {
             setIsLogin(!isLogin);
-            setError('');
+            setError(null);
           }}
-          className="mt-8 text-xs font-bold text-slate-500 hover:text-blue-500 transition-colors uppercase tracking-widest"
+          className="mt-8 text-xs font-bold text-slate-500 hover:text-blue-500 transition-colors uppercase tracking-widest cursor-pointer"
         >
           {isLogin ? 'Não tem conta? Cadastre-se' : 'Já tem conta? Faça Login'}
         </button>
