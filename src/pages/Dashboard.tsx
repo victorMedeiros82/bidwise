@@ -86,7 +86,10 @@ export default function Dashboard() {
 
     if (isAcquired) {
       const pSaldoDevedor = p.tipo_arrematacao === TipoArrematacao.Financiada ? (p.saldo_devedor || 0) : 0;
-      const pTotalInvestido = (pAquisicao - pSaldoDevedor) + pReforma + pHolding;
+      const pEntradaEfetiva = p.tipo_arrematacao === TipoArrematacao.Financiada
+        ? Math.max(0, baseAquisicao - pSaldoDevedor)
+        : baseAquisicao;
+      const pTotalInvestido = pEntradaEfetiva + (pAquisicao - baseAquisicao) + pReforma + pHolding;
       totalInvested += pTotalInvestido;
       totalInvoiced += pBillingBruto;
 
@@ -106,8 +109,8 @@ export default function Dashboard() {
     }
   });
 
-  // Handle orphan faturamentos if any
-  const orphanBilling = billing.filter(f => !f.id_imovel || !propertyIdsSet.has(f.id_imovel));
+  // Handle orphan faturamentos if any (only genuinely without any id_imovel; ignore billings of deleted properties)
+  const orphanBilling = billing.filter(f => !f.id_imovel);
   const orphanBillingBruto = orphanBilling.reduce((sum, f) => sum + (f.valor || 0), 0);
   const orphanComissoes = orphanBilling.reduce((sum, f) => sum + (f.custo_corretagem || 0), 0);
   
@@ -153,7 +156,10 @@ export default function Dashboard() {
 
     if (isAcquired) {
       const pSaldoDevedor = p.tipo_arrematacao === TipoArrematacao.Financiada ? (p.saldo_devedor || 0) : 0;
-      const pTotalInvestido = (pAquisicao - pSaldoDevedor) + pReforma + pHolding;
+      const pEntradaEfetiva = p.tipo_arrematacao === TipoArrematacao.Financiada
+        ? Math.max(0, baseAquisicao - pSaldoDevedor)
+        : baseAquisicao;
+      const pTotalInvestido = pEntradaEfetiva + pAquisicaoExt + pReforma + pHolding;
       let pLucroLiquido = 0;
       let pImpostoRenda = 0;
 
@@ -176,7 +182,7 @@ export default function Dashboard() {
         endereco: p.endereco,
         status: p.status_arrematacao || '',
         valorArrematacao: baseAquisicao,
-        custosExtras: (pAquisicaoExt - pSaldoDevedor) + pReforma + pHolding,
+        custosExtras: pAquisicaoExt + pReforma + pHolding,
         totalInvested: pTotalInvestido,
         faturamentoLiquido: pFaturamentoLiquido,
         impostoRenda: pImpostoRenda,

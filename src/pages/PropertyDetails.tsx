@@ -274,7 +274,12 @@ export default function PropertyDetails() {
   
   // Capital Alocado (Cash-out) é o total de custos reais desembolsados (não inclui saldo devedor)
   // De acordo com as instruções: Entrada (Lance - Saldo Devedor para Financiada), Custos com documentação (em totalAquisicao), reforma (totalReforma) e holding (totalHolding)
-  const totalInvestimento = (totalAquisicao - (imovel.tipo_arrematacao === TipoArrematacao.Financiada ? saldoDevedor : 0)) + totalReforma + totalHolding;
+  // Usamos Math.max(0, valorArrematacaoBase - saldoDevedor) para garantir que não haja capital alocado negativo caso o lance não esteja totalmente preenchido ou seja menor que a dívida cadastrada.
+  const entradaEfetiva = imovel.tipo_arrematacao === TipoArrematacao.Financiada 
+    ? Math.max(0, valorArrematacaoBase - saldoDevedor)
+    : valorArrematacaoBase;
+  const custosAquisicaoExtras = filteredCustosAquisicao.reduce((acc, curr) => acc + (curr.valor || 0), 0);
+  const totalInvestimento = entradaEfetiva + custosAquisicaoExtras + totalReforma + totalHolding;
   
   const faturamentoBruto = filteredFaturamento.reduce((acc, curr) => acc + (curr.valor || 0), 0);
   const totalComissoes = filteredFaturamento.reduce((acc, curr) => acc + (curr.custo_corretagem || 0), 0);
