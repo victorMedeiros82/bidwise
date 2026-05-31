@@ -171,30 +171,48 @@ export function useFirestore<T>(collectionName: string, constraints: QueryConstr
     }
 
     if (hasSupabase) {
-      try {
-        const payload = {
-          ...cleanedNewData,
-          createdBy: auth.currentUser.uid,
-          createdAt: new Date().toISOString(),
-          updatedAt: new Date().toISOString()
-        };
+      let payload = {
+        ...cleanedNewData,
+        createdBy: auth.currentUser.uid,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString()
+      };
 
-        const { data: inserted, error: insertErr } = await supabase
-          .from(collectionName)
-          .insert(payload)
-          .select();
+      let attempts = 0;
+      while (attempts < 5) {
+        try {
+          const { data: inserted, error: insertErr } = await supabase
+            .from(collectionName)
+            .insert(payload)
+            .select();
 
-        if (insertErr) throw insertErr;
+          if (insertErr) throw insertErr;
 
-        // Fetch again to sync instantly
-        fetchSupabaseData();
+          // Fetch again to sync instantly
+          fetchSupabaseData();
 
-        if (inserted && inserted[0]) {
-          return { id: inserted[0].id, ...inserted[0] };
+          if (inserted && inserted[0]) {
+            return { id: inserted[0].id, ...inserted[0] };
+          }
+          return null;
+        } catch (err: any) {
+          const errMsg = err.message || err.details || String(err);
+          // Check if error is due to a missing column
+          const missingColumnMatch = errMsg.match(/Could not find the '([^']+)' column/i) || 
+                                     errMsg.match(/column "([^"]+)" does not exist/i);
+          
+          if (missingColumnMatch && missingColumnMatch[1]) {
+            const colName = missingColumnMatch[1];
+            if (payload.hasOwnProperty(colName)) {
+              console.warn(`Column '${colName}' not found in Supabase schema for '${collectionName}'. Stripping and retrying...`);
+              delete (payload as any)[colName];
+              attempts++;
+              continue;
+            }
+          }
+          handleFirestoreError(err, OperationType.CREATE, collectionName);
+          break;
         }
-        return null;
-      } catch (err) {
-        handleFirestoreError(err, OperationType.CREATE, collectionName);
       }
     } else {
       try {
@@ -222,30 +240,48 @@ export function useFirestore<T>(collectionName: string, constraints: QueryConstr
     }
 
     if (hasSupabase) {
-      try {
-        const cleanData = { ...cleanedUpdateData };
-        delete (cleanData as any).id; // Delete keys that shouldn't be overridden
+      let cleanData = { 
+        ...cleanedUpdateData,
+        updatedAt: new Date().toISOString()
+      };
+      delete (cleanData as any).id; // Delete keys that shouldn't be overridden
 
-        const { data: updated, error: updateErr } = await supabase
-          .from(collectionName)
-          .update({
-            ...cleanData,
-            updatedAt: new Date().toISOString()
-          })
-          .eq('id', id)
-          .select();
+      let attempts = 0;
+      while (attempts < 5) {
+        try {
+          const { data: updated, error: updateErr } = await supabase
+            .from(collectionName)
+            .update(cleanData)
+            .eq('id', id)
+            .select();
 
-        if (updateErr) throw updateErr;
+          if (updateErr) throw updateErr;
 
-        // Fetch again to sync instantly
-        fetchSupabaseData();
+          // Fetch again to sync instantly
+          fetchSupabaseData();
 
-        if (updated && updated[0]) {
-          return { id: updated[0].id, ...updated[0] };
+          if (updated && updated[0]) {
+            return { id: updated[0].id, ...updated[0] };
+          }
+          return null;
+        } catch (err: any) {
+          const errMsg = err.message || err.details || String(err);
+          // Check if error is due to a missing column
+          const missingColumnMatch = errMsg.match(/Could not find the '([^']+)' column/i) || 
+                                     errMsg.match(/column "([^"]+)" does not exist/i);
+          
+          if (missingColumnMatch && missingColumnMatch[1]) {
+            const colName = missingColumnMatch[1];
+            if (cleanData.hasOwnProperty(colName)) {
+              console.warn(`Column '${colName}' not found in Supabase schema for '${collectionName}'. Stripping and retrying...`);
+              delete (cleanData as any)[colName];
+              attempts++;
+              continue;
+            }
+          }
+          handleFirestoreError(err, OperationType.UPDATE, `${collectionName}/${id}`);
+          break;
         }
-        return null;
-      } catch (err) {
-        handleFirestoreError(err, OperationType.UPDATE, `${collectionName}/${id}`);
       }
     } else {
       const docRef = doc(db, collectionName, id);
