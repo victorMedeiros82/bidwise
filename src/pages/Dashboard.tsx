@@ -15,7 +15,10 @@ import {
   Activity,
   ChevronDown,
   ChevronUp,
-  Info
+  Info,
+  Loader2,
+  Plus,
+  Sparkles
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useFirestore } from '../hooks/useFirestore';
@@ -33,9 +36,12 @@ import {
   CartesianGrid
 } from 'recharts';
 import { cn } from '../lib/utils';
+import { seedDatabaseForUser } from '../lib/dbSeeding';
+import { auth } from '../lib/firebase';
 
 export default function Dashboard() {
   const navigate = useNavigate();
+  const [seeding, setSeeding] = useState(false);
   const { data: properties } = useFirestore<Imovel>('imoveis');
   const { data: billing } = useFirestore<Faturamento>('faturamento');
   const { data: custosAquisicao } = useFirestore<CustoAquisicao>('custos_aquisicao');
@@ -201,6 +207,21 @@ export default function Dashboard() {
 
   const COLORS = ['#94a3b8', '#10b981', '#3b82f6', '#8b5cf6'];
 
+  const handleLoadDemo = async () => {
+    if (!auth.currentUser) return;
+    setSeeding(true);
+    try {
+      await seedDatabaseForUser(auth.currentUser.uid);
+      setTimeout(() => {
+        window.location.reload();
+      }, 1200);
+    } catch (err) {
+      console.error('Demo seeding failed:', err);
+    } finally {
+      setSeeding(false);
+    }
+  };
+
   return (
     <motion.div
       initial={{ opacity: 0 }}
@@ -218,6 +239,44 @@ export default function Dashboard() {
           <div className="px-4 py-2 text-slate-400 text-xs font-black uppercase tracking-widest cursor-pointer hover:text-slate-600">Mensal</div>
         </div>
       </div>
+
+      {/* Onboarding Banner Card for New Clean User Profiles */}
+      {totalProperties === 0 && (
+        <motion.div
+          initial={{ opacity: 0, y: -20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="bg-gradient-to-r from-blue-600 to-indigo-700 text-white p-8 rounded-[2.5rem] shadow-xl relative overflow-hidden flex flex-col md:flex-row md:items-center justify-between gap-6"
+        >
+          <div className="relative z-10 max-w-2xl">
+            <div className="flex items-center gap-2 mb-3">
+              <span className="px-3 py-1 bg-white/20 rounded-full text-[10px] font-black uppercase tracking-widest text-blue-100">Novo Broker</span>
+            </div>
+            <h3 className="text-2xl font-black tracking-tight mb-2">Bem-vindo ao PropMaestro!</h3>
+            <p className="text-sm text-blue-100/90 leading-relaxed font-normal">
+              Seu painel está limpo e totalmente zerado. Você pode cadastrar seu primeiro imóvel de leilão agora ou carregar um conjunto de dados demonstrativos (demo) para explorar os gráficos e a inteligência analítica do sistema instantaneamente.
+            </p>
+          </div>
+          <div className="relative z-10 shrink-0 flex flex-wrap gap-3">
+            <button
+              onClick={handleLoadDemo}
+              disabled={seeding}
+              className="px-5 py-3 bg-white/10 hover:bg-white/20 active:scale-95 disabled:opacity-50 text-white text-xs font-black uppercase tracking-widest rounded-2xl flex items-center gap-2 transition-all border border-white/10"
+            >
+              {seeding ? <Loader2 className="animate-spin size-4" /> : <Sparkles className="size-4" />}
+              {seeding ? 'Carregando...' : 'Carregar Demo'}
+            </button>
+            <button
+              onClick={() => navigate('/properties')}
+              className="px-5 py-3 bg-white text-slate-900 hover:bg-blue-50 active:scale-95 text-xs font-black uppercase tracking-widest rounded-2xl flex items-center gap-2 transition-all shadow-md shadow-black/10"
+            >
+              <Plus className="size-4 text-blue-600" />
+              Cadastrar Imóvel
+            </button>
+          </div>
+          {/* Decorative background shape */}
+          <div className="absolute top-0 right-0 w-64 h-64 bg-white/10 rounded-full blur-[80px] pointer-events-none -mr-20 -mt-20" />
+        </motion.div>
+      )}
 
       {/* Main Bento Grid */}
       <div className="grid grid-cols-1 md:grid-cols-12 gap-6">

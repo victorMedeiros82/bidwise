@@ -8,4 +8,6 @@ const cleanedUrl = rawUrl
 
 const anonKey = (import.meta.env.VITE_SUPABASE_ANON_KEY || '').trim();
 
-export const supabase = createClient(cleanedUrl, anonKey);
+export const supabase = cleanedUrl && anonKey 
+  ? createClient(cleanedUrl, anonKey)
+  : (null as any);
