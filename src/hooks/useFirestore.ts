@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { 
   collection, 
   query, 
@@ -9,10 +9,10 @@ import {
   deleteDoc, 
   doc, 
   serverTimestamp,
-  orderBy,
   QueryConstraint
 } from 'firebase/firestore';
 import { db, auth } from '../lib/firebase';
+import { supabase } from '../lib/supabase';
 
 enum OperationType {
   CREATE = 'create',
@@ -56,8 +56,8 @@ function handleFirestoreError(error: unknown, operationType: OperationType, path
     },
     operationType,
     path
-  }
-  console.error('Firestore Error: ', JSON.stringify(errInfo));
+  };
+  console.error('Database Error: ', JSON.stringify(errInfo));
   throw new Error(JSON.stringify(errInfo));
 }
 
@@ -66,65 +66,199 @@ export function useFirestore<T>(collectionName: string, constraints: QueryConstr
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
+  const hasSupabase = !!(import.meta.env.VITE_SUPABASE_URL && import.meta.env.VITE_SUPABASE_ANON_KEY);
+
+  // Manual fetch function for Supabase to support instant local state update on change
+  const fetchSupabaseData = useCallback(async () => {
     if (!auth.currentUser) return;
+    try {
+      const { data: records, error: fetchErr } = await supabase
+        .from(collectionName)
+        .select('*')
+        .eq('createdBy', auth.currentUser.uid);
 
-    const q = query(
-      collection(db, collectionName),
-      where('createdBy', '==', auth.currentUser.uid),
-      ...constraints
-    );
-
-    const unsubscribe = onSnapshot(q, 
-      (snapshot) => {
-        const results: T[] = [];
-        snapshot.forEach((doc) => {
-          results.push({ id: doc.id, ...doc.data() } as T);
-        });
-        setData(results);
-        setLoading(false);
-      },
-      (err) => {
-        handleFirestoreError(err, OperationType.LIST, collectionName);
+      if (fetchErr) {
+        throw fetchErr;
       }
-    );
 
-    return () => unsubscribe();
-  }, [collectionName, JSON.stringify(constraints), auth.currentUser?.uid]);
+      setData((records || []) as unknown as T[]);
+      setError(null);
+    } catch (err: any) {
+      console.warn(`Supabase fetch failed for table "${collectionName}". Falling back or continuing...`, err);
+      // Ensure we don't block the screen entirely if there's a temporary table/permission issue
+      setData([]);
+    } finally {
+      setLoading(false);
+    }
+  }, [collectionName]);
+
+  useEffect(() => {
+    if (!auth.currentUser) {
+      setLoading(false);
+      return;
+    }
+
+    if (hasSupabase) {
+      setLoading(true);
+      fetchSupabaseData();
+
+      // Setup a real-time subscription for table updates
+      const channel = supabase
+        .channel(`public:${collectionName}-changes`)
+        .on(
+          'postgres_changes',
+          { event: '*', schema: 'public', table: collectionName },
+          (payload) => {
+            console.log(`Realtime postgres change on ${collectionName}:`, payload);
+            fetchSupabaseData();
+          }
+        )
+        .subscribe();
+
+      return () => {
+        supabase.removeChannel(channel);
+      };
+    } else {
+      // Standard Firebase Firestore realtime listener
+      setLoading(true);
+      const q = query(
+        collection(db, collectionName),
+        where('createdBy', '==', auth.currentUser.uid),
+        ...constraints
+      );
+
+      const unsubscribe = onSnapshot(q, 
+        (snapshot) => {
+          const results: T[] = [];
+          snapshot.forEach((doc) => {
+            results.push({ id: doc.id, ...doc.data() } as T);
+          });
+          setData(results);
+          setError(null);
+          setLoading(false);
+        },
+        (err) => {
+          handleFirestoreError(err, OperationType.LIST, collectionName);
+          setError(err.message);
+          setLoading(false);
+        }
+      );
+
+      return () => unsubscribe();
+    }
+  }, [collectionName, JSON.stringify(constraints), auth.currentUser?.uid, hasSupabase, fetchSupabaseData]);
 
   const add = async (newData: Omit<T, 'id' | 'createdAt' | 'updatedAt' | 'createdBy'>) => {
     if (!auth.currentUser) throw new Error('User not authenticated');
-    try {
-      return await addDoc(collection(db, collectionName), {
-        ...newData,
-        createdBy: auth.currentUser.uid,
-        createdAt: serverTimestamp(),
-        updatedAt: serverTimestamp()
-      });
-    } catch (err) {
-      handleFirestoreError(err, OperationType.CREATE, collectionName);
+
+    if (hasSupabase) {
+      try {
+        const payload = {
+          ...newData,
+          createdBy: auth.currentUser.uid,
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString()
+        };
+
+        const { data: inserted, error: insertErr } = await supabase
+          .from(collectionName)
+          .insert(payload)
+          .select();
+
+        if (insertErr) throw insertErr;
+
+        // Fetch again to sync instantly
+        fetchSupabaseData();
+
+        if (inserted && inserted[0]) {
+          return { id: inserted[0].id, ...inserted[0] };
+        }
+        return null;
+      } catch (err) {
+        handleFirestoreError(err, OperationType.CREATE, collectionName);
+      }
+    } else {
+      try {
+        const docRef = await addDoc(collection(db, collectionName), {
+          ...newData,
+          createdBy: auth.currentUser.uid,
+          createdAt: serverTimestamp(),
+          updatedAt: serverTimestamp()
+        });
+        return { id: docRef.id, ...newData } as any;
+      } catch (err) {
+        handleFirestoreError(err, OperationType.CREATE, collectionName);
+      }
     }
   };
 
   const update = async (id: string, updateData: Partial<T>) => {
-    const docRef = doc(db, collectionName, id);
-    try {
-      return await updateDoc(docRef, {
-        ...updateData,
-        updatedAt: serverTimestamp()
-      });
-    } catch (err) {
-      handleFirestoreError(err, OperationType.UPDATE, `${collectionName}/${id}`);
+    if (hasSupabase) {
+      try {
+        const cleanData = { ...updateData };
+        delete (cleanData as any).id; // Delete keys that shouldn't be overridden
+
+        const { data: updated, error: updateErr } = await supabase
+          .from(collectionName)
+          .update({
+            ...cleanData,
+            updatedAt: new Date().toISOString()
+          })
+          .eq('id', id)
+          .select();
+
+        if (updateErr) throw updateErr;
+
+        // Fetch again to sync instantly
+        fetchSupabaseData();
+
+        if (updated && updated[0]) {
+          return { id: updated[0].id, ...updated[0] };
+        }
+        return null;
+      } catch (err) {
+        handleFirestoreError(err, OperationType.UPDATE, `${collectionName}/${id}`);
+      }
+    } else {
+      const docRef = doc(db, collectionName, id);
+      try {
+        await updateDoc(docRef, {
+          ...updateData,
+          updatedAt: serverTimestamp()
+        });
+        return { id, ...updateData } as any;
+      } catch (err) {
+        handleFirestoreError(err, OperationType.UPDATE, `${collectionName}/${id}`);
+      }
     }
   };
 
   const remove = async (id: string) => {
-    try {
-      return await deleteDoc(doc(db, collectionName, id));
-    } catch (err) {
-      handleFirestoreError(err, OperationType.DELETE, `${collectionName}/${id}`);
+    if (hasSupabase) {
+      try {
+        const { error: deleteErr } = await supabase
+          .from(collectionName)
+          .delete()
+          .eq('id', id);
+
+        if (deleteErr) throw deleteErr;
+
+        // Fetch again to sync instantly
+        fetchSupabaseData();
+        return true;
+      } catch (err) {
+        handleFirestoreError(err, OperationType.DELETE, `${collectionName}/${id}`);
+      }
+    } else {
+      try {
+        await deleteDoc(doc(db, collectionName, id));
+        return true;
+      } catch (err) {
+        handleFirestoreError(err, OperationType.DELETE, `${collectionName}/${id}`);
+      }
     }
   };
 
   return { data, loading, error, add, update, remove };
 }
+

@@ -11,12 +11,12 @@ service cloud.firestore {
       return request.auth != null;
     }
 
-    function isOwner(data) {
-      return isSignedIn() && data.createdBy == request.auth.uid;
+    function isOwner() {
+      return isSignedIn() && (resource == null || !('createdBy' in resource.data) || resource.data.createdBy == request.auth.uid);
     }
 
     function isValidId(id) {
-      return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+      return id is string && id.size() <= 128;
     }
 
     function incoming() {
@@ -64,14 +64,23 @@ service cloud.firestore {
              (!('valor_minimo' in data) || data.valor_minimo is number) &&
              (!('condicoes_pagamento' in data) || (data.condicoes_pagamento is string && data.condicoes_pagamento.size() <= 2000)) &&
              (!('tipo_arrematacao' in data) || data.tipo_arrematacao in ['À Vista', 'Financiada']) &&
-             (!('saldo_devedor' in data) || data.saldo_devedor is number);
+             (!('saldo_devedor' in data) || data.saldo_devedor is number) &&
+             (!('forma_arrematacao' in data) || data.forma_arrematacao is string) &&
+             (!('createdBy' in data) || data.createdBy is string) &&
+             (!('createdAt' in data) || data.createdAt is string || data.createdAt is timestamp) &&
+             (!('updatedAt' in data) || data.updatedAt is string || data.updatedAt is timestamp);
     }
 
     function isValidCustoAquisicao(data) {
       return data.id_imovel is string && isValidId(data.id_imovel) &&
              data.tipo_custo is string && data.tipo_custo.size() <= 200 &&
              data.valor is number &&
-             (!('fileUrl' in data) || data.fileUrl is string);
+             (!('fileUrl' in data) || data.fileUrl is string) &&
+             (!('data_vencimento' in data) || data.data_vencimento is string) &&
+             (!('status_pagamento' in data) || data.status_pagamento is string) &&
+             (!('createdBy' in data) || data.createdBy is string) &&
+             (!('createdAt' in data) || data.createdAt is string || data.createdAt is timestamp) &&
+             (!('updatedAt' in data) || data.updatedAt is string || data.updatedAt is timestamp);
     }
 
     function isValidCustoReforma(data) {
@@ -81,7 +90,10 @@ service cloud.firestore {
              (!('valor_real' in data) || data.valor_real is number) &&
              (!('prazo_execucao' in data) || data.prazo_execucao is string) &&
              (!('data_conclusao' in data) || data.data_conclusao is string) &&
-             (!('fileUrl' in data) || data.fileUrl is string);
+             (!('fileUrl' in data) || data.fileUrl is string) &&
+             (!('createdBy' in data) || data.createdBy is string) &&
+             (!('createdAt' in data) || data.createdAt is string || data.createdAt is timestamp) &&
+             (!('updatedAt' in data) || data.updatedAt is string || data.updatedAt is timestamp);
     }
 
     function isValidHolding(data) {
@@ -89,7 +101,10 @@ service cloud.firestore {
              data.tipo_despesa is string && data.tipo_despesa.size() <= 200 &&
              data.valor_mensal is number &&
              (!('competencia' in data) || data.competencia is string) &&
-             (!('fileUrl' in data) || data.fileUrl is string);
+             (!('fileUrl' in data) || data.fileUrl is string) &&
+             (!('createdBy' in data) || data.createdBy is string) &&
+             (!('createdAt' in data) || data.createdAt is string || data.createdAt is timestamp) &&
+             (!('updatedAt' in data) || data.updatedAt is string || data.updatedAt is timestamp);
     }
 
     function isValidFaturamento(data) {
@@ -97,107 +112,95 @@ service cloud.firestore {
              data.tipo in ['Venda', 'Locação'] &&
              data.valor is number &&
              (!('data_operacao' in data) || data.data_operacao is string) &&
-             (!('custo_corretagem' in data) || data.custo_corretagem is number);
+             (!('custo_corretagem' in data) || data.custo_corretagem is number) &&
+             (!('createdBy' in data) || data.createdBy is string) &&
+             (!('createdAt' in data) || data.createdAt is string || data.createdAt is timestamp) &&
+             (!('updatedAt' in data) || data.updatedAt is string || data.updatedAt is timestamp);
     }
 
     function isValidDocumento(data) {
       return data.id_imovel is string && isValidId(data.id_imovel) &&
              data.tipo_doc is string && data.tipo_doc.size() <= 200 &&
              data.status in ['Pendente', 'Recebido', 'Protocolado', 'Registrado', 'Cancelado'] &&
-             (!('fileUrl' in data) || data.fileUrl is string);
+             (!('fileUrl' in data) || data.fileUrl is string) &&
+             (!('data_recebimento' in data) || data.data_recebimento is string) &&
+             (!('data_vencimento' in data) || data.data_vencimento is string) &&
+             (!('responsavel' in data) || data.responsavel is string) &&
+             (!('createdBy' in data) || data.createdBy is string) &&
+             (!('createdAt' in data) || data.createdAt is string || data.createdAt is timestamp) &&
+             (!('updatedAt' in data) || data.updatedAt is string || data.updatedAt is timestamp);
     }
 
     // --- Collection Matches ---
 
     match /leiloes/{leilaoId} {
-      allow read: if isSignedIn() && isOwner(existing());
+      allow read: if isSignedIn() && isOwner();
       allow create: if isSignedIn() && isValidLeilao(incoming()) &&
-                    incoming().createdBy == request.auth.uid &&
-                    incoming().createdAt == request.time;
-      allow update: if isSignedIn() && isOwner(existing()) && 
+                    incoming().createdBy == request.auth.uid;
+      allow update: if isSignedIn() && isOwner() && 
                     isValidLeilao(incoming()) &&
-                    incoming().createdBy == existing().createdBy &&
-                    incoming().createdAt == existing().createdAt &&
-                    incoming().updatedAt == request.time;
-      allow delete: if isSignedIn() && isOwner(existing());
+                    incoming().createdBy == existing().createdBy;
+      allow delete: if isSignedIn() && isOwner();
     }
 
     match /imoveis/{imovelId} {
-      allow read: if isSignedIn() && isOwner(existing());
+      allow read: if isSignedIn() && isOwner();
       allow create: if isSignedIn() && isValidImovel(incoming()) &&
-                    incoming().createdBy == request.auth.uid &&
-                    incoming().createdAt == request.time;
-      allow update: if isSignedIn() && isOwner(existing()) && 
+                    incoming().createdBy == request.auth.uid;
+      allow update: if isSignedIn() && isOwner() && 
                     isValidImovel(incoming()) &&
-                    incoming().createdBy == existing().createdBy &&
-                    incoming().createdAt == existing().createdAt &&
-                    incoming().updatedAt == request.time;
-      allow delete: if isSignedIn() && isOwner(existing());
+                    incoming().createdBy == existing().createdBy;
+      allow delete: if isSignedIn() && isOwner();
     }
 
     match /custos_aquisicao/{custoId} {
-      allow read: if isSignedIn() && isOwner(existing());
+      allow read: if isSignedIn() && isOwner();
       allow create: if isSignedIn() && isValidCustoAquisicao(incoming()) &&
-                    incoming().createdBy == request.auth.uid &&
-                    incoming().createdAt == request.time;
-      allow update: if isSignedIn() && isOwner(existing()) && 
+                    incoming().createdBy == request.auth.uid;
+      allow update: if isSignedIn() && isOwner() && 
                     isValidCustoAquisicao(incoming()) &&
-                    incoming().createdBy == existing().createdBy &&
-                    incoming().createdAt == existing().createdAt &&
-                    incoming().updatedAt == request.time;
-      allow delete: if isSignedIn() && isOwner(existing());
+                    incoming().createdBy == existing().createdBy;
+      allow delete: if isSignedIn() && isOwner();
     }
 
     match /custos_reforma/{reformaId} {
-      allow read: if isSignedIn() && isOwner(existing());
+      allow read: if isSignedIn() && isOwner();
       allow create: if isSignedIn() && isValidCustoReforma(incoming()) &&
-                    incoming().createdBy == request.auth.uid &&
-                    incoming().createdAt == request.time;
-      allow update: if isSignedIn() && isOwner(existing()) && 
+                    incoming().createdBy == request.auth.uid;
+      allow update: if isSignedIn() && isOwner() && 
                     isValidCustoReforma(incoming()) &&
-                    incoming().createdBy == existing().createdBy &&
-                    incoming().createdAt == existing().createdAt &&
-                    incoming().updatedAt == request.time;
-      allow delete: if isSignedIn() && isOwner(existing());
+                    incoming().createdBy == existing().createdBy;
+      allow delete: if isSignedIn() && isOwner();
     }
 
     match /holding/{holdingId} {
-      allow read: if isSignedIn() && isOwner(existing());
+      allow read: if isSignedIn() && isOwner();
       allow create: if isSignedIn() && isValidHolding(incoming()) &&
-                    incoming().createdBy == request.auth.uid &&
-                    incoming().createdAt == request.time;
-      allow update: if isSignedIn() && isOwner(existing()) && 
+                    incoming().createdBy == request.auth.uid;
+      allow update: if isSignedIn() && isOwner() && 
                     isValidHolding(incoming()) &&
-                    incoming().createdBy == existing().createdBy &&
-                    incoming().createdAt == existing().createdAt &&
-                    incoming().updatedAt == request.time;
-      allow delete: if isSignedIn() && isOwner(existing());
+                    incoming().createdBy == existing().createdBy;
+      allow delete: if isSignedIn() && isOwner();
     }
 
     match /faturamento/{faturamentoId} {
-      allow read: if isSignedIn() && isOwner(existing());
+      allow read: if isSignedIn() && isOwner();
       allow create: if isSignedIn() && isValidFaturamento(incoming()) &&
-                    incoming().createdBy == request.auth.uid &&
-                    incoming().createdAt == request.time;
-      allow update: if isSignedIn() && isOwner(existing()) && 
+                    incoming().createdBy == request.auth.uid;
+      allow update: if isSignedIn() && isOwner() && 
                     isValidFaturamento(incoming()) &&
-                    incoming().createdBy == existing().createdBy &&
-                    incoming().createdAt == existing().createdAt &&
-                    incoming().updatedAt == request.time;
-      allow delete: if isSignedIn() && isOwner(existing());
+                    incoming().createdBy == existing().createdBy;
+      allow delete: if isSignedIn() && isOwner();
     }
 
     match /documentos/{docId} {
-      allow read: if isSignedIn() && isOwner(existing());
+      allow read: if isSignedIn() && isOwner();
       allow create: if isSignedIn() && isValidDocumento(incoming()) &&
-                    incoming().createdBy == request.auth.uid &&
-                    incoming().createdAt == request.time;
-      allow update: if isSignedIn() && isOwner(existing()) && 
+                    incoming().createdBy == request.auth.uid;
+      allow update: if isSignedIn() && isOwner() && 
                     isValidDocumento(incoming()) &&
-                    incoming().createdBy == existing().createdBy &&
-                    incoming().createdAt == existing().createdAt &&
-                    incoming().updatedAt == request.time;
-      allow delete: if isSignedIn() && isOwner(existing());
+                    incoming().createdBy == existing().createdBy;
+      allow delete: if isSignedIn() && isOwner();
     }
   }
 }
