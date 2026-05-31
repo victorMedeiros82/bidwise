@@ -1,9 +1,9 @@
 import { useState } from 'react';
 import { motion } from 'motion/react';
-import { 
-  TrendingUp, 
-  Home, 
-  Gavel, 
+import {
+  TrendingUp,
+  Home,
+  Gavel,
   DollarSign,
   Hammer,
   Clock,
@@ -16,32 +16,30 @@ import {
   ChevronDown,
   ChevronUp,
   Info,
-  Loader2,
-  Plus,
-  Sparkles
+  Plus
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useFirestore } from '../hooks/useFirestore';
 import { Imovel, Faturamento, StatusArrematacao, OrigemImovel, CustoAquisicao, CustoReforma, Holding, TipoArrematacao } from '../types';
-import { 
-  PieChart, 
-  Pie, 
-  Cell, 
-  Tooltip, 
+import {
+  PieChart,
+  Pie,
+  Cell,
+  Tooltip,
   ResponsiveContainer,
   AreaChart,
   Area,
   XAxis,
   YAxis,
-  CartesianGrid
+  CartesianGrid,
+  BarChart,
+  Bar
 } from 'recharts';
 import { cn } from '../lib/utils';
-import { seedDatabaseForUser } from '../lib/dbSeeding';
 import { auth } from '../lib/firebase';
 
 export default function Dashboard() {
   const navigate = useNavigate();
-  const [seeding, setSeeding] = useState(false);
   const { data: properties } = useFirestore<Imovel>('imoveis');
   const { data: billing } = useFirestore<Faturamento>('faturamento');
   const { data: custosAquisicao } = useFirestore<CustoAquisicao>('custos_aquisicao');
@@ -53,7 +51,7 @@ export default function Dashboard() {
   const arrematados = properties.filter(p => p.status_arrematacao === StatusArrematacao.Arrematado);
   const vendidos = properties.filter(p => p.status_arrematacao === StatusArrematacao.Vendido);
   const emAnalise = properties.filter(p => p.status_arrematacao === StatusArrematacao.Analise);
-  
+
   const totalArrematados = arrematados.length;
   const totalVendidos = vendidos.length;
   const totalEmAnalise = emAnalise.length;
@@ -73,11 +71,11 @@ export default function Dashboard() {
   let netProfit = 0;
 
   const propertyIdsSet = new Set(properties.map(p => p.id));
-  
+
   properties.forEach(p => {
-    const isAcquired = p.status_arrematacao === StatusArrematacao.Arrematado || 
-                       p.status_arrematacao === StatusArrematacao.Vendido || 
-                       p.status_arrematacao === StatusArrematacao.Alugado;
+    const isAcquired = p.status_arrematacao === StatusArrematacao.Arrematado ||
+      p.status_arrematacao === StatusArrematacao.Vendido ||
+      p.status_arrematacao === StatusArrematacao.Alugado;
 
     // Incorporate both the arrematacao base value and specific acquisition expenses
     const baseAquisicao = p.valor_arrematacao || 0;
@@ -85,7 +83,7 @@ export default function Dashboard() {
     const pReforma = custosReforma.filter(r => r.id_imovel === p.id).reduce((sum, r) => sum + (r.valor_real || r.orcamento || 0), 0);
     const pHolding = holding.filter(h => h.id_imovel === p.id).reduce((sum, h) => sum + (h.valor_mensal || 0), 0);
     const pBilling = billing.filter(f => f.id_imovel === p.id);
-    
+
     const pBillingBruto = pBilling.reduce((sum, f) => sum + (f.valor || 0), 0);
     const pComissoes = pBilling.reduce((sum, f) => sum + (f.custo_corretagem || 0), 0);
     const pFaturamentoLiquido = pBillingBruto - pComissoes;
@@ -119,7 +117,7 @@ export default function Dashboard() {
   const orphanBilling = billing.filter(f => !f.id_imovel);
   const orphanBillingBruto = orphanBilling.reduce((sum, f) => sum + (f.valor || 0), 0);
   const orphanComissoes = orphanBilling.reduce((sum, f) => sum + (f.custo_corretagem || 0), 0);
-  
+
   totalInvoiced += orphanBillingBruto;
   netProfit += (orphanBillingBruto - orphanComissoes);
 
@@ -145,9 +143,9 @@ export default function Dashboard() {
   }> = [];
 
   properties.forEach(p => {
-    const isAcquired = p.status_arrematacao === StatusArrematacao.Arrematado || 
-                       p.status_arrematacao === StatusArrematacao.Vendido || 
-                       p.status_arrematacao === StatusArrematacao.Alugado;
+    const isAcquired = p.status_arrematacao === StatusArrematacao.Arrematado ||
+      p.status_arrematacao === StatusArrematacao.Vendido ||
+      p.status_arrematacao === StatusArrematacao.Alugado;
 
     const baseAquisicao = p.valor_arrematacao || 0;
     const pAquisicaoExt = custosAquisicao.filter(c => c.id_imovel === p.id).reduce((sum, c) => sum + (c.valor || 0), 0);
@@ -155,7 +153,7 @@ export default function Dashboard() {
     const pReforma = custosReforma.filter(r => r.id_imovel === p.id).reduce((sum, r) => sum + (r.valor_real || r.orcamento || 0), 0);
     const pHolding = holding.filter(h => h.id_imovel === p.id).reduce((sum, h) => sum + (h.valor_mensal || 0), 0);
     const pBilling = billing.filter(f => f.id_imovel === p.id);
-    
+
     const pBillingBruto = pBilling.reduce((sum, f) => sum + (f.valor || 0), 0);
     const pComissoes = pBilling.reduce((sum, f) => sum + (f.custo_corretagem || 0), 0);
     const pFaturamentoLiquido = pBillingBruto - pComissoes;
@@ -199,6 +197,20 @@ export default function Dashboard() {
   });
 
   // Chart Data
+  const chartData = detailedProperties.map(p => ({
+    name: p.codigo && p.codigo !== 'S/C' ? p.codigo : p.endereco.split(',')[0] || 'Imóvel',
+    investimento: p.totalInvested,
+    roi: p.roi,
+  }));
+
+  const validRoiProperties = detailedProperties.filter(p => p.totalInvested > 0);
+  const highestRoiProp = validRoiProperties.length > 0 
+    ? [...validRoiProperties].sort((a, b) => b.roi - a.roi)[0] 
+    : null;
+  const lowestRoiProp = validRoiProperties.length > 0 
+    ? [...validRoiProperties].sort((a, b) => a.roi - b.roi)[0] 
+    : null;
+
   const pieData = [
     { name: 'Em Análise', value: totalEmAnalise, color: '#94a3b8' },
     { name: 'Arrematados', value: totalArrematados, color: '#10b981' },
@@ -206,21 +218,6 @@ export default function Dashboard() {
   ];
 
   const COLORS = ['#94a3b8', '#10b981', '#3b82f6', '#8b5cf6'];
-
-  const handleLoadDemo = async () => {
-    if (!auth.currentUser) return;
-    setSeeding(true);
-    try {
-      await seedDatabaseForUser(auth.currentUser.uid);
-      setTimeout(() => {
-        window.location.reload();
-      }, 1200);
-    } catch (err) {
-      console.error('Demo seeding failed:', err);
-    } finally {
-      setSeeding(false);
-    }
-  };
 
   return (
     <motion.div
@@ -248,23 +245,12 @@ export default function Dashboard() {
           className="bg-gradient-to-r from-blue-600 to-indigo-700 text-white p-8 rounded-[2.5rem] shadow-xl relative overflow-hidden flex flex-col md:flex-row md:items-center justify-between gap-6"
         >
           <div className="relative z-10 max-w-2xl">
-            <div className="flex items-center gap-2 mb-3">
-              <span className="px-3 py-1 bg-white/20 rounded-full text-[10px] font-black uppercase tracking-widest text-blue-100">Novo Broker</span>
-            </div>
             <h3 className="text-2xl font-black tracking-tight mb-2">Bem-vindo ao PropMaestro!</h3>
             <p className="text-sm text-blue-100/90 leading-relaxed font-normal">
-              Seu painel está limpo e totalmente zerado. Você pode cadastrar seu primeiro imóvel de leilão agora ou carregar um conjunto de dados demonstrativos (demo) para explorar os gráficos e a inteligência analítica do sistema instantaneamente.
+              Seu painel está limpo e totalmente zerado. Comece cadastrando seu primeiro imóvel de leilão para explorar os gráficos e a inteligência analítica do sistema instantaneamente.
             </p>
           </div>
           <div className="relative z-10 shrink-0 flex flex-wrap gap-3">
-            <button
-              onClick={handleLoadDemo}
-              disabled={seeding}
-              className="px-5 py-3 bg-white/10 hover:bg-white/20 active:scale-95 disabled:opacity-50 text-white text-xs font-black uppercase tracking-widest rounded-2xl flex items-center gap-2 transition-all border border-white/10"
-            >
-              {seeding ? <Loader2 className="animate-spin size-4" /> : <Sparkles className="size-4" />}
-              {seeding ? 'Carregando...' : 'Carregar Demo'}
-            </button>
             <button
               onClick={() => navigate('/properties')}
               className="px-5 py-3 bg-white text-slate-900 hover:bg-blue-50 active:scale-95 text-xs font-black uppercase tracking-widest rounded-2xl flex items-center gap-2 transition-all shadow-md shadow-black/10"
@@ -280,9 +266,9 @@ export default function Dashboard() {
 
       {/* Main Bento Grid */}
       <div className="grid grid-cols-1 md:grid-cols-12 gap-6">
-        
+
         {/* Total Equity / Performance - Large Primary Card */}
-        <motion.div 
+        <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           className="md:col-span-8 bg-slate-900 dark:bg-white p-8 rounded-[2.5rem] shadow-2xl relative overflow-hidden flex flex-col justify-between min-h-[340px]"
@@ -294,15 +280,15 @@ export default function Dashboard() {
               </div>
               <p className="text-xs font-black text-white/50 dark:text-black/40 uppercase tracking-[0.3em]">Capital Realizado</p>
             </div>
-            
+
             <h2 className="text-6xl md:text-7xl font-black text-white dark:text-slate-900 tracking-tighter leading-[0.8] mb-4">
               R$ {totalInvested.toLocaleString('pt-BR')}
             </h2>
             <div className="flex items-center gap-4">
               <div className={cn(
                 "flex items-center gap-1.5 px-3 py-1.5 rounded-full border",
-                portfolioRoi >= 0 
-                  ? "bg-emerald-500/20 text-emerald-400 border-emerald-500/30" 
+                portfolioRoi >= 0
+                  ? "bg-emerald-500/20 text-emerald-400 border-emerald-500/30"
                   : "bg-rose-500/20 text-rose-400 border-rose-500/30"
               )}>
                 <TrendingUp size={14} />
@@ -330,7 +316,7 @@ export default function Dashboard() {
                 <p className="text-xl font-bold text-white dark:text-slate-900">{totalProperties}</p>
               </div>
             </div>
-            <button 
+            <button
               onClick={() => navigate('/properties')}
               className="px-6 py-3 bg-white/10 dark:bg-black/5 hover:bg-white/20 dark:hover:bg-black/10 rounded-2xl text-xs font-black text-white dark:text-black uppercase tracking-[0.2em] transition-all"
             >
@@ -344,7 +330,7 @@ export default function Dashboard() {
         </motion.div>
 
         {/* Mix de Ativos */}
-        <motion.div 
+        <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.1 }}
@@ -356,7 +342,7 @@ export default function Dashboard() {
               Mix de Ativos
             </h3>
           </div>
-          
+
           <div className="h-[150px] w-full min-w-0">
             <ResponsiveContainer width="100%" height="100%" minWidth={0}>
               <PieChart>
@@ -374,15 +360,15 @@ export default function Dashboard() {
                     <Cell key={`cell-${index}`} fill={entry.color} />
                   ))}
                 </Pie>
-                <Tooltip 
-                  contentStyle={{ 
-                    borderRadius: '1rem', 
-                    border: 'none', 
+                <Tooltip
+                  contentStyle={{
+                    borderRadius: '1rem',
+                    border: 'none',
                     boxShadow: '0 10px 40px rgba(0,0,0,0.1)',
                     fontSize: '10px',
                     fontWeight: '900',
                     textTransform: 'uppercase'
-                  }} 
+                  }}
                 />
               </PieChart>
             </ResponsiveContainer>
@@ -397,6 +383,154 @@ export default function Dashboard() {
             ))}
           </div>
         </motion.div>
+
+        {/* Comparativos de Investimento e ROI */}
+        {totalProperties > 0 && (
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.12 }}
+            className="md:col-span-12 grid grid-cols-1 lg:grid-cols-2 gap-6"
+          >
+            {/* Card 1: Distribuição de Investimentos */}
+            <div className="bg-white dark:bg-slate-900 p-8 rounded-[2.5rem] border border-slate-200 dark:border-slate-800 shadow-sm flex flex-col justify-between min-h-[380px]">
+              <div>
+                <span className="text-[10px] font-black text-blue-500 uppercase tracking-[0.2em] mb-1 block">Alocação de Capital</span>
+                <h3 className="text-base font-black text-slate-900 dark:text-white tracking-tight mb-2">
+                  Distribuição de Investimentos por Ativo
+                </h3>
+                <p className="text-xs text-slate-400 dark:text-slate-500 font-normal mb-6">
+                  Comparação do capital total alocado em cada imóvel (Valor de lance, regularização e benfeitorias).
+                </p>
+              </div>
+
+              <div className="h-[220px] w-full min-w-0">
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart data={chartData} margin={{ top: 10, right: 10, left: 10, bottom: 20 }}>
+                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" className="dark:stroke-slate-800" />
+                    <XAxis 
+                      dataKey="name" 
+                      tick={{ fill: '#94a3b8', fontSize: 10, fontWeight: '700' }} 
+                      axisLine={false}
+                      tickLine={false}
+                    />
+                    <YAxis 
+                      tick={{ fill: '#94a3b8', fontSize: 10 }} 
+                      axisLine={false}
+                      tickLine={false}
+                      tickFormatter={(value) => `R$ ${(value / 1000)}k`}
+                    />
+                    <Tooltip
+                      cursor={{ fill: 'rgba(148, 163, 184, 0.05)' }}
+                      contentStyle={{
+                        borderRadius: '1rem',
+                        border: 'none',
+                        boxShadow: '0 10px 40px rgba(0,0,0,0.1)',
+                        fontSize: '11px',
+                        fontWeight: '600',
+                      }}
+                      formatter={(value: any) => [`R$ ${value.toLocaleString('pt-BR')}`, 'Investimento Total']}
+                    />
+                    <Bar dataKey="investimento" radius={[6, 6, 0, 0]}>
+                      {chartData.map((_entry, index) => (
+                        <Cell key={`cell-${index}`} fill="#3b82f6" />
+                      ))}
+                    </Bar>
+                  </BarChart>
+                </ResponsiveContainer>
+              </div>
+            </div>
+
+            {/* Card 2: Comparativo de ROI & Destaques de Extremos */}
+            <div className="bg-white dark:bg-slate-900 p-8 rounded-[2.5rem] border border-slate-200 dark:border-slate-800 shadow-sm flex flex-col justify-between min-h-[380px]">
+              <div>
+                <span className="text-[10px] font-black text-emerald-500 uppercase tracking-[0.2em] mb-1 block">Retorno Analítico</span>
+                <h3 className="text-base font-black text-slate-900 dark:text-white tracking-tight mb-2">
+                  Comparativo de ROI (%) por Ativo
+                </h3>
+                <p className="text-xs text-slate-400 dark:text-slate-500 font-normal mb-4">
+                  Visualização do retorno percentual de cada ativo, destacando os de maior e menor performance.
+                </p>
+              </div>
+
+              {/* Destaques de Maior e Menor ROI */}
+              <div className="grid grid-cols-2 gap-4 mb-6">
+                {highestRoiProp ? (
+                  <div className="p-4 bg-emerald-500/10 dark:bg-emerald-950/20 border border-emerald-500/20 rounded-2xl flex flex-col justify-between">
+                    <div>
+                      <p className="text-[10px] font-black text-emerald-600 dark:text-emerald-400 uppercase tracking-widest mb-1">Maior Retorno (ROI)</p>
+                      <p className="text-xs font-bold text-slate-700 dark:text-slate-300 truncate">{highestRoiProp.codigo} - {highestRoiProp.endereco.split(',')[0]}</p>
+                    </div>
+                    <p className="text-xl font-black text-emerald-600 dark:text-emerald-400 mt-2">
+                      +{highestRoiProp.roi.toFixed(1)}%
+                    </p>
+                  </div>
+                ) : (
+                  <div className="p-4 bg-slate-50 dark:bg-slate-800/40 rounded-2xl flex flex-col justify-center items-center text-slate-400 text-xs">
+                    Sem dados suficientes
+                  </div>
+                )}
+
+                {lowestRoiProp ? (
+                  <div className="p-4 bg-rose-500/10 dark:bg-rose-950/20 border border-rose-500/20 rounded-2xl flex flex-col justify-between">
+                    <div>
+                      <p className="text-[10px] font-black text-rose-600 dark:text-rose-400 uppercase tracking-widest mb-1">Menor Retorno (ROI)</p>
+                      <p className="text-xs font-bold text-slate-700 dark:text-slate-300 truncate">{lowestRoiProp.codigo} - {lowestRoiProp.endereco.split(',')[0]}</p>
+                    </div>
+                    <p className="text-xl font-black text-rose-600 dark:text-rose-400 mt-2">
+                      {lowestRoiProp.roi >= 0 ? '+' : ''}{lowestRoiProp.roi.toFixed(1)}%
+                    </p>
+                  </div>
+                ) : (
+                  <div className="p-4 bg-slate-50 dark:bg-slate-800/40 rounded-2xl flex flex-col justify-center items-center text-slate-400 text-xs">
+                    Sem dados suficientes
+                  </div>
+                )}
+              </div>
+
+              <div className="h-[140px] w-full min-w-0">
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart data={chartData} margin={{ top: 5, right: 10, left: 10, bottom: 20 }}>
+                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" className="dark:stroke-slate-800" />
+                    <XAxis 
+                      dataKey="name" 
+                      tick={{ fill: '#94a3b8', fontSize: 10, fontWeight: '700' }} 
+                      axisLine={false}
+                      tickLine={false}
+                    />
+                    <YAxis 
+                      tick={{ fill: '#94a3b8', fontSize: 10 }} 
+                      axisLine={false}
+                      tickLine={false}
+                      tickFormatter={(value) => `${value}%`}
+                    />
+                    <Tooltip
+                      cursor={{ fill: 'rgba(148, 163, 184, 0.05)' }}
+                      contentStyle={{
+                        borderRadius: '1rem',
+                        border: 'none',
+                        boxShadow: '0 10px 40px rgba(0,0,0,0.1)',
+                        fontSize: '11px',
+                        fontWeight: '600',
+                      }}
+                      formatter={(value: any) => [`${value.toFixed(1)}%`, 'ROI']}
+                    />
+                    <Bar dataKey="roi" radius={[6, 6, 0, 0]}>
+                      {chartData.map((entry, index) => {
+                        const isHighest = highestRoiProp && entry.name === (highestRoiProp.codigo && highestRoiProp.codigo !== 'S/C' ? highestRoiProp.codigo : highestRoiProp.endereco.split(',')[0]);
+                        const isLowest = lowestRoiProp && entry.name === (lowestRoiProp.codigo && lowestRoiProp.codigo !== 'S/C' ? lowestRoiProp.codigo : lowestRoiProp.endereco.split(',')[0]);
+                        
+                        if (isHighest) return <Cell key={`cell-${index}`} fill="#10b981" />;
+                        if (isLowest) return <Cell key={`cell-${index}`} fill="#ef4444" />;
+                        return <Cell key={`cell-${index}`} fill="#6366f1" />;
+                      })}
+                    </Bar>
+                  </BarChart>
+                </ResponsiveContainer>
+              </div>
+            </div>
+          </motion.div>
+        )}
 
         {/* Accordion breakdown for ROI Calculation Transparency */}
         <motion.div
@@ -474,8 +608,8 @@ export default function Dashboard() {
                   </thead>
                   <tbody className="divide-y divide-slate-100 dark:divide-slate-800/60 font-sans">
                     {detailedProperties.map((p) => (
-                      <tr 
-                        key={p.id} 
+                      <tr
+                        key={p.id}
                         onClick={() => navigate(`/properties/${p.id}`)}
                         className="hover:bg-slate-50 dark:hover:bg-slate-900/40 transition-colors cursor-pointer group"
                       >
@@ -488,11 +622,11 @@ export default function Dashboard() {
                         <td className="p-4 text-center">
                           <span className={cn(
                             "px-2.5 py-1 rounded-full text-[9px] font-black uppercase tracking-wider border",
-                            p.status === StatusArrematacao.Vendido 
-                              ? "bg-blue-500/10 text-blue-500 border-blue-500/20" 
+                            p.status === StatusArrematacao.Vendido
+                              ? "bg-blue-500/10 text-blue-500 border-blue-500/20"
                               : p.status === StatusArrematacao.Alugado
-                              ? "bg-emerald-500/10 text-emerald-500 border-emerald-500/20"
-                              : "bg-amber-500/10 text-amber-500 border-amber-500/20"
+                                ? "bg-emerald-500/10 text-emerald-500 border-emerald-500/20"
+                                : "bg-amber-500/10 text-amber-500 border-amber-500/20"
                           )}>
                             {p.status}
                           </span>
@@ -518,8 +652,8 @@ export default function Dashboard() {
                         <td className="p-4 text-right pr-6">
                           <span className={cn(
                             "px-2.5 py-1 rounded-lg text-[10px] font-black font-mono inline-block min-w-[64px] text-center",
-                            p.roi >= 0 
-                              ? "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400" 
+                            p.roi >= 0
+                              ? "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400"
                               : "bg-rose-500/10 text-rose-600 dark:text-rose-400"
                           )}>
                             {p.roi >= 0 ? '+' : ''}{p.roi.toFixed(1)}%
@@ -578,8 +712,8 @@ export default function Dashboard() {
                       <td className="p-4 text-right pr-6">
                         <span className={cn(
                           "px-3 py-1 rounded-full text-xs font-black font-mono text-white inline-block min-w-[76px] text-center",
-                          portfolioRoi >= 0 
-                            ? "bg-emerald-500" 
+                          portfolioRoi >= 0
+                            ? "bg-emerald-500"
                             : "bg-rose-500"
                         )}>
                           {portfolioRoi >= 0 ? '+' : ''}{portfolioRoi.toFixed(1)}%
@@ -601,7 +735,7 @@ export default function Dashboard() {
         </motion.div>
 
         {/* Upcoming Radar - Agenda Style - Expanded to Full Width (12 cols) */}
-        <motion.div 
+        <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.2 }}
@@ -618,8 +752,8 @@ export default function Dashboard() {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {upcomingAuctions.length > 0 ? (
               upcomingAuctions.map((auction, idx) => (
-                <div 
-                  key={auction.id} 
+                <div
+                  key={auction.id}
                   onClick={() => navigate(`/properties/${auction.id}`)}
                   className="group flex flex-col md:flex-row md:items-center justify-between p-5 bg-slate-50 dark:bg-slate-800/50 hover:bg-slate-900 dark:hover:bg-white hover:text-white dark:hover:text-slate-900 rounded-[1.5rem] transition-all cursor-pointer border border-transparent hover:shadow-xl hover:-translate-y-1"
                 >

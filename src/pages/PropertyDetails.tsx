@@ -112,6 +112,7 @@ export default function PropertyDetails() {
   const [showAddHolding, setShowAddHolding] = useState(false);
   const [editingItem, setEditingItem] = useState<{ id: string, type: 'aquisicao' | 'reforma' | 'holding' | 'faturamento' | 'reforma-orc' | 'reforma-desc' | 'holding-tipo' } | null>(null);
   const [formErrors, setFormErrors] = useState<Record<string, string>>({});
+  const [dbError, setDbError] = useState<string | null>(null);
 
   // Local state for monetary inputs
   const [reformaOrc, setReformaOrc] = useState<number | undefined>(0);
@@ -134,77 +135,130 @@ export default function PropertyDetails() {
 
   const handleAddAquisicao = async () => {
     if (!aquisicaoValor || !id) return;
-    await addCustoAquisicao({
-      id_imovel: id,
-      tipo_custo: 'Desembolso Inicial (Entrada/Lance)',
-      descricao: aquisicaoDescricao,
-      valor: aquisicaoValor,
-      status_pagamento: StatusPagamento.Pago,
-      fileUrl: aquisicaoFileUrl
-    });
-    setAquisicaoValor(0);
-    setAquisicaoDescricao('');
-    setAquisicaoFileUrl('');
-    setShowAddAquisicao(false);
+    try {
+      await addCustoAquisicao({
+        id_imovel: id,
+        tipo_custo: 'Desembolso Inicial (Entrada/Lance)',
+        descricao: aquisicaoDescricao,
+        valor: aquisicaoValor,
+        status_pagamento: StatusPagamento.Pago,
+        fileUrl: aquisicaoFileUrl
+      });
+      setAquisicaoValor(0);
+      setAquisicaoDescricao('');
+      setAquisicaoFileUrl('');
+      setShowAddAquisicao(false);
+      setDbError(null);
+    } catch (err: any) {
+      console.error('Erro ao adicionar custo de aquisição:', err);
+      // Simplify error string if it is a JSON error
+      let errorMsg = err.message || String(err);
+      if (errorMsg.startsWith('{') && errorMsg.endsWith('}')) {
+        try {
+          const parsed = JSON.parse(errorMsg);
+          errorMsg = parsed.error?.message || parsed.error || errorMsg;
+        } catch (_) {}
+      }
+      setDbError(errorMsg);
+    }
   };
 
   const handleAddReforma = async () => {
     if (!reformaOrc || !id) return;
-    await addCustoReforma({
-      id_imovel: id,
-      descricao_etapa: reformaDescricao || 'Etapa de Reforma',
-      orcamento: reformaOrc,
-      valor_real: reformaReal,
-      fileUrl: reformaFileUrl
-    });
-    setReformaOrc(0);
-    setReformaReal(0);
-    setReformaDescricao('');
-    setReformaFileUrl('');
-    setShowAddReforma(false);
+    try {
+      await addCustoReforma({
+        id_imovel: id,
+        descricao_etapa: reformaDescricao || 'Etapa de Reforma',
+        orcamento: reformaOrc,
+        valor_real: reformaReal,
+        fileUrl: reformaFileUrl
+      });
+      setReformaOrc(0);
+      setReformaReal(0);
+      setReformaDescricao('');
+      setReformaFileUrl('');
+      setShowAddReforma(false);
+      setDbError(null);
+    } catch (err: any) {
+      console.error('Erro ao adicionar custo de reforma:', err);
+      let errorMsg = err.message || String(err);
+      if (errorMsg.startsWith('{') && errorMsg.endsWith('}')) {
+        try {
+          const parsed = JSON.parse(errorMsg);
+          errorMsg = parsed.error?.message || parsed.error || errorMsg;
+        } catch (_) {}
+      }
+      setDbError(errorMsg);
+    }
   };
 
   const handleAddHolding = async () => {
     if (!holdingValor || !id) return;
-    await addHolding({
-      id_imovel: id,
-      tipo_despesa: 'Custos Fixos / Holding',
-      descricao: holdingDescricao,
-      valor_mensal: holdingValor,
-      competencia: holdingCompetencia || new Date().toLocaleDateString('pt-BR', { month: '2-digit', year: 'numeric' }),
-      fileUrl: holdingFileUrl
-    });
-    setHoldingValor(0);
-    setHoldingCompetencia('');
-    setHoldingDescricao('');
-    setHoldingFileUrl('');
-    setShowAddHolding(false);
+    try {
+      await addHolding({
+        id_imovel: id,
+        tipo_despesa: 'Custos Fixos / Holding',
+        descricao: holdingDescricao,
+        valor_mensal: holdingValor,
+        competencia: holdingCompetencia || new Date().toLocaleDateString('pt-BR', { month: '2-digit', year: 'numeric' }),
+        fileUrl: holdingFileUrl
+      });
+      setHoldingValor(0);
+      setHoldingCompetencia('');
+      setHoldingDescricao('');
+      setHoldingFileUrl('');
+      setShowAddHolding(false);
+      setDbError(null);
+    } catch (err: any) {
+      console.error('Erro ao adicionar custo de holding:', err);
+      let errorMsg = err.message || String(err);
+      if (errorMsg.startsWith('{') && errorMsg.endsWith('}')) {
+        try {
+          const parsed = JSON.parse(errorMsg);
+          errorMsg = parsed.error?.message || parsed.error || errorMsg;
+        } catch (_) {}
+      }
+      setDbError(errorMsg);
+    }
   };
 
   const handleAddFaturamento = async () => {
     if (!fatValor || !id) return;
-    await addFaturamento({
-      id_imovel: id,
-      tipo: fatTipo,
-      descricao: fatDescricao,
-      valor: fatValor,
-      custo_corretagem: fatComissao,
-      fileUrl: fatFileUrl
-    });
+    try {
+      await addFaturamento({
+        id_imovel: id,
+        tipo: fatTipo,
+        descricao: fatDescricao,
+        valor: fatValor,
+        custo_corretagem: fatComissao,
+        fileUrl: fatFileUrl
+      });
 
-    // Auto-update property status
-    const newStatus = fatTipo === TipoFaturamento.Locacao 
-      ? StatusArrematacao.Alugado 
-      : StatusArrematacao.Vendido;
-    
-    await updateImovel(id, { status_arrematacao: newStatus });
+      // Auto-update property status
+      const newStatus = fatTipo === TipoFaturamento.Locacao 
+        ? StatusArrematacao.Alugado 
+        : StatusArrematacao.Vendido;
+      
+      await updateImovel(id, { status_arrematacao: newStatus });
 
-    setFatValor(0);
-    setFatComissao(0);
-    setFatTipo(TipoFaturamento.Venda);
-    setFatDescricao('');
-    setFatFileUrl('');
-    setShowAddFaturamento(false);
+      setFatValor(0);
+      setFatComissao(0);
+      setFatTipo(TipoFaturamento.Venda);
+      setFatDescricao('');
+      setFatFileUrl('');
+      setShowAddFaturamento(false);
+      setDbError(null);
+    } catch (err: any) {
+      console.error('Erro ao adicionar faturamento:', err);
+      let errorMsg = err.message || String(err);
+      if (errorMsg.startsWith('{') && errorMsg.endsWith('}')) {
+        try {
+          const parsed = JSON.parse(errorMsg);
+          errorMsg = parsed.error?.message || parsed.error || errorMsg;
+        } catch (_) {}
+      }
+      setDbError(errorMsg);
+    }
   };
 
   const filteredCustosAquisicao = custosAquisicao.filter(c => c.id_imovel === id);
@@ -379,6 +433,31 @@ export default function PropertyDetails() {
       animate={{ opacity: 1, scale: 1 }}
       className="space-y-6 max-w-6xl mx-auto px-4 md:px-0"
     >
+      <AnimatePresence>
+        {dbError && (
+          <motion.div
+            initial={{ opacity: 0, y: -20 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -20 }}
+            className="p-4 bg-rose-50 dark:bg-rose-950/20 border-2 border-rose-200 dark:border-rose-900/50 text-rose-800 dark:text-rose-200 rounded-2xl flex items-start gap-3 shadow-lg"
+          >
+            <AlertCircle className="w-5 h-5 text-rose-500 shrink-0 mt-0.5" />
+            <div className="flex-1 text-sm font-semibold leading-relaxed">
+              <span className="font-bold">Ocorreu um erro na gravação dos dados:</span> {dbError}
+              <div className="text-xs text-rose-600/80 dark:text-rose-400/80 mt-1 font-medium">
+                Se estiver utilizando o Supabase, certifique-se de que executou os comandos SQL para criar todas as tabelas e relações necessárias no console da sua conta do Supabase. Para Firebase, garanta que as regras de segurança estão atualizadas.
+              </div>
+            </div>
+            <button 
+              onClick={() => setDbError(null)}
+              className="text-rose-500 dark:text-rose-400 hover:text-rose-800 dark:hover:text-rose-200 text-xs font-bold uppercase tracking-widest px-2 py-1 rounded hover:bg-rose-100 dark:hover:bg-rose-950 transition-colors shrink-0"
+            >
+              Fechar
+            </button>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       <button 
         onClick={() => navigate('/properties')}
         className="flex items-center gap-2 text-slate-500 dark:text-slate-500 hover:text-slate-900 dark:hover:text-white transition-colors font-bold text-xs uppercase tracking-widest mt-4 md:mt-0"

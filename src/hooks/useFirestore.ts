@@ -41,8 +41,18 @@ interface FirestoreErrorInfo {
 }
 
 function handleFirestoreError(error: unknown, operationType: OperationType, path: string | null) {
+  let errorMsg = '';
+  if (error instanceof Error) {
+    errorMsg = error.message;
+  } else if (typeof error === 'object' && error !== null) {
+    const errObj = error as any;
+    errorMsg = errObj.message || errObj.details || errObj.hint || JSON.stringify(errObj);
+  } else {
+    errorMsg = String(error);
+  }
+
   const errInfo: FirestoreErrorInfo = {
-    error: error instanceof Error ? error.message : String(error),
+    error: errorMsg,
     authInfo: {
       userId: auth.currentUser?.uid,
       email: auth.currentUser?.email,
@@ -151,10 +161,19 @@ export function useFirestore<T>(collectionName: string, constraints: QueryConstr
   const add = async (newData: Omit<T, 'id' | 'createdAt' | 'updatedAt' | 'createdBy'>) => {
     if (!auth.currentUser) throw new Error('User not authenticated');
 
+    // Strip keys with undefined or null values to prevent database schema/rule validation issues
+    const cleanedNewData: any = {};
+    for (const key of Object.keys(newData as any)) {
+      const val = (newData as any)[key];
+      if (val !== undefined && val !== null) {
+        cleanedNewData[key] = val;
+      }
+    }
+
     if (hasSupabase) {
       try {
         const payload = {
-          ...newData,
+          ...cleanedNewData,
           createdBy: auth.currentUser.uid,
           createdAt: new Date().toISOString(),
           updatedAt: new Date().toISOString()
@@ -180,12 +199,12 @@ export function useFirestore<T>(collectionName: string, constraints: QueryConstr
     } else {
       try {
         const docRef = await addDoc(collection(db, collectionName), {
-          ...newData,
+          ...cleanedNewData,
           createdBy: auth.currentUser.uid,
           createdAt: serverTimestamp(),
           updatedAt: serverTimestamp()
         });
-        return { id: docRef.id, ...newData } as any;
+        return { id: docRef.id, ...cleanedNewData } as any;
       } catch (err) {
         handleFirestoreError(err, OperationType.CREATE, collectionName);
       }
@@ -193,9 +212,18 @@ export function useFirestore<T>(collectionName: string, constraints: QueryConstr
   };
 
   const update = async (id: string, updateData: Partial<T>) => {
+    // Strip keys with undefined or null values to prevent database schema/rule validation issues
+    const cleanedUpdateData: any = {};
+    for (const key of Object.keys(updateData as any)) {
+      const val = (updateData as any)[key];
+      if (val !== undefined && val !== null) {
+        cleanedUpdateData[key] = val;
+      }
+    }
+
     if (hasSupabase) {
       try {
-        const cleanData = { ...updateData };
+        const cleanData = { ...cleanedUpdateData };
         delete (cleanData as any).id; // Delete keys that shouldn't be overridden
 
         const { data: updated, error: updateErr } = await supabase
@@ -223,10 +251,10 @@ export function useFirestore<T>(collectionName: string, constraints: QueryConstr
       const docRef = doc(db, collectionName, id);
       try {
         await updateDoc(docRef, {
-          ...updateData,
+          ...cleanedUpdateData,
           updatedAt: serverTimestamp()
         });
-        return { id, ...updateData } as any;
+        return { id, ...cleanedUpdateData } as any;
       } catch (err) {
         handleFirestoreError(err, OperationType.UPDATE, `${collectionName}/${id}`);
       }
