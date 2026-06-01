@@ -226,57 +226,57 @@ function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen w-screen flex items-center justify-center bg-slate-50 dark:bg-slate-950 p-6 transition-colors duration-300">
-      <div className="max-w-md w-full bg-white dark:bg-slate-900 rounded-[2.5rem] shadow-2xl p-8 md:p-12 text-center border border-slate-100 dark:border-slate-800 relative overflow-hidden">
+    <div className="h-screen md:h-[100dvh] w-screen flex items-center justify-center bg-slate-50 dark:bg-slate-950 p-4 md:p-6 overflow-y-auto transition-colors duration-300">
+      <div className="max-w-md w-full bg-white dark:bg-slate-900 rounded-[2.5rem] shadow-2xl p-6 md:p-10 text-center border border-slate-100 dark:border-slate-800 relative overflow-hidden my-auto">
         {/* Abstract Background Element */}
         <div className="absolute -top-10 -right-10 w-40 h-40 bg-blue-600/5 rounded-full blur-3xl pointer-events-none" />
         <div className="absolute -bottom-10 -left-10 w-40 h-40 bg-blue-600/5 rounded-full blur-3xl pointer-events-none" />
 
-        <div className="w-20 h-20 bg-gradient-to-br from-blue-600 to-indigo-700 rounded-3xl flex items-center justify-center mx-auto mb-8 shadow-xl shadow-blue-500/30">
-          <Gavel className="w-10 h-10 text-white" />
+        <div className="w-16 h-16 md:w-20 md:h-20 bg-gradient-to-br from-blue-600 to-indigo-700 rounded-3xl flex items-center justify-center mx-auto mb-6 md:mb-8 shadow-xl shadow-blue-500/30">
+          <Gavel className="w-8 h-8 md:w-10 md:h-10 text-white" />
         </div>
         
-        <h1 className="text-3xl font-bold mb-2 text-slate-900 dark:text-white tracking-tight">PropMaestro</h1>
-        <p className="text-sm text-slate-600 dark:text-slate-400 mb-10 font-medium">
+        <h1 className="text-2xl md:text-3xl font-bold mb-1 md:mb-2 text-slate-900 dark:text-white tracking-tight">PropMaestro</h1>
+        <p className="text-xs md:text-sm text-slate-600 dark:text-slate-400 mb-6 md:mb-8 font-medium">
           {isLogin ? 'Bem-vindo de volta ao seu centro de gestão.' : 'Crie sua conta de broker autorizados.'}
         </p>
 
-        <form onSubmit={handleSubmit} className="space-y-4 text-left">
+        <form onSubmit={handleSubmit} className="space-y-3 md:space-y-4 text-left">
           {!isLogin && (
             <div className="relative group">
-              <UserIcon className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-500 group-focus-within:text-blue-500 transition-colors" />
+              <UserIcon className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 md:w-5 md:h-5 text-slate-500 group-focus-within:text-blue-500 transition-colors" />
               <input
                 type="text"
                 placeholder="Nome Completo"
                 value={name}
                 onChange={(e) => setName(e.target.value)}
                 required
-                className="w-full pl-12 pr-4 py-4 bg-slate-50 dark:bg-slate-800/50 border border-slate-100 dark:border-slate-700 rounded-2xl text-slate-900 dark:text-white outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all font-medium"
+                className="w-full pl-11 pr-4 py-3 md:py-4 bg-slate-50 dark:bg-slate-800/50 border border-slate-100 dark:border-slate-700 rounded-2xl text-slate-900 dark:text-white outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all font-medium text-sm"
               />
             </div>
           )}
 
           <div className="relative group">
-            <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-500 group-focus-within:text-blue-500 transition-colors" />
+            <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 md:w-5 md:h-5 text-slate-500 group-focus-within:text-blue-500 transition-colors" />
             <input
               type="email"
               placeholder="seu@email.com"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               required
-              className="w-full pl-12 pr-4 py-4 bg-slate-50 dark:bg-slate-800/50 border border-slate-100 dark:border-slate-700 rounded-2xl text-slate-900 dark:text-white outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all font-medium"
+              className="w-full pl-11 pr-4 py-3 md:py-4 bg-slate-50 dark:bg-slate-800/50 border border-slate-100 dark:border-slate-700 rounded-2xl text-slate-900 dark:text-white outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all font-medium text-sm"
             />
           </div>
 
           <div className="relative group">
-            <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-500 group-focus-within:text-blue-500 transition-colors" />
+            <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 md:w-5 md:h-5 text-slate-500 group-focus-within:text-blue-500 transition-colors" />
             <input
               type="password"
               placeholder="Sua senha"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               required
-              className="w-full pl-12 pr-4 py-4 bg-slate-50 dark:bg-slate-800/50 border border-slate-100 dark:border-slate-700 rounded-2xl text-slate-900 dark:text-white outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all font-medium"
+              className="w-full pl-11 pr-4 py-3 md:py-4 bg-slate-50 dark:bg-slate-800/50 border border-slate-100 dark:border-slate-700 rounded-2xl text-slate-900 dark:text-white outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all font-medium text-sm"
             />
           </div>
 
@@ -289,13 +289,13 @@ function LoginPage() {
           <button
             type="submit"
             disabled={loading}
-            className="w-full bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 text-white py-4 rounded-2xl font-bold transition-all shadow-lg shadow-blue-500/25 active:scale-[0.98] flex items-center justify-center gap-2 cursor-pointer"
+            className="w-full bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 text-white py-3 md:py-4 rounded-2xl font-bold transition-all shadow-lg shadow-blue-500/25 active:scale-[0.98] flex items-center justify-center gap-2 cursor-pointer text-sm"
           >
             {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : (isLogin ? 'Entrar no Sistema' : 'Criar minha Conta')}
           </button>
         </form>
 
-        <div className="my-8 flex items-center gap-4 text-slate-500">
+        <div className="my-5 md:my-6 flex items-center gap-4 text-slate-500">
           <div className="h-px flex-1 bg-slate-100 dark:bg-slate-800" />
           <span className="text-[10px] font-bold uppercase tracking-widest">ou</span>
           <div className="h-px flex-1 bg-slate-100 dark:bg-slate-800" />
@@ -304,13 +304,13 @@ function LoginPage() {
         <button
           onClick={handleGoogleSignIn}
           disabled={loading}
-          className="w-full flex items-center justify-center gap-3 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 px-6 py-4 rounded-2xl font-bold text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700 transition-all active:scale-[0.98] shadow-sm group cursor-pointer"
+          className="w-full flex items-center justify-center gap-3 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 px-5 py-3 md:py-4 rounded-2xl font-bold text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700 transition-all active:scale-[0.98] shadow-sm group cursor-pointer text-sm"
         >
-          <img src="https://www.google.com/favicon.ico" alt="Google" className="w-5 h-5 grayscale group-hover:grayscale-0 transition-all font-medium" />
+          <img src="https://www.google.com/favicon.ico" alt="Google" className="w-4 h-4 md:w-5 md:h-5 grayscale group-hover:grayscale-0 transition-all font-medium" />
           Acessar com Google
         </button>
 
-        <p className="mt-4 text-[11px] text-slate-400 dark:text-slate-500 font-medium leading-relaxed">
+        <p className="mt-3 md:mt-4 text-[10px] md:text-[11px] text-slate-400 dark:text-slate-500 font-medium leading-relaxed">
           Dica: Se o login do Google falhar no iFrame, clique para abrir em uma{" "}
           <a
             href={window.location.href}
@@ -328,13 +328,13 @@ function LoginPage() {
             setIsLogin(!isLogin);
             setError(null);
           }}
-          className="mt-8 text-xs font-bold text-slate-500 hover:text-blue-500 transition-colors uppercase tracking-widest cursor-pointer"
+          className="mt-6 md:mt-8 text-[10px] md:text-xs font-bold text-slate-500 hover:text-blue-500 transition-colors uppercase tracking-widest cursor-pointer"
         >
           {isLogin ? 'Não tem conta? Cadastre-se' : 'Já tem conta? Faça Login'}
         </button>
 
-        <div className="mt-10 pt-8 border-t border-slate-50 dark:border-slate-800">
-          <p className="text-[10px] text-slate-500 dark:text-slate-500 font-bold uppercase tracking-[0.2em]">
+        <div className="mt-6 md:mt-8 pt-6 md:pt-8 border-t border-slate-50 dark:border-slate-800">
+          <p className="text-[9px] md:text-[10px] text-slate-500 dark:text-slate-500 font-bold uppercase tracking-[0.2em]">
             Acesso restrito para brokers autorizados
           </p>
         </div>

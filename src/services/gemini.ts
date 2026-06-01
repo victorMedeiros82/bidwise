@@ -30,6 +30,9 @@ export async function generateRiskAnalysis(
   ` : `
     DADOS DE AQUISIÇÃO:
     - Origem: ${imovel.origem}
+    - Valor de Compra / Pedido: R$ ${imovel.valor_minimo?.toLocaleString('pt-BR')}
+    - Valor Efetivo de Compra (Real): R$ ${(imovel.valor_arrematacao || imovel.valor_minimo)?.toLocaleString('pt-BR') || 'Não informado'}
+    - Valor Avaliação: R$ ${imovel.valor_avaliacao?.toLocaleString('pt-BR')}
   `;
 
   const financialInfo = financials ? `

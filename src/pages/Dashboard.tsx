@@ -78,7 +78,7 @@ export default function Dashboard() {
       p.status_arrematacao === StatusArrematacao.Alugado;
 
     // Incorporate both the arrematacao base value and specific acquisition expenses
-    const baseAquisicao = p.valor_arrematacao || 0;
+    const baseAquisicao = p.valor_arrematacao || p.valor_minimo || 0;
     const pAquisicao = baseAquisicao + custosAquisicao.filter(c => c.id_imovel === p.id).reduce((sum, c) => sum + (c.valor || 0), 0);
     const pReforma = custosReforma.filter(r => r.id_imovel === p.id).reduce((sum, r) => sum + (r.valor_real || r.orcamento || 0), 0);
     const pHolding = holding.filter(h => h.id_imovel === p.id).reduce((sum, h) => sum + (h.valor_mensal || 0), 0);
@@ -147,7 +147,7 @@ export default function Dashboard() {
       p.status_arrematacao === StatusArrematacao.Vendido ||
       p.status_arrematacao === StatusArrematacao.Alugado;
 
-    const baseAquisicao = p.valor_arrematacao || 0;
+    const baseAquisicao = p.valor_arrematacao || p.valor_minimo || 0;
     const pAquisicaoExt = custosAquisicao.filter(c => c.id_imovel === p.id).reduce((sum, c) => sum + (c.valor || 0), 0);
     const pAquisicao = baseAquisicao + pAquisicaoExt;
     const pReforma = custosReforma.filter(r => r.id_imovel === p.id).reduce((sum, r) => sum + (r.valor_real || r.orcamento || 0), 0);
@@ -583,7 +583,7 @@ export default function Dashboard() {
                   </p>
                   <ul className="list-disc pl-4 space-y-2">
                     <li>
-                      <strong className="text-slate-900 dark:text-white">Capital Realizado:</strong> Representa o capital de fato investido. É a soma de: <span className="italic font-semibold">Valor de Lance + Custos Extras de Aquisição + Reformas Executadas + Custos de Holding (Condomínio, IPTU)</span> dos imóveis arrematados.
+                      <strong className="text-slate-900 dark:text-white">Capital Realizado:</strong> Representa o capital de fato investido. É a soma de: <span className="italic font-semibold">Valor de Aquisição (Lance ou Compra) + Custos Extras de Aquisição + Reformas Executadas + Custos de Holding (Condomínio, IPTU)</span> dos imóveis arrematados/comprados.
                     </li>
                     <li>
                       <strong className="text-slate-900 dark:text-white">Lucro Líquido:</strong> Para imóveis vendidos/locados, subtrai-se os custos de holding, a base tributável (lucro × IR de 15%) e comissões da receita líquida. Para imóveis ainda em andamento, desconta-se todos os custos investidos como fluxo de caixa negativo temporário (<span className="text-rose-500 font-bold">ROI parcial negativo</span>) até sua rentabilização.
@@ -598,7 +598,7 @@ export default function Dashboard() {
                     <tr className="bg-slate-50 dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 text-[10px] font-black uppercase tracking-wider text-slate-400 select-none">
                       <th className="p-4 pl-6">IMÓVEL / ENDEREÇO</th>
                       <th className="p-4 text-center">STATUS</th>
-                      <th className="p-4 text-right">VALOR LANCE</th>
+                      <th className="p-4 text-right">AQUISIÇÃO / LANCE</th>
                       <th className="p-4 text-right">OUTROS CUSTOS</th>
                       <th className="p-4 text-right">CAP. REALIZADO</th>
                       <th className="p-4 text-right">FATUR. LÍQUIDO</th>

@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { Plus, Search, MapPin, Building2, ChevronRight, ChevronDown, Gavel, Trash2, X, ClipboardCheck, Loader2, Info, Calendar, Link as LinkIcon, PencilLine } from 'lucide-react';
+import { Plus, Search, MapPin, Building2, ChevronRight, ChevronDown, Gavel, Trash2, X, ClipboardCheck, Loader2, Info, Calendar, Link as LinkIcon, PencilLine, AlertTriangle } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import CurrencyInput from 'react-currency-input-field';
 import { useFirestore } from '../hooks/useFirestore';
@@ -12,6 +12,7 @@ export default function Properties() {
   const { data: properties, add, remove, update } = useFirestore<Imovel>('imoveis');
   
   const [editingProperty, setEditingProperty] = useState<Imovel | null>(null);
+  const [propertyToDelete, setPropertyToDelete] = useState<Imovel | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [filterType, setFilterType] = useState<TipoImovel | 'Todos'>('Todos');
@@ -454,9 +455,9 @@ export default function Properties() {
                         <PencilLine size={18} />
                       </button>
                       <button
-                        onClick={(e) => { e.stopPropagation(); remove(imovel.id!); }}
-                        className="p-4 bg-rose-50 text-rose-500 rounded-2xl hover:bg-rose-500 hover:text-white transition-all active:scale-95"
-                        title="Arquivar"
+                        onClick={(e) => { e.stopPropagation(); setPropertyToDelete(imovel); }}
+                        className="p-4 bg-rose-50 dark:bg-rose-950/20 text-rose-500 rounded-2xl hover:bg-rose-500 hover:text-white transition-all active:scale-95"
+                        title="Excluir Ativo"
                       >
                         <Trash2 size={18} />
                       </button>
@@ -527,23 +528,7 @@ export default function Properties() {
                 <div className="flex-1 overflow-y-auto p-6 space-y-8 scrollbar-hide">
                   {/* Seção 1: Identificação e Aquisição */}
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <section className="space-y-4">
-                      <div className="flex items-center gap-2 mb-1">
-                        <div className="p-1.5 bg-blue-50 dark:bg-blue-900/30 rounded-lg">
-                          <ClipboardCheck size={16} className="text-blue-600 dark:text-blue-400" />
-                        </div>
-                        <h3 className="text-xs font-bold text-slate-500 uppercase tracking-widest">Código Único</h3>
-                      </div>
-                      <input
-                        type="text"
-                        placeholder="Automático"
-                        className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-800 border-none rounded-xl text-sm font-black dark:text-slate-200 outline-none"
-                        value={formData.codigo || ''}
-                        onChange={e => setFormData({ ...formData, codigo: e.target.value.toUpperCase() })}
-                      />
-                    </section>
-
-                    <section className="space-y-4">
+                    <section className="space-y-4 md:col-span-2">
                       <div className="flex items-center gap-2 mb-1">
                         <div className="p-1.5 bg-blue-50 dark:bg-blue-900/30 rounded-lg">
                           <ClipboardCheck size={16} className="text-blue-600 dark:text-blue-400" />
@@ -1042,6 +1027,70 @@ export default function Properties() {
                   </button>
                 </div>
               </form>
+            </motion.div>
+          </div>
+        )}
+
+        {propertyToDelete && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setPropertyToDelete(null)}
+              className="absolute inset-0 bg-black/40 backdrop-blur-sm"
+            />
+            <motion.div
+              initial={{ scale: 0.9, opacity: 0, y: 20 }}
+              animate={{ scale: 1, opacity: 1, y: 0 }}
+              exit={{ scale: 0.9, opacity: 0, y: 20 }}
+              className="bg-white dark:bg-slate-900 rounded-[2rem] shadow-2xl w-full max-w-md relative z-10 overflow-hidden border border-slate-100 dark:border-slate-800"
+            >
+              <div className="p-6 text-center">
+                <div className="w-16 h-16 bg-rose-50 dark:bg-rose-950/30 rounded-2xl flex items-center justify-center mx-auto mb-5 text-rose-500">
+                  <AlertTriangle size={32} />
+                </div>
+                
+                <h3 className="text-xl font-black text-slate-900 dark:text-white tracking-tight">Excluir Ativo?</h3>
+                <p className="text-sm text-slate-300 dark:text-slate-400 mt-2 font-medium">
+                  Tem certeza que deseja apagar o imóvel em questão?
+                </p>
+
+                {/* Info Card inside modal */}
+                <div className="mt-4 p-4 bg-slate-50 dark:bg-slate-800/50 rounded-2xl border border-slate-100 dark:border-slate-800 text-left">
+                  <p className="text-xs font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest mb-1">Imóvel</p>
+                  <p className="text-sm font-bold text-slate-800 dark:text-slate-200 truncate">{propertyToDelete.endereco}</p>
+                  {propertyToDelete.codigo && (
+                    <p className="text-[10px] font-mono text-slate-400 dark:text-slate-500 mt-1">Cód: {propertyToDelete.codigo}</p>
+                  )}
+                </div>
+
+                <p className="text-[11px] text-rose-500 font-bold uppercase tracking-wider mt-4">
+                  Esta ação é irreversível e apagará todos os dados financeiros vinculados.
+                </p>
+
+                <div className="mt-6 flex gap-3">
+                  <button
+                    type="button"
+                    onClick={() => setPropertyToDelete(null)}
+                    className="flex-1 px-5 py-3.5 bg-slate-100 hover:bg-slate-205 dark:bg-slate-800 dark:hover:bg-slate-700/80 text-slate-700 dark:text-slate-300 rounded-xl text-xs font-black uppercase tracking-widest transition-all cursor-pointer"
+                  >
+                    Cancelar
+                  </button>
+                  <button
+                    type="button"
+                    onClick={async () => {
+                      if (propertyToDelete.id) {
+                        await remove(propertyToDelete.id);
+                        setPropertyToDelete(null);
+                      }
+                    }}
+                    className="flex-1 px-5 py-3.5 bg-rose-600 hover:bg-rose-700 text-white rounded-xl text-xs font-black uppercase tracking-widest transition-all shadow-lg shadow-rose-500/25 active:scale-[0.98] cursor-pointer font-bold"
+                  >
+                    Confirmar
+                  </button>
+                </div>
+              </div>
             </motion.div>
           </div>
         )}

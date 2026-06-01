@@ -318,7 +318,7 @@ export default function PropertyDetails() {
   if (!imovel) return <div className="p-8 text-center text-slate-600">Imóvel não encontrado.</div>;
 
   // Consolidação Financeira
-  const valorArrematacaoBase = imovel.valor_arrematacao || 0;
+  const valorArrematacaoBase = imovel.valor_arrematacao || imovel.valor_minimo || 0;
   const totalAquisicao = valorArrematacaoBase + filteredCustosAquisicao.reduce((acc, curr) => acc + (curr.valor || 0), 0);
   const totalReforma = filteredCustosReforma.reduce((acc, curr) => acc + (curr.valor_real || curr.orcamento || 0), 0);
   const totalHolding = filteredHolding.reduce((acc, curr) => acc + (curr.valor_mensal || 0), 0);
@@ -357,12 +357,14 @@ export default function PropertyDetails() {
   // ROI sobre o capital próprio (Cash-on-Cash Return)
   const roiLiquido = totalInvestimento > 0 ? (lucroLiquido / totalInvestimento) * 100 : 0;
 
+  const isLeilao = [OrigemImovel.LeilaoJudicial, OrigemImovel.LeilaoExtrajudicial].includes(imovel.origem);
+
   // Calculo de Fluxo de Caixa Acumulado
   const allEvents = [
     ...(valorArrematacaoBase > 0 ? [{
       date: imovel.createdAt ? (typeof imovel.createdAt === 'object' ? imovel.createdAt.toDate() : new Date(imovel.createdAt)) : new Date(),
       value: -valorArrematacaoBase,
-      type: 'Arrematação / Lance'
+      type: isLeilao ? 'Arrematação / Lance' : 'Preço de Compra / Aquisição'
     }] : []),
     ...filteredCustosAquisicao.map(c => ({ 
       date: c.createdAt ? (typeof c.createdAt === 'object' ? c.createdAt.toDate() : new Date(c.createdAt)) : new Date(), 
@@ -662,9 +664,11 @@ export default function PropertyDetails() {
                     />
                   </div>
                   <div className="space-y-2">
-                    <label className="text-xs font-black text-slate-400 uppercase tracking-widest px-2">Lance Mínimo / Arrematação</label>
+                    <label className="text-xs font-black text-slate-400 uppercase tracking-widest px-2">
+                      {isLeilao ? "Lance Mínimo / Arrematação" : "Preço Efetivo de Compra / Aquisição"}
+                    </label>
                     <DebouncedCurrencyInput
-                      value={imovel.valor_arrematacao || 0}
+                      value={imovel.valor_arrematacao || imovel.valor_minimo || 0}
                       onUpdate={(val) => updateImovel(id!, { valor_arrematacao: val })}
                       className="w-full px-5 py-4 bg-slate-50 dark:bg-slate-800 border-none rounded-2xl text-sm font-bold outline-none ring-2 ring-transparent focus:ring-amber-500/20 transition-all"
                     />
@@ -687,7 +691,9 @@ export default function PropertyDetails() {
                     />
                   </div>
                   <div className="space-y-2">
-                    <label className="text-xs font-black text-slate-400 uppercase tracking-widest px-2">Tipo de Arrematação</label>
+                    <label className="text-xs font-black text-slate-400 uppercase tracking-widest px-2">
+                      {isLeilao ? "Tipo de Arrematação" : "Forma de Pagamento / Compra"}
+                    </label>
                     <div className="flex gap-2 bg-slate-50 dark:bg-slate-800 p-1 rounded-2xl">
                       {Object.values(TipoArrematacao).map(tipo => (
                         <button
@@ -1010,8 +1016,10 @@ export default function PropertyDetails() {
                           <span className="text-sm font-black text-slate-300">R$ {totalHolding.toLocaleString('pt-BR')}</span>
                         </div>
                         <div className="flex justify-between items-center bg-slate-800/20 p-4 rounded-2xl border border-white/5">
-                          <span className="text-xs font-bold text-slate-500 uppercase tracking-widest">Taxas Arrematação</span>
-                          <span className="text-sm font-black text-slate-300">R$ {(totalAquisicao - (imovel.valor_arrematacao || 0)).toLocaleString('pt-BR')}</span>
+                          <span className="text-xs font-bold text-slate-500 uppercase tracking-widest">
+                            {isLeilao ? "Taxas Arrematação" : "Custos Extras de Aquisição"}
+                          </span>
+                          <span className="text-sm font-black text-slate-300">R$ {(totalAquisicao - valorArrematacaoBase).toLocaleString('pt-BR')}</span>
                         </div>
                       </div>
                     </div>
