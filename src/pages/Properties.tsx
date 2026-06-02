@@ -9,7 +9,7 @@ import { cn } from '../lib/utils';
 
 export default function Properties() {
   const navigate = useNavigate();
-  const { data: properties, add, remove, update } = useFirestore<Imovel>('imoveis');
+  const { data: properties, loading, add, remove, update } = useFirestore<Imovel>('imoveis');
   
   const [editingProperty, setEditingProperty] = useState<Imovel | null>(null);
   const [propertyToDelete, setPropertyToDelete] = useState<Imovel | null>(null);
@@ -36,6 +36,63 @@ export default function Properties() {
     tipo_arrematacao: TipoArrematacao.AVista,
     saldo_devedor: 0
   });
+
+  if (loading) {
+    return (
+      <motion.div
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        className="space-y-6 pb-12"
+      >
+        <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 pb-2">
+          <div className="space-y-2">
+            <div className="h-9 w-64 bg-slate-200 dark:bg-slate-800 rounded-xl animate-pulse" />
+            <div className="h-4 w-48 bg-slate-150 dark:bg-slate-850 rounded-lg animate-pulse" />
+          </div>
+          <div className="h-12 w-40 bg-slate-200 dark:bg-slate-800 rounded-2xl animate-pulse" />
+        </div>
+
+        {/* Quick Stats Summary Skeletons */}
+        <section className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          {[1, 2, 3, 4].map((i) => (
+            <div key={i} className="p-6 rounded-[2rem] border border-slate-100 dark:border-slate-850 bg-white dark:bg-slate-900 flex items-center justify-between">
+              <div className="space-y-2 flex-1">
+                <div className="h-3 w-16 bg-slate-200 dark:bg-slate-850 rounded animate-pulse" />
+                <div className="h-8 w-12 bg-slate-200 dark:bg-slate-850 rounded-lg animate-pulse" />
+              </div>
+              <div className="size-10 rounded-2xl bg-slate-100 dark:bg-slate-800 animate-pulse" />
+            </div>
+          ))}
+        </section>
+
+        {/* Search & Filters Placeholder */}
+        <div className="h-24 bg-white dark:bg-slate-900 rounded-2xl border border-slate-100 dark:border-slate-800 animate-pulse" />
+
+        {/* Grid Skeletons */}
+        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6 pb-12">
+          {[1, 2, 3, 4, 5, 6].map((i) => (
+            <div key={i} className="bg-white dark:bg-slate-900 rounded-3xl border border-slate-100 dark:border-slate-800 overflow-hidden flex flex-col h-[400px]">
+              <div className="h-32 bg-slate-100 dark:bg-slate-800 animate-pulse" />
+              <div className="p-6 flex-1 flex flex-col justify-between">
+                <div className="space-y-3">
+                  <div className="flex justify-between">
+                    <div className="h-4 w-24 bg-slate-200 dark:bg-slate-800 rounded animate-pulse" />
+                    <div className="h-4 w-12 bg-slate-200 dark:bg-slate-800 rounded animate-pulse" />
+                  </div>
+                  <div className="h-6 w-full bg-slate-200 dark:bg-slate-850 rounded-lg animate-pulse" />
+                  <div className="h-6 w-2/3 bg-slate-200 dark:bg-slate-850 rounded-lg animate-pulse" />
+                </div>
+                <div className="space-y-3">
+                  <div className="h-10 w-full bg-slate-100 dark:bg-slate-850 rounded-xl animate-pulse" />
+                  <div className="h-12 w-full bg-slate-200 dark:bg-slate-800 rounded-2xl animate-pulse" />
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      </motion.div>
+    );
+  }
 
   const validateForm = () => {
     const newErrors: Record<string, string> = {};
@@ -270,7 +327,7 @@ export default function Properties() {
           <input
             type="text"
             placeholder="Pesquisar por endereço, matrícula ou número do processo..."
-            className="flex-1 bg-transparent border-none focus:ring-0 text-sm font-bold placeholder:text-slate-400 dark:text-slate-200 pl-[10px] pt-[5px] pb-[5px] rounded-[10px]"
+            className="flex-1 bg-transparent border-none focus:ring-0 text-sm font-bold placeholder:text-slate-400 dark:text-slate-200"
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
           />
@@ -411,7 +468,7 @@ export default function Properties() {
                         </p>
                       )}
                     </div>
-                    <h3 className="text-base font-black text-slate-900 dark:text-white leading-tight group-hover:text-blue-600 transition-colors line-clamp-2 min-h-[3rem]">
+                    <h3 className="text-base font-black text-slate-900 dark:text-white leading-tight group-hover:text-[#FCA311] transition-colors line-clamp-2 min-h-[3rem]">
                       {imovel.endereco}
                     </h3>
                   </div>
@@ -530,14 +587,14 @@ export default function Properties() {
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <section className="space-y-4 md:col-span-2">
                       <div className="flex items-center gap-2 mb-1">
-                        <div className="p-1.5 bg-blue-50 dark:bg-blue-900/30 rounded-lg">
-                          <ClipboardCheck size={16} className="text-blue-600 dark:text-blue-400" />
+                        <div className="p-1.5 bg-[#FCA311]/10 dark:bg-[#FCA311]/20 rounded-lg">
+                          <ClipboardCheck size={16} className="text-[#FCA311]" />
                         </div>
                         <h3 className="text-xs font-bold text-slate-500 uppercase tracking-widest">Tipo de Aquisição</h3>
                       </div>
                       <div className="relative">
                         <select
-                          className="w-full px-4 py-3 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl outline-none text-sm font-medium dark:text-slate-200 appearance-none shadow-sm pr-10 focus:ring-2 focus:ring-blue-500/15"
+                          className="w-full px-4 py-3 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl outline-none text-sm font-medium dark:text-slate-200 appearance-none shadow-sm pr-10 focus:ring-2 focus:ring-[#FCA311]/15"
                           value={formData.origem || ''}
                           onChange={e => setFormData({ ...formData, origem: e.target.value as OrigemImovel })}
                         >
@@ -703,7 +760,7 @@ export default function Properties() {
                             <input
                               type="text"
                               placeholder="https://exemplo.com/edital"
-                              className="w-full pl-10 pr-4 py-3 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl outline-none text-sm font-medium dark:text-slate-200 focus:ring-2 focus:ring-blue-500/10"
+                              className="w-full pl-10 pr-4 py-3 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl outline-none text-sm font-medium dark:text-slate-200 focus:ring-2 focus:ring-[#FCA311]/10"
                               value={formData.link_edital || ''}
                               onChange={e => setFormData({...formData, link_edital: e.target.value})}
                             />
@@ -798,7 +855,7 @@ export default function Properties() {
                     <div className="grid grid-cols-1 sm:grid-cols-4 gap-5">
                       <div className="sm:col-span-1 space-y-1.5">
                         <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-widest ml-1 flex items-center gap-2">
-                          CEP {searchingCep && <Loader2 size={12} className="animate-spin text-blue-500" />}
+                          CEP {searchingCep && <Loader2 size={12} className="animate-spin text-[#FCA311]" />}
                         </label>
                         <input
                           type="text"
@@ -806,7 +863,7 @@ export default function Properties() {
                           placeholder="00000-000"
                           className={cn(
                             "w-full px-4 py-3 border bg-white dark:bg-slate-800 rounded-xl outline-none text-sm font-bold shadow-sm transition-all",
-                            errors.cep ? "border-rose-500 focus:ring-2 focus:ring-rose-500/10" : "border-slate-200 dark:border-slate-700 focus:ring-2 focus:ring-blue-500/10"
+                            errors.cep ? "border-rose-500 focus:ring-2 focus:ring-rose-500/10" : "border-slate-200 dark:border-slate-700 focus:ring-2 focus:ring-[#FCA311]/10"
                           )}
                           value={formData.cep || ''}
                           onChange={e => {
@@ -824,7 +881,7 @@ export default function Properties() {
                           placeholder="Rua, Número, Complemento..."
                           className={cn(
                             "w-full px-4 py-3 border bg-white dark:bg-slate-800 rounded-xl outline-none text-sm font-medium shadow-sm transition-all",
-                            errors.endereco ? "border-rose-500 focus:ring-2 focus:ring-rose-500/10" : "border-slate-200 dark:border-slate-700 focus:ring-2 focus:ring-blue-500/10"
+                            errors.endereco ? "border-rose-500 focus:ring-2 focus:ring-rose-500/10" : "border-slate-200 dark:border-slate-700 focus:ring-2 focus:ring-[#FCA311]/10"
                           )}
                           value={formData.endereco || ''}
                           onChange={e => {
@@ -981,9 +1038,9 @@ export default function Properties() {
                       </div>
 
                       <div className="space-y-1.5">
-                        <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-widest ml-1 text-blue-500">Tipo de Arrematação</label>
+                        <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-widest ml-1 text-[#FCA311]">Tipo de Arrematação</label>
                         <select
-                          className="w-full px-4 py-3 border border-blue-100 dark:border-blue-900 bg-white dark:bg-slate-800 rounded-xl outline-none text-sm font-black text-blue-600 appearance-none shadow-sm"
+                          className="w-full px-4 py-3 border border-[#FCA311]/30 dark:border-[#FCA311]/40 bg-white dark:bg-slate-800 rounded-xl outline-none text-sm font-black text-[#FCA311] appearance-none shadow-sm"
                           value={formData.tipo_arrematacao}
                           onChange={e => setFormData({...formData, tipo_arrematacao: e.target.value as TipoArrematacao})}
                         >

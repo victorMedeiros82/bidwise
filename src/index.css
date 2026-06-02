@@ -9,31 +9,31 @@
 
 @layer base {
   body {
-    @apply bg-white text-slate-800 dark:bg-slate-950 dark:text-slate-100 transition-colors duration-300 min-h-screen text-base antialiased;
+    @apply bg-[#E5E5E5]/10 text-[#14213D] dark:bg-[#000000] dark:text-[#E5E5E5] transition-colors duration-300 min-h-screen text-base antialiased;
     font-family: var(--font-sans);
   }
 }
 
 .stat-card {
-  @apply bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-5 shadow-sm transition-all hover:shadow-md;
+  @apply bg-white dark:bg-[#14213D] border border-[#E5E5E5] dark:border-white/5 rounded-xl p-5 shadow-sm transition-all hover:shadow-md;
 }
 
 .sidebar-link {
-  @apply flex items-center gap-3 px-4 py-3 rounded-lg text-slate-600 dark:text-slate-400 font-medium transition-all hover:bg-slate-100 dark:hover:bg-slate-800;
+  @apply flex items-center gap-3 px-4 py-3 rounded-lg text-slate-600 dark:text-slate-400 font-medium transition-all hover:bg-[#E5E5E5]/50 dark:hover:bg-[#14213D]/50;
 }
 
 .sidebar-link.active {
-  @apply bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 border-r-4 border-blue-600 dark:border-blue-500 rounded-r-none;
+  @apply bg-[#FCA311]/10 dark:bg-[#FCA311]/15 text-[#FCA311] border-r-4 border-[#FCA311] rounded-r-none font-bold;
 }
 
-.risk-badge-low { @apply bg-emerald-100 dark:bg-emerald-900/40 text-emerald-700 dark:text-emerald-400; }
-.risk-badge-med { @apply bg-amber-100 dark:bg-amber-900/40 text-amber-700 dark:text-amber-400; }
-.risk-badge-high { @apply bg-rose-100 dark:bg-rose-900/40 text-rose-700 dark:text-rose-400; }
+.risk-badge-low { @apply bg-emerald-100 dark:bg-emerald-900/35 text-emerald-700 dark:text-emerald-400; }
+.risk-badge-med { @apply bg-amber-100 dark:bg-amber-900/35 text-amber-700 dark:text-amber-400; }
+.risk-badge-high { @apply bg-rose-100 dark:bg-rose-900/35 text-rose-700 dark:text-rose-400; }
 
 .btn-primary {
-  @apply bg-blue-600 dark:bg-blue-500 text-white px-4 py-2 rounded-lg text-sm font-semibold shadow-md shadow-blue-100 dark:shadow-none hover:bg-blue-700 dark:hover:bg-blue-400 active:scale-95 transition-all;
+  @apply bg-[#FCA311] text-black px-4 py-2 rounded-lg text-sm font-extrabold shadow-md shadow-[#FCA311]/15 hover:bg-[#e28f0e] active:scale-95 transition-all cursor-pointer;
 }
 
 .btn-secondary {
-  @apply bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 px-4 py-2 rounded-lg text-sm font-medium shadow-sm hover:bg-slate-50 dark:hover:bg-slate-700 dark:text-slate-200 transition-all;
+  @apply bg-white dark:bg-[#14213D] border border-slate-200 dark:border-slate-800 px-4 py-2 rounded-lg text-sm font-medium shadow-sm hover:bg-slate-50 dark:hover:bg-[#14213D]/80 dark:text-slate-200 transition-all cursor-pointer;
 }

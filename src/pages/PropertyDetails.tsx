@@ -473,14 +473,14 @@ export default function PropertyDetails() {
           <div className="flex items-center gap-3 mb-2">
             <div className="flex flex-col">
               {imovel.codigo && (
-                <span className="text-xs font-black text-blue-500 uppercase tracking-[0.3em] mb-1">Cód: {imovel.codigo}</span>
+                <span className="text-xs font-black text-[#FCA311] uppercase tracking-[0.3em] mb-1">Cód: {imovel.codigo}</span>
               )}
               <h1 className="text-4xl font-black text-slate-900 dark:text-white tracking-tighter leading-none">{imovel.endereco}</h1>
             </div>
             <div className={cn(
               "px-3 py-1 rounded-full text-xs font-black uppercase tracking-widest",
               imovel.status_arrematacao === StatusArrematacao.Arrematado ? "bg-emerald-100 text-emerald-700" :
-              imovel.status_arrematacao === StatusArrematacao.Analise ? "bg-blue-100 text-blue-700" :
+              imovel.status_arrematacao === StatusArrematacao.Analise ? "bg-[#FCA311]/10 text-[#FCA311]" :
               "bg-slate-100 text-slate-700"
             )}>
               {imovel.status_arrematacao}
@@ -556,7 +556,7 @@ export default function PropertyDetails() {
         </div>
       </div>
 
-      <div className="flex flex-wrap gap-2 p-1.5 bg-slate-100 dark:bg-slate-900 rounded-[1.25rem] w-fit mb-8 border border-slate-200 dark:border-slate-800 shadow-inner">
+      <div className="flex overflow-x-auto scrollbar-none max-w-full gap-2 p-1.5 bg-slate-100 dark:bg-slate-900 rounded-[1.25rem] md:w-fit mb-8 border border-slate-200 dark:border-slate-800 shadow-inner select-none snap-x active:cursor-grabbing">
         {[
           { id: 'analise', label: 'Análise', icon: ShieldAlert },
           { id: 'custos', label: 'Custos', icon: Wallet },
@@ -566,7 +566,7 @@ export default function PropertyDetails() {
             key={tab.id}
             onClick={() => setActiveTab(tab.id as any)}
             className={cn(
-              "relative flex items-center gap-2.5 px-6 py-3 rounded-xl text-xs font-black uppercase tracking-[0.15em] transition-all duration-300",
+              "relative flex items-center gap-2.5 px-6 py-3 rounded-xl text-xs font-black uppercase tracking-[0.15em] transition-all duration-300 shrink-0 snap-start",
               activeTab === tab.id ? "text-slate-900 dark:text-white" : "text-slate-500 hover:text-slate-700 dark:hover:text-slate-300"
             )}
           >

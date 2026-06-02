@@ -40,11 +40,81 @@ import { auth } from '../lib/firebase';
 
 export default function Dashboard() {
   const navigate = useNavigate();
-  const { data: properties } = useFirestore<Imovel>('imoveis');
-  const { data: billing } = useFirestore<Faturamento>('faturamento');
-  const { data: custosAquisicao } = useFirestore<CustoAquisicao>('custos_aquisicao');
-  const { data: custosReforma } = useFirestore<CustoReforma>('custos_reforma');
-  const { data: holding } = useFirestore<Holding>('holding');
+  const { data: properties, loading: loadingProperties } = useFirestore<Imovel>('imoveis');
+  const { data: billing, loading: loadingBilling } = useFirestore<Faturamento>('faturamento');
+  const { data: custosAquisicao, loading: loadingAquisicao } = useFirestore<CustoAquisicao>('custos_aquisicao');
+  const { data: custosReforma, loading: loadingReforma } = useFirestore<CustoReforma>('custos_reforma');
+  const { data: holding, loading: loadingHolding } = useFirestore<Holding>('holding');
+  const [showCalculationDetails, setShowCalculationDetails] = useState(false);
+
+  const loading = loadingProperties || loadingBilling || loadingAquisicao || loadingReforma || loadingHolding;
+
+  if (loading) {
+    return (
+      <motion.div
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        className="space-y-6 pb-12"
+      >
+        {/* Header Skeleton */}
+        <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
+          <div className="space-y-2">
+            <div className="h-9 w-48 bg-slate-200 dark:bg-slate-800 rounded-xl animate-pulse" />
+            <div className="h-4 w-64 bg-slate-150 dark:bg-slate-850 rounded-lg animate-pulse" />
+          </div>
+          <div className="h-10 w-32 bg-slate-200 dark:bg-slate-800 rounded-xl animate-pulse" />
+        </div>
+
+        {/* Primary Bento Skeleton */}
+        <div className="grid grid-cols-1 md:grid-cols-12 gap-6">
+          <div className="md:col-span-8 bg-slate-900 border border-slate-800 dark:border-slate-200 dark:bg-slate-100 p-8 rounded-[2.5rem] h-[340px] flex flex-col justify-between">
+            <div className="space-y-4">
+              <div className="h-4 w-28 bg-white/20 dark:bg-slate-400/20 rounded-md animate-pulse" />
+              <div className="h-16 w-2/3 bg-white/10 dark:bg-slate-400/10 rounded-2xl animate-pulse" />
+              <div className="h-6 w-32 bg-white/10 dark:bg-slate-400/10 rounded-full animate-pulse" />
+            </div>
+            <div className="flex justify-between items-center border-t border-white/10 dark:border-slate-100/10 pt-6">
+              <div className="flex gap-4">
+                <div className="h-8 w-24 bg-white/10 dark:bg-slate-400/10 rounded-lg animate-pulse" />
+                <div className="h-8 w-24 bg-white/10 dark:bg-slate-400/10 rounded-lg animate-pulse" />
+              </div>
+              <div className="h-10 w-24 bg-white/15 dark:bg-slate-400/15 rounded-xl animate-pulse" />
+            </div>
+          </div>
+
+          <div className="md:col-span-4 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-8 rounded-[2.5rem] h-[340px] flex flex-col justify-between">
+            <div className="h-4 w-32 bg-slate-100 dark:bg-slate-800 rounded animate-pulse" />
+            <div className="size-36 mx-auto bg-slate-100/50 dark:bg-slate-850 rounded-full flex items-center justify-center animate-pulse">
+              <div className="size-24 bg-white dark:bg-slate-950 rounded-full" />
+            </div>
+            <div className="grid grid-cols-3 gap-2 mt-4 animate-pulse">
+              <div className="h-8 bg-slate-100 dark:bg-slate-800 rounded-xl" />
+              <div className="h-8 bg-slate-100 dark:bg-slate-800 rounded-xl" />
+              <div className="h-8 bg-slate-100 dark:bg-slate-800 rounded-xl" />
+            </div>
+          </div>
+        </div>
+
+        {/* Charts Skeletons */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <div className="bg-white dark:bg-slate-900 p-8 rounded-[2.5rem] border border-slate-200 dark:border-slate-800 h-[380px] flex flex-col justify-between animate-pulse">
+            <div className="space-y-2">
+              <div className="h-3 w-20 bg-slate-150 dark:bg-slate-800 rounded" />
+              <div className="h-5 w-48 bg-slate-200 dark:bg-slate-700 rounded-md" />
+            </div>
+            <div className="h-48 w-full bg-slate-50 dark:bg-slate-850/65 rounded-2xl" />
+          </div>
+          <div className="bg-white dark:bg-slate-900 p-8 rounded-[2.5rem] border border-slate-200 dark:border-slate-800 h-[380px] flex flex-col justify-between animate-pulse">
+            <div className="space-y-2">
+              <div className="h-3 w-20 bg-slate-150 dark:bg-slate-800 rounded" />
+              <div className="h-5 w-48 bg-slate-200 dark:bg-slate-700 rounded-md" />
+            </div>
+            <div className="h-48 w-full bg-slate-50 dark:bg-slate-850/65 rounded-2xl" />
+          </div>
+        </div>
+      </motion.div>
+    );
+  }
 
   // Basic Stats
   const totalProperties = properties.length;
@@ -124,8 +194,6 @@ export default function Dashboard() {
   const portfolioRoi = totalInvested > 0 ? (netProfit / totalInvested) * 100 : 0;
   const hasOrphanBilling = orphanBilling.length > 0;
   const orphanNetProfit = orphanBillingBruto - orphanComissoes;
-
-  const [showCalculationDetails, setShowCalculationDetails] = useState(false);
 
   // Detailed breakdowns for each property
   const detailedProperties: Array<{
@@ -242,25 +310,25 @@ export default function Dashboard() {
         <motion.div
           initial={{ opacity: 0, y: -20 }}
           animate={{ opacity: 1, y: 0 }}
-          className="bg-gradient-to-r from-blue-600 to-indigo-700 text-white p-8 rounded-[2.5rem] shadow-xl relative overflow-hidden flex flex-col md:flex-row md:items-center justify-between gap-6"
+          className="bg-gradient-to-r from-[#14213D] to-black text-white p-8 rounded-[2.5rem] border border-[#FCA311]/25 legacy-gradient relative overflow-hidden flex flex-col md:flex-row md:items-center justify-between gap-6 shadow-xl"
         >
           <div className="relative z-10 max-w-2xl">
-            <h3 className="text-2xl font-black tracking-tight mb-2">Bem-vindo ao PropMaestro!</h3>
-            <p className="text-sm text-blue-100/90 leading-relaxed font-normal">
+            <h3 className="text-2xl font-black tracking-tight mb-2 text-[#FCA311]">Bem-vindo ao BidWise!</h3>
+            <p className="text-sm text-[#E5E5E5]/90 leading-relaxed font-normal">
               Seu painel está limpo e totalmente zerado. Comece cadastrando seu primeiro imóvel de leilão para explorar os gráficos e a inteligência analítica do sistema instantaneamente.
             </p>
           </div>
           <div className="relative z-10 shrink-0 flex flex-wrap gap-3">
             <button
               onClick={() => navigate('/properties')}
-              className="px-5 py-3 bg-white text-slate-900 hover:bg-blue-50 active:scale-95 text-xs font-black uppercase tracking-widest rounded-2xl flex items-center gap-2 transition-all shadow-md shadow-black/10"
+              className="px-5 py-3 bg-[#FCA311] text-black hover:bg-[#e28f0e] active:scale-95 text-xs font-black uppercase tracking-widest rounded-2xl flex items-center gap-2 transition-all shadow-md shadow-black/10 cursor-pointer"
             >
-              <Plus className="size-4 text-blue-600" />
+              <Plus className="size-4 text-black" />
               Cadastrar Imóvel
             </button>
           </div>
           {/* Decorative background shape */}
-          <div className="absolute top-0 right-0 w-64 h-64 bg-white/10 rounded-full blur-[80px] pointer-events-none -mr-20 -mt-20" />
+          <div className="absolute top-0 right-0 w-64 h-64 bg-[#FCA311]/10 rounded-full blur-[80px] pointer-events-none -mr-20 -mt-20" />
         </motion.div>
       )}
 
@@ -338,7 +406,7 @@ export default function Dashboard() {
         >
           <div className="flex items-center justify-between mb-4">
             <h3 className="text-xs font-black text-slate-900 dark:text-white uppercase tracking-[0.2em] flex items-center gap-2">
-              <Activity size={14} className="text-blue-500" />
+              <Activity size={14} className="text-[#FCA311]" />
               Mix de Ativos
             </h3>
           </div>
@@ -395,7 +463,7 @@ export default function Dashboard() {
             {/* Card 1: Distribuição de Investimentos */}
             <div className="bg-white dark:bg-slate-900 p-8 rounded-[2.5rem] border border-slate-200 dark:border-slate-800 shadow-sm flex flex-col justify-between min-h-[380px]">
               <div>
-                <span className="text-[10px] font-black text-blue-500 uppercase tracking-[0.2em] mb-1 block">Alocação de Capital</span>
+                <span className="text-[10px] font-black text-[#FCA311] uppercase tracking-[0.2em] mb-1 block">Alocação de Capital</span>
                 <h3 className="text-base font-black text-slate-900 dark:text-white tracking-tight mb-2">
                   Distribuição de Investimentos por Ativo
                 </h3>
@@ -548,7 +616,7 @@ export default function Dashboard() {
                 <Info size={18} />
               </div>
               <div>
-                <span className="text-[10px] font-black text-blue-500 uppercase tracking-[0.2em] mb-0.5 block">Transparência Financeira</span>
+                <span className="text-[10px] font-black text-[#FCA311] uppercase tracking-[0.2em] mb-0.5 block">Transparência Financeira</span>
                 <h3 className="text-sm font-black text-slate-900 dark:text-white uppercase tracking-wider">
                   Como o ROI de {portfolioRoi.toFixed(1)}% é calculado? (Memória de Cálculo)
                 </h3>
@@ -564,7 +632,7 @@ export default function Dashboard() {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6 text-xs text-slate-650 dark:text-slate-400 leading-relaxed font-sans">
                 <div className="space-y-3">
                   <p className="font-bold text-slate-800 dark:text-slate-200 uppercase tracking-wider text-[10px] flex items-center gap-2">
-                    <span className="w-1.5 h-1.5 rounded-full bg-blue-500" /> A Fórmula do ROI do Portfólio
+                    <span className="w-1.5 h-1.5 rounded-full bg-[#FCA311]" /> A Fórmula do ROI do Portfólio
                   </p>
                   <p>
                     O <strong className="text-slate-900 dark:text-white font-black">ROI (Retorno sobre Investimento)</strong> consolidado do seu portfólio completo é calculado nos padrões tradicionais de avaliação corporativa:
@@ -613,7 +681,7 @@ export default function Dashboard() {
                         onClick={() => navigate(`/properties/${p.id}`)}
                         className="hover:bg-slate-50 dark:hover:bg-slate-900/40 transition-colors cursor-pointer group"
                       >
-                        <td className="p-4 pl-6 font-bold text-slate-900 dark:text-white group-hover:text-blue-500 transition-colors">
+                        <td className="p-4 pl-6 font-bold text-slate-900 dark:text-white group-hover:text-[#FCA311] transition-colors">
                           <div className="flex flex-col">
                             <span className="text-xs uppercase tracking-wider">{p.codigo || 'S/Código'}</span>
                             <span className="text-[10px] text-slate-400 font-normal truncate max-w-[220px] mt-0.5">{p.endereco}</span>
@@ -623,7 +691,7 @@ export default function Dashboard() {
                           <span className={cn(
                             "px-2.5 py-1 rounded-full text-[9px] font-black uppercase tracking-wider border",
                             p.status === StatusArrematacao.Vendido
-                              ? "bg-blue-500/10 text-blue-500 border-blue-500/20"
+                              ? "bg-[#FCA311]/10 text-[#FCA311] border-[#FCA311]/20"
                               : p.status === StatusArrematacao.Alugado
                                 ? "bg-emerald-500/10 text-emerald-500 border-emerald-500/20"
                                 : "bg-amber-500/10 text-amber-500 border-amber-500/20"
@@ -746,7 +814,7 @@ export default function Dashboard() {
               <Calendar size={14} className="text-emerald-500" />
               Próximos Leilões (Radar)
             </h3>
-            <button className="text-xs font-black text-blue-500 uppercase tracking-widest hover:underline">Calendário Completo</button>
+            <button className="text-xs font-black text-[#FCA311] uppercase tracking-widest hover:underline">Calendário Completo</button>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
