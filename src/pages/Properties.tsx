@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { Plus, Search, MapPin, Building2, ChevronRight, ChevronDown, Gavel, Trash2, X, ClipboardCheck, Loader2, Info, Calendar, Link as LinkIcon, PencilLine, AlertTriangle } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
@@ -201,7 +201,7 @@ export default function Properties() {
       exit={{ opacity: 0, x: -20 }}
       className="space-y-6"
     >
-      <div className="flex flex-col md:flex-row md:items-end justify-between gap-6">
+      <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 pb-2">
         <div>
           <h1 className="text-3xl md:text-4xl font-black text-slate-900 dark:text-white tracking-tighter">Portfólio Imobiliário</h1>
           <p className="text-slate-500 dark:text-slate-400 text-sm font-medium mt-1">Gestão estratégica de ativos imobiliários</p>
@@ -216,7 +216,7 @@ export default function Properties() {
       </div>
 
       {/* Quick Stats Summary */}
-      <section className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          <section className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         {[
           { 
             label: 'Total Geral', 
@@ -270,7 +270,7 @@ export default function Properties() {
           <input
             type="text"
             placeholder="Pesquisar por endereço, matrícula ou número do processo..."
-            className="flex-1 bg-transparent border-none focus:ring-0 text-sm font-bold placeholder:text-slate-400 dark:text-slate-200"
+            className="flex-1 bg-transparent border-none focus:ring-0 text-sm font-bold placeholder:text-slate-400 dark:text-slate-200 pl-[10px] pt-[5px] pb-[5px] rounded-[10px]"
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
           />
@@ -494,7 +494,7 @@ export default function Properties() {
         </AnimatePresence>
       </div>
 
-      <AnimatePresence>
+  <AnimatePresence>
         {isModalOpen && (
           <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
             <motion.div

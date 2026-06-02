@@ -1,7 +1,5 @@
-import { GoogleGenAI } from "@google/genai";
-import { Imovel, OrigemImovel } from "../types";
-
-const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY! });
+import { Imovel } from "../types";
+import { auth } from "../lib/firebase";
 
 export async function generateRiskAnalysis(
   imovel: Imovel, 
@@ -16,68 +14,39 @@ export async function generateRiskAnalysis(
     totalHolding: number;
     faturamentoLiquido: number;
   }
-) {
-  const isLeilao = imovel.origem === OrigemImovel.LeilaoJudicial || imovel.origem === OrigemImovel.LeilaoExtrajudicial;
-  const leilaoInfo = isLeilao ? `
-    DADOS DO LEILÃO INTEGRADOS:
-    - Processo: ${imovel.processo}
-    - Comarca: ${imovel.comarca}
-    - Tipo: ${imovel.tipo_leilao || 'Não especificado'}
-    - Valor Mínimo: R$ ${imovel.valor_minimo?.toLocaleString('pt-BR')}
-    - Valor Arrematação (Real): R$ ${imovel.valor_arrematacao?.toLocaleString('pt-BR') || 'Não informado'}
-    - Valor Avaliação: R$ ${imovel.valor_avaliacao?.toLocaleString('pt-BR')}
-    - Forma de Arrematação: ${imovel.forma_arrematacao}
-  ` : `
-    DADOS DE AQUISIÇÃO:
-    - Origem: ${imovel.origem}
-    - Valor de Compra / Pedido: R$ ${imovel.valor_minimo?.toLocaleString('pt-BR')}
-    - Valor Efetivo de Compra (Real): R$ ${(imovel.valor_arrematacao || imovel.valor_minimo)?.toLocaleString('pt-BR') || 'Não informado'}
-    - Valor Avaliação: R$ ${imovel.valor_avaliacao?.toLocaleString('pt-BR')}
-  `;
-
-  const financialInfo = financials ? `
-    DADOS FINANCEIROS CONSOLIDADOS:
-    - Total Investimento (Cash-out): R$ ${financials.totalInvestimento.toLocaleString('pt-BR')}
-    - Total em Reformas: R$ ${financials.totalReforma.toLocaleString('pt-BR')}
-    - Custos de Holding/Mensais: R$ ${financials.totalHolding.toLocaleString('pt-BR')}
-    - Faturamento Líquido Esperado: R$ ${financials.faturamentoLiquido.toLocaleString('pt-BR')}
-    - Lucro Bruto Estimado: R$ ${financials.lucroBruto.toLocaleString('pt-BR')}
-    - Imposto de Renda (15%): R$ ${financials.impostoRenda.toLocaleString('pt-BR')}
-    - Lucro Líquido Final: R$ ${financials.lucroLiquido.toLocaleString('pt-BR')}
-    - ROI Líquido: ${financials.roiLiquido.toFixed(2)}%
-  ` : "";
-
-  const prompt = `
-    Como um especialista jurídico e de investimentos imobiliários no Brasil (focado em análise de ativos), analise os seguintes dados e gere um relatório de análise de risco e viabilidade.
-    
-    ${leilaoInfo}
-    ${financialInfo}
-    
-    DADOS DO IMÓVEL:
-    - Endereço: ${imovel.endereco}
-    - Matrícula: ${imovel.matricula}
-    - Tipo de Imóvel: ${imovel.tipo_imovel}
-    - Situação Jurídica: ${imovel.situacao_juridica}
-    - Estado de Conservação: ${imovel.estado_conservacao}
-    - Área: ${imovel.area_m2}m²
-    
-    Por favor, forneça:
-    1. Resumo dos Riscos Jurídicos (Baseado na situação jurídica e origem).
-    2. Análise de Viabilidade Financeira (Use os dados consolidados se fornecidos).
-    3. Pontos de Atenção (Ocupação, débitos de condomínio/IPTU, etc).
-    4. Recomendação Final.
-    
-    Responda em Português e use Markdown para formatação.
-  `;
-
+): Promise<string> {
   try {
-    const response = await ai.models.generateContent({
-      model: "gemini-3-flash-preview",
-      contents: prompt,
+    const headers: Record<string, string> = {
+      'Content-Type': 'application/json'
+    };
+
+    // Safely retrieve the current authenticated user's ID token from Firebase Authentication
+    if (auth.currentUser) {
+      try {
+        const idToken = await auth.currentUser.getIdToken();
+        headers['Authorization'] = `Bearer ${idToken}`;
+      } catch (authErr) {
+        console.warn("Could not retrieve Firebase getIdToken:", authErr);
+      }
+    }
+
+    const response = await fetch('/api/generate-risk-analysis', {
+      method: 'POST',
+      headers,
+      body: JSON.stringify({
+        imovel,
+        financials
+      })
     });
-    return response.text || "Não foi possível gerar a análise no momento.";
+
+    if (!response.ok) {
+      throw new Error(`HTTP Error Status: ${response.status}`);
+    }
+
+    const data = await response.json();
+    return data.analysis || "Não foi possível gerar a análise no momento.";
   } catch (error) {
-    console.error("Erro ao gerar análise de risco:", error);
-    return "Não foi possível gerar a análise no momento.";
+    console.error("Erro ao solicitar análise de risco ao servidor:", error);
+    return "Não foi possível gerar a análise no momento devido a instabilidades na rede ou expiração do serviço. Por favor, tente novamente mais tarde.";
   }
 }
