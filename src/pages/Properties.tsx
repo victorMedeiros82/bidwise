@@ -24,6 +24,11 @@ export default function Properties() {
   const [filterLocation, setFilterLocation] = useState('');
   const [searchingCep, setSearchingCep] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
+  
+  // Custom states for intelligent property code generation
+  const [autoGenerateCode, setAutoGenerateCode] = useState(true);
+  const [tempCodeSuffix, setTempCodeSuffix] = useState('');
+
   const [formData, setFormData] = useState<Partial<Imovel>>({
     origem: OrigemImovel.LeilaoExtrajudicial,
     tipo_imovel: TipoImovel.Apartamento,
@@ -36,6 +41,69 @@ export default function Properties() {
     tipo_arrematacao: TipoArrematacao.AVista,
     saldo_devedor: 0
   });
+
+  const getTipoAbbrev = (tipo?: TipoImovel): string => {
+    if (!tipo) return 'IMV';
+    switch (tipo) {
+      case TipoImovel.Apartamento: return 'APT';
+      case TipoImovel.Casa: return 'CS';
+      case TipoImovel.Terreno: return 'TRN';
+      case TipoImovel.SalaComercial: return 'COM';
+      case TipoImovel.Galpao: return 'GP';
+      default: return 'OUT';
+    }
+  };
+
+  const getCityAbbrev = (cidade?: string): string => {
+    if (!cidade) return 'XXXX';
+    return cidade
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .replace(/[^a-zA-Z0-9]/g, '')
+      .substring(0, 4)
+      .toUpperCase();
+  };
+
+  const getMatriculaSuffix = (matricula?: string): string => {
+    if (matricula && matricula.trim().length > 0) {
+      const clean = matricula.replace(/[^a-zA-Z0-9]/g, '');
+      if (clean.length >= 3) {
+        return clean.substring(clean.length - 3).toUpperCase();
+      }
+    }
+    return '';
+  };
+
+  const getSuggestedCode = (data: Partial<Imovel>): string => {
+    const uf = data.estado && data.estado.trim().length === 2 ? data.estado.trim().toUpperCase() : 'UF';
+    const tipo = getTipoAbbrev(data.tipo_imovel);
+    const city = getCityAbbrev(data.cidade);
+    
+    let suffix = getMatriculaSuffix(data.matricula);
+    if (!suffix) {
+      suffix = tempCodeSuffix || '000';
+    }
+    
+    return `${uf}-${tipo}-${city}-${suffix}`;
+  };
+
+  // Automatically update the code when values change
+  useEffect(() => {
+    if (autoGenerateCode && isModalOpen) {
+      const suggested = getSuggestedCode(formData);
+      if (suggested !== formData.codigo) {
+        setFormData(prev => ({ ...prev, codigo: suggested }));
+      }
+    }
+  }, [
+    autoGenerateCode,
+    isModalOpen,
+    formData.estado,
+    formData.tipo_imovel,
+    formData.cidade,
+    formData.matricula,
+    tempCodeSuffix
+  ]);
 
   if (loading) {
     return (
@@ -217,12 +285,17 @@ export default function Properties() {
   const handleOpenModal = () => {
     setEditingProperty(null);
     resetForm();
+    const rdSuf = Math.random().toString(36).substring(2, 5).toUpperCase();
+    setTempCodeSuffix(rdSuf);
+    setAutoGenerateCode(true);
     setIsModalOpen(true);
   };
 
   const handleEditModal = (property: Imovel) => {
     setEditingProperty(property);
     setFormData(property);
+    setTempCodeSuffix('');
+    setAutoGenerateCode(false); // Do not overwrite existing code automatically on edit load
     setIsModalOpen(true);
   };
 
@@ -234,9 +307,7 @@ export default function Properties() {
       const dataToSave = { ...formData };
       
       if (!dataToSave.codigo) {
-        const timestamp = Date.now().toString(36).toUpperCase();
-        const random = Math.random().toString(36).substring(2, 5).toUpperCase();
-        dataToSave.codigo = `IMV-${timestamp}-${random}`;
+        dataToSave.codigo = getSuggestedCode(dataToSave);
       }
 
       if (editingProperty?.id) {
@@ -585,8 +656,8 @@ export default function Properties() {
                 <div className="flex-1 overflow-y-auto p-6 space-y-8 scrollbar-hide">
                   {/* Seção 1: Identificação e Aquisição */}
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <section className="space-y-4 md:col-span-2">
-                      <div className="flex items-center gap-2 mb-1">
+                    <section className="space-y-4 md:col-span-1">
+                      <div className="flex items-center gap-2 pt-0 mt-0 mr-0 ml-0 mb-[10px]" style={{ paddingTop: '0px', marginTop: '0px', marginRight: '0px', marginLeft: '0px', marginBottom: '10px' }}>
                         <div className="p-1.5 bg-[#FCA311]/10 dark:bg-[#FCA311]/20 rounded-lg">
                           <ClipboardCheck size={16} className="text-[#FCA311]" />
                         </div>
@@ -607,6 +678,59 @@ export default function Properties() {
                         <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none text-slate-400 dark:text-slate-500">
                           <ChevronDown size={16} />
                         </div>
+                      </div>
+                    </section>
+
+                    <section className="space-y-3 md:col-span-1">
+                      <div className="flex items-center justify-between pt-0 mt-0 mr-0 ml-0 mb-[10px]" style={{ paddingTop: '0px', marginTop: '0px', marginRight: '0px', marginLeft: '0px', marginBottom: '10px' }}>
+                        <div className="flex items-center gap-2">
+                          <div className="p-1.5 bg-[#FCA311]/10 dark:bg-[#FCA311]/20 rounded-lg">
+                            <Info size={16} className="text-[#FCA311]" />
+                          </div>
+                          <h3 className="text-xs font-bold text-slate-500 uppercase tracking-widest">Código do Ativo</h3>
+                        </div>
+                        <label className="flex items-center gap-1.5 text-[10px] font-black text-[#FCA311] cursor-pointer">
+                          <input 
+                            type="checkbox" 
+                            checked={autoGenerateCode} 
+                            onChange={(e) => {
+                              setAutoGenerateCode(e.target.checked);
+                              if (e.target.checked) {
+                                const suggested = getSuggestedCode(formData);
+                                setFormData(prev => ({ ...prev, codigo: suggested }));
+                              }
+                            }}
+                            className="rounded border-slate-300 dark:border-slate-700 text-[#FCA311] focus:ring-[#FCA311] w-3 h-3"
+                          />
+                          Automático
+                        </label>
+                      </div>
+                      <div className="relative">
+                        <input
+                          type="text"
+                          placeholder="EX: SP-APT-SAOP-456"
+                          className={cn(
+                            "w-full px-4 py-3 bg-white dark:bg-slate-800 border rounded-xl outline-none text-sm font-bold uppercase transition-all focus:ring-2",
+                            autoGenerateCode ? "text-slate-500 dark:text-slate-400 bg-slate-50 dark:bg-slate-800/50 border-slate-200 dark:border-slate-800 cursor-not-allowed" : "text-slate-950 dark:text-white border-slate-200 dark:border-slate-700 focus:ring-[#FCA311]/15"
+                          )}
+                          value={formData.codigo || ''}
+                          disabled={autoGenerateCode}
+                          onChange={e => {
+                            setFormData({...formData, codigo: e.target.value.toUpperCase()});
+                          }}
+                        />
+                        {autoGenerateCode && (
+                          <button 
+                            type="button" 
+                            onClick={() => {
+                              const suggested = getSuggestedCode(formData);
+                              setFormData(prev => ({ ...prev, codigo: suggested }));
+                            }}
+                            className="absolute right-2 top-1/2 -translate-y-1/2 px-2.5 py-1 text-[9px] font-black uppercase text-white bg-[#FCA311] hover:bg-[#e28f0e] rounded-lg transition-all active:scale-95"
+                          >
+                            Regerar
+                          </button>
+                        )}
                       </div>
                     </section>
                   </div>

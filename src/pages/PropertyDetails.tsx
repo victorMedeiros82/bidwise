@@ -1063,7 +1063,7 @@ export default function PropertyDetails() {
                     <span className="w-4 h-px bg-slate-300" />
                     Custos de Aquisição
                   </h3>
-                  <p className="text-[8px] font-bold text-blue-500 uppercase tracking-widest">Registre apenas o valor desembolsado (ex: Entrada do financiamento)</p>
+                  <p className="text-[10px] font-bold text-blue-500 uppercase tracking-widest text-left font-sans">Registre apenas o valor desembolsado (ex: Entrada do financiamento)</p>
                 </div>
                 <button 
                   onClick={() => setShowAddAquisicao(!showAddAquisicao)}
