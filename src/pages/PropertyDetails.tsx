@@ -104,7 +104,70 @@ export default function PropertyDetails() {
     }
   }, [activeTab, id]);
 
+  // Operational Checklist hook for current property
+  const [checklist, setChecklist] = useState<Record<string, boolean>>(() => {
+    if (id) {
+      const saved = localStorage.getItem(`checklist_${id}`);
+      return saved ? JSON.parse(saved) : {
+        'estudo_edital': false,
+        'analise_matricula': false,
+        'analise_risco_ia': false,
+        'guia_itbi': false,
+        'registro_carta': false,
+        'comprovacao_posse': false,
+        'calculo_reforma': false,
+        'execucao_benfeitorias': false,
+        'limpeza_marketing': false,
+        'anuncio_imobiliaria': false,
+        'receber_venda': false
+      };
+    }
+    return {};
+  });
+
+  useEffect(() => {
+    if (id) {
+      localStorage.setItem(`checklist_${id}`, JSON.stringify(checklist));
+    }
+  }, [checklist, id]);
+
+  const toggleChecklist = (key: string) => {
+    setChecklist(prev => ({ ...prev, [key]: !prev[key] }));
+  };
+
+  const [vendaSimulada, setVendaSimulada] = useState<number>(0);
+
+  // Sync simulation values with active assets evaluation data
+  useEffect(() => {
+    if (imovel) {
+      const matchedFats = faturamento.filter(f => f.id_imovel === id);
+      const fBruto = matchedFats.reduce((acc, curr) => acc + (curr.valor || 0), 0);
+      const fComissao = matchedFats.reduce((acc, curr) => acc + (curr.custo_corretagem || 0), 0);
+      const fLiquido = fBruto - fComissao;
+
+      if (fLiquido > 0) {
+        setVendaSimulada(fLiquido);
+      } else if (imovel.valor_avaliacao) {
+        setVendaSimulada(imovel.valor_avaliacao);
+      } else if (imovel.valor_minimo) {
+        setVendaSimulada(imovel.valor_minimo * 1.4);
+      }
+    }
+  }, [id, faturamento, imovel?.valor_avaliacao, imovel?.valor_minimo]);
+
   const [isEditingLance, setIsEditingLance] = useState(false);
+  const [roadmapTab, setRoadmapTab] = useState<number>(0);
+
+  // Auto-sync roadmap selection tab with current status of the asset
+  useEffect(() => {
+    if (imovel) {
+      const idx = imovel.status_arrematacao === StatusArrematacao.Analise ? 0 :
+                  imovel.status_arrematacao === StatusArrematacao.Arrematado ? 1 :
+                  (imovel.status_arrematacao === StatusArrematacao.Vendido || imovel.status_arrematacao === StatusArrematacao.Alugado) ? 3 : 2;
+      setRoadmapTab(idx);
+    }
+  }, [imovel?.status_arrematacao]);
+
   const [analyzing, setAnalyzing] = useState(false);
   const [showAddReforma, setShowAddReforma] = useState(false);
   const [showAddFaturamento, setShowAddFaturamento] = useState(false);
@@ -554,6 +617,323 @@ export default function PropertyDetails() {
             </div>
           </div>
         </div>
+      </div>
+
+      {/* SEÇÃO DA JORNADA OPERACIONAL E SIMULADOR FINANCEIRO SMART */}
+      <div className="grid grid-cols-1 xl:grid-cols-12 gap-8 my-8">
+        {/* Bloco 1: Roteiro Operacional / Pipeline do Ativo (7 Colunas) */}
+        <div className="xl:col-span-7 bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 rounded-[2.5rem] p-6 lg:p-8 hover:shadow-xl transition-all relative overflow-hidden flex flex-col justify-between">
+          <div>
+            <div className="flex items-center gap-3 mb-6">
+              <div className="size-10 bg-indigo-50 dark:bg-indigo-900/20 text-indigo-600 dark:text-indigo-400 rounded-xl flex items-center justify-center">
+                <ShieldCheck size={20} />
+              </div>
+              <div>
+                <h3 className="text-md font-black text-slate-900 dark:text-white tracking-tight">Roteiro Operacional do Ativo</h3>
+                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Acompanhe a evolução do projeto e checklist de obrigações</p>
+              </div>
+            </div>
+
+            {/* Stepper horizontal interativo */}
+            <div className="flex items-start md:items-center justify-between gap-2 border-b border-slate-100 dark:border-slate-800 pb-6 mb-6 overflow-x-auto scrollbar-none">
+              {[
+                { label: 'Análise', activeIndex: 0, icon: ShieldAlert, color: 'text-amber-500 bg-amber-50 dark:bg-amber-950/20' },
+                { label: 'Aquisição', activeIndex: 1, icon: Gavel, color: 'text-blue-500 bg-blue-50 dark:bg-blue-950/20' },
+                { label: 'Obras', activeIndex: 2, icon: Hammer, color: 'text-orange-500 bg-orange-50 dark:bg-orange-950/20' },
+                { label: 'Saída', activeIndex: 3, icon: TrendingUp, color: 'text-emerald-500 bg-emerald-50 dark:bg-emerald-950/20' }
+              ].map((step, idx) => {
+                const currentIdx = imovel.status_arrematacao === StatusArrematacao.Analise ? 0 :
+                                   imovel.status_arrematacao === StatusArrematacao.Arrematado ? 1 :
+                                   (imovel.status_arrematacao === StatusArrematacao.Vendido || imovel.status_arrematacao === StatusArrematacao.Alugado) ? 3 : 2;
+                
+                const isPassed = idx < currentIdx;
+                const isCurrent = idx === currentIdx;
+                const isSelected = idx === roadmapTab;
+
+                return (
+                  <button
+                    key={step.label}
+                    onClick={() => setRoadmapTab(idx)}
+                    className={cn(
+                      "flex flex-col items-center gap-2 group relative text-center focus:outline-none transition-all px-2 py-1.5 rounded-xl shrink-0",
+                      isSelected ? "bg-slate-50 dark:bg-slate-800/50" : "hover:bg-slate-50/50 dark:hover:bg-slate-850/30"
+                    )}
+                  >
+                    <div className="relative z-10 flex items-center justify-center">
+                      <div className={cn(
+                        "size-10 rounded-xl flex items-center justify-center border-2 transition-all",
+                        isPassed ? "bg-emerald-500 border-emerald-500 text-white" :
+                        isCurrent ? "bg-slate-900 border-slate-900 text-white dark:bg-white dark:border-white dark:text-slate-900 shadow-md" :
+                        "bg-white border-slate-200 text-slate-400 dark:bg-slate-950 dark:border-slate-800"
+                      )}>
+                        {isPassed ? <CheckCircle2 size={16} /> : <step.icon size={16} />}
+                      </div>
+                      
+                      {isCurrent && (
+                        <span className="absolute -top-1 -right-1 flex h-3.5 w-3.5 relative">
+                          <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-slate-400 opacity-75"></span>
+                          <span className="relative inline-flex rounded-full h-3.5 w-3.5 bg-blue-500"></span>
+                        </span>
+                      )}
+                    </div>
+                    <div className="flex flex-col justify-start">
+                      <span className={cn(
+                        "text-[10px] font-black tracking-tight uppercase leading-none",
+                        isSelected ? "text-slate-900 dark:text-white" : "text-slate-400"
+                      )}>{step.label}</span>
+                      {isCurrent && (
+                        <span className="text-[8px] font-black tracking-wide text-blue-500 uppercase">Ativo</span>
+                      )}
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
+
+            {/* Checklist Dinâmico da Fase selecionada */}
+            <AnimatePresence mode="wait">
+              <motion.div
+                key={roadmapTab}
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -10 }}
+                className="space-y-4"
+              >
+                {roadmapTab === 0 && (
+                  <div className="space-y-3">
+                    <p className="text-[11px] font-bold text-slate-500 text-left">Fase de Diligência: Verifique todos os riscos antes de planejar lances ou concretizar a compra.</p>
+                    <div className="grid grid-cols-1 gap-2.5">
+                      {[
+                        { key: 'estudo_edital', label: 'Estudar edital do leilão e taxas administrativas' },
+                        { key: 'analise_matricula', label: 'Verificar matrícula mãe (RGI) atualizada do imóvel' },
+                        { key: 'analise_risco_ia', label: 'Gerar análise jurídica e risco com Gemini AI no BIDWISE' }
+                      ].map(item => (
+                        <label 
+                          key={item.key} 
+                          className="flex items-center gap-3 p-3.5 bg-slate-50 dark:bg-slate-800/30 rounded-2xl cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors border border-transparent hover:border-slate-200 dark:hover:border-slate-700 text-left select-none"
+                        >
+                          <input 
+                            type="checkbox" 
+                            checked={!!checklist[item.key]} 
+                            onChange={() => toggleChecklist(item.key)} 
+                            className="size-4 rounded-md accent-emerald-500 text-white cursor-pointer"
+                          />
+                          <span className={cn(
+                            "text-xs font-bold transition-all",
+                            checklist[item.key] ? "text-slate-400 line-through" : "text-slate-700 dark:text-slate-300"
+                          )}>{item.label}</span>
+                        </label>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {roadmapTab === 1 && (
+                  <div className="space-y-3">
+                    <p className="text-[11px] font-bold text-slate-500 text-left">Fase de Homologação e Posse: Regularização legal da propriedade e desocupação imediata.</p>
+                    <div className="grid grid-cols-1 gap-2.5">
+                      {[
+                        { key: 'guia_itbi', label: 'Emissão e pagamento da Guia de ITBI local e foro' },
+                        { key: 'registro_carta', label: 'Protocolamento do registro de Carta de Arrematação' },
+                        { key: 'comprovacao_posse', label: 'Imissão de posse ou acerto amigável das chaves' }
+                      ].map(item => (
+                        <label 
+                          key={item.key} 
+                          className="flex items-center gap-3 p-3.5 bg-slate-50 dark:bg-slate-800/30 rounded-2xl cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors border border-transparent hover:border-slate-200 dark:hover:border-slate-700 text-left select-none"
+                        >
+                          <input 
+                            type="checkbox" 
+                            checked={!!checklist[item.key]} 
+                            onChange={() => toggleChecklist(item.key)} 
+                            className="size-4 rounded-md accent-emerald-500 text-white cursor-pointer"
+                          />
+                          <span className={cn(
+                            "text-xs font-bold transition-all",
+                            checklist[item.key] ? "text-slate-400 line-through" : "text-slate-700 dark:text-slate-300"
+                          )}>{item.label}</span>
+                        </label>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {roadmapTab === 2 && (
+                  <div className="space-y-3">
+                    <p className="text-[11px] font-bold text-slate-500 text-left">Fase de Execução: Projetos, obras de retrofit, pinturas e reparos que trarão alta liquidez.</p>
+                    <div className="grid grid-cols-1 gap-2.5">
+                      {[
+                        { key: 'calculo_reforma', label: 'Estipular e planilhar teto de custos de reformas' },
+                        { key: 'execucao_benfeitorias', label: 'Acompanhar obras civis e faturas de materiais' },
+                        { key: 'limpeza_marketing', label: 'Contratar limpeza pós-obra do ativo e capturar fotos' }
+                      ].map(item => (
+                        <label 
+                          key={item.key} 
+                          className="flex items-center gap-3 p-3.5 bg-slate-50 dark:bg-slate-800/30 rounded-2xl cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors border border-transparent hover:border-slate-200 dark:hover:border-slate-700 text-left select-none"
+                        >
+                          <input 
+                            type="checkbox" 
+                            checked={!!checklist[item.key]} 
+                            onChange={() => toggleChecklist(item.key)} 
+                            className="size-4 rounded-md accent-emerald-500 text-white cursor-pointer"
+                          />
+                          <span className={cn(
+                            "text-xs font-bold transition-all",
+                            checklist[item.key] ? "text-slate-400 line-through" : "text-slate-700 dark:text-slate-300"
+                          )}>{item.label}</span>
+                        </label>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {roadmapTab === 3 && (
+                  <div className="space-y-3">
+                    <p className="text-[11px] font-bold text-slate-500 text-left">Fase de Saída Comercial: Publicitação do ativo imobiliário e contabilização de entradas financeiras.</p>
+                    <div className="grid grid-cols-1 gap-2.5">
+                      {[
+                        { key: 'anuncio_imobiliaria', label: 'Anunciar o ativo em canais digitais e imobiliárias' },
+                        { key: 'receber_venda', label: 'Declarar faturamento e dar baixa operacional no ativo' }
+                      ].map(item => (
+                        <label 
+                          key={item.key} 
+                          className="flex items-center gap-3 p-3.5 bg-slate-50 dark:bg-slate-800/30 rounded-2xl cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors border border-transparent hover:border-slate-200 dark:hover:border-slate-700 text-left select-none"
+                        >
+                          <input 
+                            type="checkbox" 
+                            checked={!!checklist[item.key]} 
+                            onChange={() => toggleChecklist(item.key)} 
+                            className="size-4 rounded-md accent-emerald-500 text-white cursor-pointer"
+                          />
+                          <span className={cn(
+                            "text-xs font-bold transition-all",
+                            checklist[item.key] ? "text-slate-400 line-through" : "text-slate-700 dark:text-slate-300"
+                          )}>{item.label}</span>
+                        </label>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </motion.div>
+            </AnimatePresence>
+          </div>
+
+          <div className="mt-6 pt-4 border-t border-slate-50 dark:border-slate-800 flex items-center justify-between text-[10px] font-bold text-slate-400 lowercase italic">
+            <span>Roteiro interativo de tarefas operacionais</span>
+            <span className="text-blue-500 font-extrabold uppercase tracking-wide">BIDWISE Ops™</span>
+          </div>
+        </div>
+
+        {/* Bloco 2: Deal Simulator Sandbox (5 Colunas) */}
+        {(() => {
+          const simLucroBruto = vendaSimulada - custosBaseIR;
+          const simIR = simLucroBruto > 0 ? simLucroBruto * 0.15 : 0;
+          const simLucroLiquido = vendaSimulada - custosBaseIR - totalHolding - simIR;
+          const simRoi = totalInvestimento > 0 ? (simLucroLiquido / totalInvestimento) * 100 : 0;
+
+          return (
+            <div className="xl:col-span-5 bg-gradient-to-br from-slate-900 via-slate-950 to-slate-900 border border-slate-800 rounded-[2.5rem] p-6 lg:p-8 hover:shadow-xl transition-all relative overflow-hidden text-white flex flex-col justify-between">
+              {/* Backlit background overlay */}
+              <div className="absolute top-0 right-0 w-48 h-48 bg-emerald-500/10 blur-[100px] pointer-events-none rounded-full" />
+              <div className="absolute bottom-0 left-0 w-32 h-32 bg-blue-500/10 blur-[80px] pointer-events-none rounded-full" />
+
+              <div>
+                <div className="flex items-center justify-between mb-6">
+                  <div className="flex items-center gap-3">
+                    <div className="size-10 bg-emerald-500/20 text-emerald-400 rounded-xl flex items-center justify-center">
+                      <TrendingUp size={20} />
+                    </div>
+                    <div>
+                      <h3 className="text-md font-black tracking-tight text-white leading-none">Simulador de ROI</h3>
+                      <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mt-1">Simule o cenário ideal de rentabilidade do ativo</p>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Slider input com label dinâmico */}
+                <div className="space-y-4 mb-6">
+                  <div className="flex justify-between items-end">
+                    <span className="text-xs font-black text-slate-400 uppercase tracking-widest">Preço de Venda Simulado</span>
+                    <span className="text-lg font-black text-emerald-400 tracking-tight">
+                      R$ {vendaSimulada.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                    </span>
+                  </div>
+                  
+                  <input
+                    type="range"
+                    min={Math.round(totalInvestimento * 0.8)}
+                    max={Math.round((imovel.valor_avaliacao || valorArrematacaoBase) * 2.5)}
+                    step={5000}
+                    value={vendaSimulada}
+                    onChange={(e) => setVendaSimulada(parseFloat(e.target.value))}
+                    className="w-full h-2 bg-slate-850 rounded-lg appearance-none cursor-pointer accent-emerald-400 focus:outline-none"
+                  />
+                  
+                  {/* Presets rítmicos */}
+                  <div className="flex gap-1.5 overflow-x-auto scrollbar-none py-1">
+                    <button 
+                      onClick={() => setVendaSimulada(Math.round(totalInvestimento * 1.15))}
+                      className="px-2.5 py-1.5 bg-slate-800 hover:bg-slate-750 text-[9px] font-black uppercase tracking-wider rounded-lg transition-colors text-slate-300"
+                    >
+                      Cost +15%
+                    </button>
+                    {imovel.valor_avaliacao && (
+                      <>
+                        <button 
+                          onClick={() => setVendaSimulada(Math.round(imovel.valor_avaliacao!))}
+                          className="px-2.5 py-1.5 bg-slate-800 hover:bg-slate-750 text-[9px] font-black uppercase tracking-wider rounded-lg transition-colors text-slate-300"
+                        >
+                          Avaliação
+                        </button>
+                        <button 
+                          onClick={() => setVendaSimulada(Math.round(imovel.valor_avaliacao! * 1.25))}
+                          className="px-2.5 py-1.5 bg-slate-800 hover:bg-slate-750 text-[9px] font-black uppercase tracking-wider rounded-lg transition-colors text-slate-300"
+                        >
+                          Eval +25%
+                        </button>
+                      </>
+                    )}
+                  </div>
+                </div>
+
+                {/* Grid de simulação */}
+                <div className="grid grid-cols-2 gap-3 pb-2 border-b border-white/5 mb-6">
+                  <div className="bg-white/5 p-4 rounded-2xl flex flex-col justify-between">
+                    <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest leading-none mb-2">Lucro Líquido Simulado</span>
+                    <span className={cn(
+                      "text-sm font-black tracking-tight",
+                      simLucroLiquido > 0 ? "text-emerald-400" : "text-rose-400"
+                    )}>R$ {Math.round(simLucroLiquido).toLocaleString('pt-BR')}</span>
+                  </div>
+                  <div className="bg-white/5 p-4 rounded-2xl flex flex-col justify-between">
+                    <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest leading-none mb-2">Imposto de Renda (15%)</span>
+                    <span className="text-sm font-black tracking-tight text-slate-300">R$ {Math.round(simIR).toLocaleString('pt-BR')}</span>
+                  </div>
+                </div>
+
+                {/* ROI central */}
+                <div className="flex items-center justify-between bg-emerald-500/10 border border-emerald-500/20 p-4 rounded-2xl">
+                  <div>
+                    <span className="text-[9px] font-black text-emerald-400 uppercase tracking-widest block mb-0.5">Retorno sobre Capital Alocado</span>
+                    <span className="text-xs font-bold text-slate-400 leading-none">ROI Líquido Estimado</span>
+                  </div>
+                  <div className="text-right">
+                    <span className={cn(
+                      "text-xl font-black block tracking-tight leading-none",
+                      simRoi > 0 ? "text-emerald-400" : "text-rose-400"
+                    )}>
+                      {simRoi.toFixed(2)}%
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              <div className="mt-6 pt-4 border-t border-white/5 flex items-center justify-between text-[10px] font-bold text-slate-400 lowercase italic">
+                <span>Calculadora integrada em tempo de execução</span>
+                <span className="text-emerald-400 font-extrabold uppercase tracking-wide">BIDWISE Deal™</span>
+              </div>
+            </div>
+          );
+        })()}
       </div>
 
       <div className="flex overflow-x-auto scrollbar-none max-w-full gap-2 p-1.5 bg-slate-100 dark:bg-slate-900 rounded-[1.25rem] md:w-fit mb-8 border border-slate-200 dark:border-slate-800 shadow-inner select-none snap-x active:cursor-grabbing">

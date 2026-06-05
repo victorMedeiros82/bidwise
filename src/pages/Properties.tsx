@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { Plus, Search, MapPin, Building2, ChevronRight, ChevronDown, Gavel, Trash2, X, ClipboardCheck, Loader2, Info, Calendar, Link as LinkIcon, PencilLine, AlertTriangle } from 'lucide-react';
+import { Plus, Search, MapPin, Building2, ChevronRight, ChevronDown, Gavel, Trash2, X, ClipboardCheck, Loader2, Info, Calendar, Link as LinkIcon, PencilLine, AlertTriangle, Home } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import CurrencyInput from 'react-currency-input-field';
 import { useFirestore } from '../hooks/useFirestore';
@@ -392,19 +392,47 @@ export default function Properties() {
       </section>
 
       {/* Search and Filters */}
-      <div className="bg-white dark:bg-slate-900 p-5 rounded-2xl border border-slate-100 dark:border-slate-800 shadow-sm space-y-5">
-        <div className="flex items-center gap-4 group">
+      <div className="bg-white dark:bg-slate-900 p-6 rounded-[2rem] border border-slate-100 dark:border-slate-800 shadow-sm space-y-6">
+        <div className="flex items-center gap-4 group bg-slate-50 dark:bg-slate-800/40 p-4 rounded-xl border border-transparent focus-within:border-slate-200 dark:focus-within:border-slate-700 transition-all">
           <Search className="text-slate-400 group-focus-within:text-slate-900 transition-colors" size={20} />
           <input
             type="text"
             placeholder="Pesquisar por endereço, matrícula ou número do processo..."
-            className="flex-1 bg-transparent border-none focus:ring-0 text-sm font-bold placeholder:text-slate-400 dark:text-slate-200"
+            className="flex-1 bg-transparent border-none focus:ring-0 text-sm font-bold placeholder:text-slate-400 dark:text-slate-200 outline-none"
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
           />
         </div>
+
+        {/* Status Quick Pills with Dynamic Counts */}
+        <div className="flex overflow-x-auto scrollbar-none gap-2 pb-1.5 border-b border-slate-50 dark:border-slate-800/50">
+          {[
+            { label: 'Todos', value: 'Todos', activeColor: 'bg-slate-900 text-white dark:bg-white dark:text-slate-900', count: properties.length },
+            { label: 'Análise', value: StatusArrematacao.Analise, activeColor: 'bg-amber-500 text-white', count: properties.filter(p => p.status_arrematacao === StatusArrematacao.Analise).length },
+            { label: 'Arrematados', value: StatusArrematacao.Arrematado, activeColor: 'bg-emerald-500 text-white', count: properties.filter(p => p.status_arrematacao === StatusArrematacao.Arrematado).length },
+            { label: 'Vendidos', value: StatusArrematacao.Vendido, activeColor: 'bg-indigo-600 text-white', count: properties.filter(p => p.status_arrematacao === StatusArrematacao.Vendido).length },
+            { label: 'Alugados', value: StatusArrematacao.Alugado, activeColor: 'bg-sky-500 text-white', count: properties.filter(p => p.status_arrematacao === StatusArrematacao.Alugado).length },
+          ].map(pill => (
+            <button
+               key={pill.value}
+               onClick={() => setFilterStatus(pill.value as any)}
+               className={cn(
+                 "flex items-center gap-2.5 px-4 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all shrink-0 border border-transparent shadow-inner",
+                 filterStatus === pill.value 
+                   ? pill.activeColor + " shadow-md font-black scale-[1.02]" 
+                   : "bg-slate-50 dark:bg-slate-800/60 text-slate-500 hover:text-slate-700 dark:hover:text-slate-350 hover:bg-slate-100 dark:hover:bg-slate-800"
+               )}
+            >
+               <span>{pill.label}</span>
+               <span className={cn(
+                 "px-2 py-0.5 rounded-md text-[9px] font-black font-mono",
+                 filterStatus === pill.value ? "bg-black/15 text-white dark:bg-white/20" : "bg-slate-200/55 dark:bg-slate-700 text-slate-500 dark:text-slate-400"
+               )}>{pill.count}</span>
+            </button>
+          ))}
+        </div>
         
-        <div className="flex flex-wrap items-center gap-3 pt-5 border-t border-slate-50 dark:border-slate-800">
+        <div className="flex flex-wrap items-center gap-3 pt-1">
           <select 
             value={filterStatus}
             onChange={(e) => setFilterStatus(e.target.value as any)}
@@ -509,22 +537,67 @@ export default function Properties() {
                 className="group bg-white dark:bg-slate-900 rounded-3xl border border-slate-100 dark:border-slate-800 shadow-sm hover:shadow-2xl hover:shadow-slate-200/50 dark:hover:shadow-none transition-all duration-500 overflow-hidden flex flex-col"
               >
                 {/* Visual Header */}
-                <div className="relative h-32 bg-slate-50 dark:bg-slate-800/50 flex items-center justify-center overflow-hidden">
-                  <div className="absolute inset-0 bg-gradient-to-br from-slate-100/50 to-transparent dark:from-slate-800/50" />
-                  <Building2 size={48} className="text-slate-200 dark:text-slate-700 group-hover:scale-110 group-hover:text-amber-500/20 transition-all duration-700" strokeWidth={1} />
-                  
-                  {/* Status Badge */}
-                  <div className={cn(
-                    "absolute top-4 right-4 px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest shadow-sm border",
-                    imovel.status_arrematacao === StatusArrematacao.Arrematado 
-                      ? "bg-emerald-500 border-emerald-400 text-white" 
-                      : imovel.status_arrematacao === StatusArrematacao.Analise 
-                        ? "bg-amber-500 border-amber-400 text-white" 
-                        : "bg-slate-700 border-slate-600 text-white"
-                  )}>
-                    {imovel.status_arrematacao}
-                  </div>
-                </div>
+                {(() => {
+                  const getCardBranding = (tipo?: TipoImovel) => {
+                    switch (tipo) {
+                      case TipoImovel.Apartamento:
+                        return {
+                          gradient: "from-blue-500/10 via-indigo-500/5 to-transparent dark:from-blue-950/30",
+                          icon: Building2,
+                          color: "text-blue-500/25 dark:text-blue-400/10 group-hover:text-blue-500/35"
+                        };
+                      case TipoImovel.Casa:
+                        return {
+                          gradient: "from-amber-500/10 via-orange-500/5 to-transparent dark:from-amber-950/30",
+                          icon: Home,
+                          color: "text-amber-500/25 dark:text-amber-400/10 group-hover:text-amber-500/35"
+                        };
+                      case TipoImovel.Terreno:
+                        return {
+                          gradient: "from-emerald-500/10 via-teal-500/5 to-transparent dark:from-emerald-950/30",
+                          icon: MapPin,
+                          color: "text-emerald-500/25 dark:text-emerald-400/10 group-hover:text-emerald-500/35"
+                        };
+                      default:
+                        return {
+                          gradient: "from-slate-500/10 via-slate-605/5 to-transparent dark:from-slate-900/40",
+                          icon: Building2,
+                          color: "text-slate-300 dark:text-slate-700 group-hover:text-amber-500/25"
+                        };
+                    }
+                  };
+                  const branding = getCardBranding(imovel.tipo_imovel);
+                  const CardIcon = branding.icon;
+
+                  return (
+                    <div className={cn("relative h-32 flex items-center justify-center overflow-hidden bg-slate-50 dark:bg-slate-800/25 border-b border-slate-100 dark:border-slate-800/40 transition-all", branding.gradient)}>
+                      {/* Ambient lighting effect */}
+                      <div className="absolute inset-0 bg-gradient-to-br from-white/10 to-transparent dark:from-black/15 pointer-events-none" />
+                      <CardIcon size={52} className={cn("transition-all duration-700 group-hover:scale-110", branding.color)} strokeWidth={1} />
+                      
+                      {/* Property Type Badge Overlay */}
+                      <div className="absolute top-4 left-4 bg-white/80 dark:bg-slate-900/80 backdrop-blur-md px-2.5 py-1 rounded-lg text-[9px] font-black uppercase tracking-widest text-slate-500 dark:text-slate-400 border border-slate-100 dark:border-slate-800">
+                        {imovel.tipo_imovel}
+                      </div>
+
+                      {/* Status Badge */}
+                      <div className={cn(
+                        "absolute top-4 right-4 px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest shadow-sm border transition-all",
+                        imovel.status_arrematacao === StatusArrematacao.Arrematado 
+                          ? "bg-emerald-500 border-emerald-400 text-white" 
+                          : imovel.status_arrematacao === StatusArrematacao.Analise 
+                            ? "bg-amber-500 border-amber-400 text-white" 
+                            : imovel.status_arrematacao === StatusArrematacao.Vendido 
+                              ? "bg-indigo-600 border-indigo-500 text-white shadow-indigo-500/10"
+                              : imovel.status_arrematacao === StatusArrematacao.Alugado
+                                ? "bg-sky-500 border-sky-400 text-white shadow-sky-500/10"
+                                : "bg-slate-700 border-slate-600 text-white"
+                      )}>
+                        {imovel.status_arrematacao}
+                      </div>
+                    </div>
+                  );
+                })()}
 
                 <div className="p-6 flex-1 flex flex-col">
                   <div className="mb-4">
