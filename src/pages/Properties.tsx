@@ -123,7 +123,7 @@ export default function Properties() {
         {/* Quick Stats Summary Skeletons */}
         <section className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
           {[1, 2, 3, 4].map((i) => (
-            <div key={i} className="p-6 rounded-[2rem] border border-slate-100 dark:border-slate-850 bg-white dark:bg-slate-900 flex items-center justify-between">
+            <div key={i} className="p-6 rounded-[2rem] border border-slate-200 dark:border-slate-850 bg-white dark:bg-slate-900 flex items-center justify-between">
               <div className="space-y-2 flex-1">
                 <div className="h-3 w-16 bg-slate-200 dark:bg-slate-850 rounded animate-pulse" />
                 <div className="h-8 w-12 bg-slate-200 dark:bg-slate-850 rounded-lg animate-pulse" />
@@ -134,12 +134,12 @@ export default function Properties() {
         </section>
 
         {/* Search & Filters Placeholder */}
-        <div className="h-24 bg-white dark:bg-slate-900 rounded-2xl border border-slate-100 dark:border-slate-800 animate-pulse" />
+        <div className="h-24 bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 animate-pulse" />
 
         {/* Grid Skeletons */}
         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6 pb-12">
           {[1, 2, 3, 4, 5, 6].map((i) => (
-            <div key={i} className="bg-white dark:bg-slate-900 rounded-3xl border border-slate-100 dark:border-slate-800 overflow-hidden flex flex-col h-[400px]">
+            <div key={i} className="bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-slate-800 overflow-hidden flex flex-col h-[400px]">
               <div className="h-32 bg-slate-100 dark:bg-slate-800 animate-pulse" />
               <div className="p-6 flex-1 flex flex-col justify-between">
                 <div className="space-y-3">
@@ -379,7 +379,7 @@ export default function Properties() {
             bg: 'bg-white dark:bg-slate-900' 
           }
         ].map((stat, i) => (
-          <div key={i} className={cn("p-6 rounded-[2rem] border border-slate-100 dark:border-slate-800/80 shadow-sm flex items-center justify-between transition-all hover:shadow-md hover:border-slate-200 dark:hover:border-slate-700/80", stat.bg)}>
+          <div key={i} className={cn("p-6 rounded-[2rem] border border-slate-200 dark:border-slate-800/80 shadow-sm flex items-center justify-between transition-all hover:shadow-md hover:border-slate-300 dark:hover:border-slate-705/80", stat.bg)}>
             <div className="space-y-1">
               <p className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-[0.2em]">{stat.label}</p>
               <h3 className={cn("text-3xl font-black tracking-tight", stat.color)}>{stat.val}</h3>
@@ -392,7 +392,7 @@ export default function Properties() {
       </section>
 
       {/* Search and Filters */}
-      <div className="bg-white dark:bg-slate-900 p-6 rounded-[2rem] border border-slate-100 dark:border-slate-800 shadow-sm space-y-6">
+      <div className="bg-white dark:bg-slate-900 p-6 rounded-[2rem] border border-slate-205 dark:border-slate-800 shadow-sm space-y-6">
         <div className="flex items-center gap-4 group bg-slate-50 dark:bg-slate-800/40 p-4 rounded-xl border border-transparent focus-within:border-slate-200 dark:focus-within:border-slate-700 transition-all">
           <Search className="text-slate-400 group-focus-within:text-slate-900 transition-colors" size={20} />
           <input
@@ -405,9 +405,9 @@ export default function Properties() {
         </div>
 
         {/* Status Quick Pills with Dynamic Counts */}
-        <div className="flex overflow-x-auto scrollbar-none gap-2 pb-1.5 border-b border-slate-50 dark:border-slate-800/50">
+        <div className="flex overflow-x-auto scrollbar-none gap-2 pb-1.5 border-b border-slate-100 dark:border-slate-800/50">
           {[
-            { label: 'Todos', value: 'Todos', activeColor: 'bg-slate-900 text-white dark:bg-white dark:text-slate-900', count: properties.length },
+            { label: 'Todos', value: 'Todos', activeColor: 'bg-slate-800 text-white dark:bg-white dark:text-slate-900', count: properties.length },
             { label: 'Análise', value: StatusArrematacao.Analise, activeColor: 'bg-amber-500 text-white', count: properties.filter(p => p.status_arrematacao === StatusArrematacao.Analise).length },
             { label: 'Arrematados', value: StatusArrematacao.Arrematado, activeColor: 'bg-emerald-500 text-white', count: properties.filter(p => p.status_arrematacao === StatusArrematacao.Arrematado).length },
             { label: 'Vendidos', value: StatusArrematacao.Vendido, activeColor: 'bg-indigo-600 text-white', count: properties.filter(p => p.status_arrematacao === StatusArrematacao.Vendido).length },
@@ -534,7 +534,7 @@ export default function Properties() {
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, scale: 0.95 }}
-                className="group bg-white dark:bg-slate-900 rounded-3xl border border-slate-100 dark:border-slate-800 shadow-sm hover:shadow-2xl hover:shadow-slate-200/50 dark:hover:shadow-none transition-all duration-500 overflow-hidden flex flex-col"
+                className="group bg-white dark:bg-slate-900 rounded-3xl border border-slate-200/70 dark:border-slate-800/80 shadow-sm hover:shadow-xl hover:shadow-slate-200/40 dark:hover:shadow-none transition-all duration-500 overflow-hidden flex flex-col"
               >
                 {/* Visual Header */}
                 {(() => {
@@ -570,13 +570,13 @@ export default function Properties() {
                   const CardIcon = branding.icon;
 
                   return (
-                    <div className={cn("relative h-32 flex items-center justify-center overflow-hidden bg-slate-50 dark:bg-slate-800/25 border-b border-slate-100 dark:border-slate-800/40 transition-all", branding.gradient)}>
+                    <div className={cn("relative h-32 flex items-center justify-center overflow-hidden bg-slate-50 dark:bg-slate-800/25 border-b border-slate-205/60 dark:border-slate-800/40 transition-all", branding.gradient)}>
                       {/* Ambient lighting effect */}
                       <div className="absolute inset-0 bg-gradient-to-br from-white/10 to-transparent dark:from-black/15 pointer-events-none" />
                       <CardIcon size={52} className={cn("transition-all duration-700 group-hover:scale-110", branding.color)} strokeWidth={1} />
                       
                       {/* Property Type Badge Overlay */}
-                      <div className="absolute top-4 left-4 bg-white/80 dark:bg-slate-900/80 backdrop-blur-md px-2.5 py-1 rounded-lg text-[9px] font-black uppercase tracking-widest text-slate-500 dark:text-slate-400 border border-slate-100 dark:border-slate-800">
+                      <div className="absolute top-4 left-4 bg-white/80 dark:bg-slate-900/80 backdrop-blur-md px-2.5 py-1 rounded-lg text-[9px] font-black uppercase tracking-widest text-slate-500 dark:text-slate-400 border border-slate-200 dark:border-slate-855">
                         {imovel.tipo_imovel}
                       </div>
 
@@ -617,7 +617,7 @@ export default function Properties() {
                     </h3>
                   </div>
 
-                  <div className="grid grid-cols-2 gap-4 py-4 border-y border-slate-50 dark:border-slate-800 mb-6">
+                  <div className="grid grid-cols-2 gap-4 py-4 border-y border-slate-200/50 dark:border-slate-800 mb-6">
                     <div className="space-y-0.5">
                       <p className="text-[10px] font-bold text-slate-400 uppercase tracking-tighter">Área Útil</p>
                       <p className="text-xs font-black text-slate-700 dark:text-slate-300">{imovel.area_m2} m²</p>
@@ -697,19 +697,19 @@ export default function Properties() {
 
   <AnimatePresence>
         {isModalOpen && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              onClick={() => setIsModalOpen(false)}
-              className="absolute inset-0 bg-black/40 backdrop-blur-sm"
-            />
+          <motion.div
+            key="edit-modal-backdrop"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm"
+          >
             <motion.div
               initial={{ scale: 0.9, opacity: 0, y: 20 }}
               animate={{ scale: 1, opacity: 1, y: 0 }}
               exit={{ scale: 0.9, opacity: 0, y: 20 }}
               className="bg-white dark:bg-slate-900 rounded-2xl shadow-2xl w-full max-w-2xl relative z-10 overflow-hidden"
+              onClick={(e) => e.stopPropagation()}
             >
               <form onSubmit={handleSubmit} className="flex flex-col h-[90vh] md:h-auto max-h-[90vh] dark:text-slate-200">
                 <div className="flex justify-between items-center p-6 border-b border-slate-100 dark:border-slate-800 shrink-0">
@@ -813,7 +813,7 @@ export default function Properties() {
                     <motion.section 
                       initial={{ opacity: 0, y: 10 }}
                       animate={{ opacity: 1, y: 0 }}
-                      className="p-5 bg-slate-50/50 dark:bg-slate-800/30 rounded-2xl border border-slate-100 dark:border-slate-800 space-y-5"
+                      className="p-5 bg-slate-50/50 dark:bg-slate-800/30 rounded-2xl border border-slate-200 dark:border-slate-800 space-y-5"
                     >
                       <div className="flex items-center gap-2 mb-1">
                         <div className="p-1.5 bg-indigo-50 dark:bg-indigo-900/30 rounded-lg">
@@ -900,7 +900,7 @@ export default function Properties() {
                             <div className="relative">
                               <span className={cn(
                                 "absolute left-4 top-1/2 -translate-y-1/2 text-xs font-bold border-r pr-3 transition-colors",
-                                errors.valor_avaliacao ? "text-rose-500 border-rose-200" : "text-slate-400 border-slate-100 dark:border-slate-700"
+                                errors.valor_avaliacao ? "text-rose-500 border-rose-200" : "text-slate-400 border-slate-200' dark:border-slate-700"
                               )}>R$</span>
                               <CurrencyInput
                                 intlConfig={{ locale: 'pt-BR', currency: 'BRL' }}
@@ -927,7 +927,7 @@ export default function Properties() {
                             <div className="relative">
                               <span className={cn(
                                 "absolute left-4 top-1/2 -translate-y-1/2 text-xs font-bold border-r pr-3 transition-colors",
-                                errors.valor_minimo ? "text-rose-500 border-rose-200" : "text-slate-400 border-slate-100 dark:border-slate-700"
+                                errors.valor_minimo ? "text-rose-500 border-rose-200" : "text-slate-400 border-slate-200 dark:border-slate-700"
                               )}>R$</span>
                               <CurrencyInput
                                 intlConfig={{ locale: 'pt-BR', currency: 'BRL' }}
@@ -973,7 +973,7 @@ export default function Properties() {
                     <motion.section 
                       initial={{ opacity: 0, y: 10 }}
                       animate={{ opacity: 1, y: 0 }}
-                      className="p-5 bg-slate-50/50 dark:bg-slate-800/30 rounded-2xl border border-slate-100 dark:border-slate-800 space-y-5"
+                      className="p-5 bg-slate-50/50 dark:bg-slate-800/30 rounded-2xl border border-slate-200 dark:border-slate-800 space-y-5"
                     >
                       <div className="flex items-center gap-2 mb-1">
                         <div className="p-1.5 bg-emerald-50 dark:bg-emerald-950/20 rounded-lg">
@@ -988,7 +988,7 @@ export default function Properties() {
                           <div className="relative">
                             <span className={cn(
                               "absolute left-4 top-1/2 -translate-y-1/2 text-xs font-bold border-r pr-3 transition-colors",
-                              errors.valor_minimo ? "text-rose-500 border-rose-200" : "text-slate-400 border-slate-100 dark:border-slate-700"
+                              errors.valor_minimo ? "text-rose-500 border-rose-200" : "text-slate-400 border-slate-200 dark:border-slate-700"
                             )}>R$</span>
                             <CurrencyInput
                               intlConfig={{ locale: 'pt-BR', currency: 'BRL' }}
@@ -1015,7 +1015,7 @@ export default function Properties() {
                           <div className="relative">
                             <span className={cn(
                               "absolute left-4 top-1/2 -translate-y-1/2 text-xs font-bold border-r pr-3 transition-colors",
-                              errors.valor_avaliacao ? "text-rose-500 border-rose-200" : "text-slate-400 border-slate-100 dark:border-slate-700"
+                              errors.valor_avaliacao ? "text-rose-500 border-rose-200" : "text-slate-400 border-slate-200 dark:border-slate-700"
                             )}>R$</span>
                             <CurrencyInput
                               intlConfig={{ locale: 'pt-BR', currency: 'BRL' }}
@@ -1282,23 +1282,24 @@ export default function Properties() {
                 </div>
               </form>
             </motion.div>
-          </div>
+          </motion.div>
         )}
 
         {propertyToDelete && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              onClick={() => setPropertyToDelete(null)}
-              className="absolute inset-0 bg-black/40 backdrop-blur-sm"
-            />
+          <motion.div
+            key="delete-modal-backdrop"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            onClick={() => setPropertyToDelete(null)}
+            className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm cursor-pointer"
+          >
             <motion.div
               initial={{ scale: 0.9, opacity: 0, y: 20 }}
               animate={{ scale: 1, opacity: 1, y: 0 }}
               exit={{ scale: 0.9, opacity: 0, y: 20 }}
-              className="bg-white dark:bg-slate-900 rounded-[2rem] shadow-2xl w-full max-w-md relative z-10 overflow-hidden border border-slate-100 dark:border-slate-800"
+              className="bg-white dark:bg-slate-900 rounded-[2rem] shadow-2xl w-full max-w-md relative z-10 overflow-hidden border border-slate-200 dark:border-slate-800"
+              onClick={(e) => e.stopPropagation()}
             >
               <div className="p-6 text-center">
                 <div className="w-16 h-16 bg-rose-50 dark:bg-rose-950/30 rounded-2xl flex items-center justify-center mx-auto mb-5 text-rose-500">
@@ -1346,7 +1347,7 @@ export default function Properties() {
                 </div>
               </div>
             </motion.div>
-          </div>
+          </motion.div>
         )}
       </AnimatePresence>
     </motion.div>

@@ -18,6 +18,7 @@ import {
   CheckCircle2, 
   AlertCircle, 
   ShieldAlert, 
+  AlertTriangle,
   History,
   FileText,
   Wallet,
@@ -136,6 +137,11 @@ export default function PropertyDetails() {
   };
 
   const [vendaSimulada, setVendaSimulada] = useState<number>(0);
+  const [itemToDelete, setItemToDelete] = useState<{
+    id: string;
+    type: 'custo_aquisicao' | 'custo_reforma' | 'holding' | 'faturamento';
+    label: string;
+  } | null>(null);
 
   // Sync simulation values with active assets evaluation data
   useEffect(() => {
@@ -1553,8 +1559,9 @@ export default function PropertyDetails() {
                             )}
 
                         <button 
-                          onClick={() => removeCustoAquisicao(c.id!)} 
+                          onClick={() => setItemToDelete({ id: c.id!, type: 'custo_aquisicao', label: c.tipo_custo + (c.descricao ? ` - ${c.descricao}` : '') })} 
                           className="p-3 text-slate-300 hover:text-rose-500 hover:bg-rose-50 rounded-xl transition-all active:scale-95"
+                          title="Excluir Custo"
                         >
                           <Trash2 size={18} />
                         </button>
@@ -1748,8 +1755,9 @@ export default function PropertyDetails() {
                           <div className="flex items-center gap-2">
                             {r.fileUrl && <FileThumbnail url={r.fileUrl} className="w-10 h-10 rounded-xl" />}
                             <button 
-                              onClick={() => removeCustoReforma(r.id!)}
+                              onClick={() => setItemToDelete({ id: r.id!, type: 'custo_reforma', label: r.descricao_etapa })}
                               className="p-3 text-slate-300 hover:text-rose-500 hover:bg-rose-50 rounded-xl transition-all"
+                              title="Excluir Etapa"
                             >
                               <Trash2 size={18} />
                             </button>
@@ -1912,8 +1920,9 @@ export default function PropertyDetails() {
                               </button>
                             )}
                         <button 
-                          onClick={() => removeHolding(h.id!)}
+                          onClick={() => setItemToDelete({ id: h.id!, type: 'holding', label: `${h.tipo_despesa} (${h.competencia})` })}
                           className="p-3 text-slate-300 hover:text-rose-500 hover:bg-rose-50 rounded-xl transition-all"
+                          title="Excluir Gasto"
                         >
                           <Trash2 size={18} />
                         </button>
@@ -2085,9 +2094,10 @@ export default function PropertyDetails() {
                       </div>
                       <div className="flex items-center gap-2">
                         <button 
-                          onClick={() => removeFaturamento(f.id!)}
-                        className="p-3 text-slate-300 hover:text-rose-500 hover:bg-rose-50 rounded-xl transition-all"
-                      >
+                          onClick={() => setItemToDelete({ id: f.id!, type: 'faturamento', label: `${f.tipo}${f.descricao ? ` - ${f.descricao}` : ''}` })}
+                          className="p-3 text-slate-300 hover:text-rose-500 hover:bg-rose-50 rounded-xl transition-all"
+                          title="Excluir Lançamento"
+                        >
                         <Trash2 size={18} />
                       </button>
                     </div>
@@ -2109,6 +2119,87 @@ export default function PropertyDetails() {
             className="space-y-6"
           >
             {/* Documentos content skeleton */}
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      <AnimatePresence>
+        {itemToDelete && (
+          <motion.div
+            key="delete-item-modal-backdrop"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            onClick={() => setItemToDelete(null)}
+            className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm cursor-pointer"
+          >
+            <motion.div
+              initial={{ scale: 0.9, opacity: 0, y: 20 }}
+              animate={{ scale: 1, opacity: 1, y: 0 }}
+              exit={{ scale: 0.9, opacity: 0, y: 20 }}
+              className="bg-white dark:bg-slate-900 rounded-[2rem] shadow-2xl w-full max-w-md relative z-10 overflow-hidden border border-slate-200 dark:border-slate-800"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="p-6 text-center">
+                <div className="w-16 h-16 bg-rose-50 dark:bg-rose-950/30 rounded-2xl flex items-center justify-center mx-auto mb-5 text-rose-500">
+                  <AlertTriangle size={32} />
+                </div>
+                
+                <h3 className="text-xl font-black text-slate-900 dark:text-white tracking-tight">Excluir Registro?</h3>
+                <p className="text-sm text-slate-500 dark:text-slate-400 mt-2 font-medium">
+                  Tem certeza que deseja apagar o seguinte registro financeiro?
+                </p>
+
+                {/* Info Card inside modal */}
+                <div className="mt-4 p-4 bg-slate-50 dark:bg-slate-800/50 rounded-2xl border border-slate-100 dark:border-slate-800 text-left">
+                  <p className="text-xs font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest mb-1">
+                    {itemToDelete.type === 'custo_aquisicao' ? 'Custo de Aquisição' :
+                     itemToDelete.type === 'custo_reforma' ? 'Reforma / Benfeitoria' :
+                     itemToDelete.type === 'holding' ? 'Despesa de Holding' : 'Lançamento de Faturamento'}
+                  </p>
+                  <p className="text-sm font-bold text-slate-800 dark:text-slate-200 truncate">{itemToDelete.label}</p>
+                </div>
+
+                <p className="text-[11px] text-rose-500 font-bold uppercase tracking-wider mt-4">
+                  Esta ação é irreversível e atualizará os cálculos em tempo real.
+                </p>
+
+                <div className="mt-6 flex gap-3">
+                  <button
+                    type="button"
+                    onClick={() => setItemToDelete(null)}
+                    className="flex-1 px-5 py-3.5 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700/80 text-slate-700 dark:text-slate-300 rounded-xl text-xs font-black uppercase tracking-widest transition-all cursor-pointer"
+                  >
+                    Cancelar
+                  </button>
+                  <button
+                    type="button"
+                    onClick={async () => {
+                      if (itemToDelete.id) {
+                        try {
+                          if (itemToDelete.type === 'custo_aquisicao') {
+                            await removeCustoAquisicao(itemToDelete.id);
+                          } else if (itemToDelete.type === 'custo_reforma') {
+                            await removeCustoReforma(itemToDelete.id);
+                          } else if (itemToDelete.type === 'holding') {
+                            await removeHolding(itemToDelete.id);
+                          } else if (itemToDelete.type === 'faturamento') {
+                            await removeFaturamento(itemToDelete.id);
+                          }
+                        } catch (err) {
+                          console.error("Erro ao deletar item:", err);
+                        } finally {
+                          setItemToDelete(null);
+                        }
+                      }
+                    }}
+                    className="flex-1 px-5 py-3.5 bg-rose-600 hover:bg-rose-700 text-white rounded-xl text-xs font-black uppercase tracking-widest transition-all shadow-lg shadow-rose-500/25 active:scale-[0.98] cursor-pointer font-bold"
+                  >
+                    Confirmar
+                  </button>
+                </div>
+              </div>
+            </motion.div>
           </motion.div>
         )}
       </AnimatePresence>

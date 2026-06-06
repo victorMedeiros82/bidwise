@@ -66,19 +66,19 @@ export default function Dashboard() {
         </div>
 
         {/* Primary Bento Skeleton */}
-        <div className="grid grid-cols-1 md:grid-cols-12 gap-6">
-          <div className="md:col-span-8 bg-slate-900 border border-slate-800 dark:border-slate-200 dark:bg-slate-100 p-8 rounded-[2.5rem] h-[340px] flex flex-col justify-between">
+        <div className="grid grid-cols-1 md:grid-cols-12 gap-6 animate-pulse">
+          <div className="md:col-span-8 bg-white border border-slate-200 dark:border-slate-800 dark:bg-slate-900 p-8 rounded-[2.5rem] h-[340px] flex flex-col justify-between">
             <div className="space-y-4">
-              <div className="h-4 w-28 bg-white/20 dark:bg-slate-400/20 rounded-md animate-pulse" />
-              <div className="h-16 w-2/3 bg-white/10 dark:bg-slate-400/10 rounded-2xl animate-pulse" />
-              <div className="h-6 w-32 bg-white/10 dark:bg-slate-400/10 rounded-full animate-pulse" />
+              <div className="h-4 w-28 bg-slate-100 dark:bg-slate-800/40 rounded-md" />
+              <div className="h-16 w-2/3 bg-slate-100 dark:bg-slate-800/30 rounded-2xl" />
+              <div className="h-6 w-32 bg-slate-100 dark:bg-slate-800/30 rounded-full" />
             </div>
-            <div className="flex justify-between items-center border-t border-white/10 dark:border-slate-100/10 pt-6">
+            <div className="flex justify-between items-center border-t border-slate-100 dark:border-slate-800 pt-6">
               <div className="flex gap-4">
-                <div className="h-8 w-24 bg-white/10 dark:bg-slate-400/10 rounded-lg animate-pulse" />
-                <div className="h-8 w-24 bg-white/10 dark:bg-slate-400/10 rounded-lg animate-pulse" />
+                <div className="h-8 w-24 bg-slate-100 dark:bg-slate-800/30 rounded-lg" />
+                <div className="h-8 w-24 bg-slate-100 dark:bg-slate-800/30 rounded-lg" />
               </div>
-              <div className="h-10 w-24 bg-white/15 dark:bg-slate-400/15 rounded-xl animate-pulse" />
+              <div className="h-10 w-24 bg-slate-100 dark:bg-slate-800/40 rounded-xl" />
             </div>
           </div>
 
@@ -300,7 +300,7 @@ export default function Dashboard() {
           <p className="text-xs font-black text-slate-400 dark:text-slate-500 uppercase tracking-[0.25em]">Gestão Consolidada de Ativos Imobiliários</p>
         </div>
         <div className="flex items-center gap-2 bg-white dark:bg-slate-900 p-1 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm">
-          <div className="px-4 py-2 bg-slate-900 dark:bg-white text-white dark:text-slate-900 rounded-lg text-xs font-black uppercase tracking-widest">Global</div>
+          <div className="px-4 py-2 bg-slate-800 dark:bg-white text-white dark:text-slate-900 rounded-lg text-xs font-black uppercase tracking-widest">Global</div>
           <div className="px-4 py-2 text-slate-400 text-xs font-black uppercase tracking-widest cursor-pointer hover:text-slate-600">Mensal</div>
         </div>
       </div>
@@ -339,62 +339,62 @@ export default function Dashboard() {
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          className="md:col-span-8 bg-slate-900 dark:bg-white p-8 rounded-[2.5rem] shadow-2xl relative overflow-hidden flex flex-col justify-between min-h-[340px]"
+          className="md:col-span-8 bg-white dark:bg-slate-900 p-8 rounded-[2.5rem] border border-slate-200 dark:border-slate-800 shadow-sm relative overflow-hidden flex flex-col justify-between min-h-[340px]"
         >
           <div className="relative z-10">
             <div className="flex items-center gap-3 mb-6">
-              <div className="size-10 bg-white/10 dark:bg-black/5 rounded-2xl flex items-center justify-center text-white dark:text-black">
+              <div className="size-10 bg-indigo-50 dark:bg-white/5 rounded-2xl flex items-center justify-center text-indigo-600 dark:text-indigo-400">
                 <BarChart2 size={20} />
               </div>
-              <p className="text-xs font-black text-white/50 dark:text-black/40 uppercase tracking-[0.3em]">Capital Realizado</p>
+              <p className="text-xs font-black text-slate-400 dark:text-slate-500 uppercase tracking-[0.3em]">Capital Realizado</p>
             </div>
 
-            <h2 className="text-6xl md:text-7xl font-black text-white dark:text-slate-900 tracking-tighter leading-[0.8] mb-4">
+            <h2 className="text-6xl md:text-7xl font-black text-slate-900 dark:text-white tracking-tighter leading-[0.8] mb-4">
               R$ {totalInvested.toLocaleString('pt-BR')}
             </h2>
             <div className="flex items-center gap-4">
               <div className={cn(
                 "flex items-center gap-1.5 px-3 py-1.5 rounded-full border",
                 portfolioRoi >= 0
-                  ? "bg-emerald-500/20 text-emerald-400 border-emerald-500/30"
-                  : "bg-rose-500/20 text-rose-400 border-rose-500/30"
+                  ? "bg-emerald-500/10 text-emerald-600 dark:text-emerald-450 border-emerald-500/20"
+                  : "bg-rose-500/10 text-rose-600 dark:text-rose-450 border-rose-500/20"
               )}>
                 <TrendingUp size={14} />
                 <span className="text-xs font-black tracking-tight">ROI: {portfolioRoi >= 0 ? '+' : ''}{portfolioRoi.toFixed(1)}%</span>
               </div>
-              <p className="text-[10px] font-bold text-white/40 dark:text-black/30 uppercase tracking-widest italic">Total investido em Arrematação, Custos de Aquisição, Reformas e Holding</p>
+              <p className="text-[10px] font-bold text-slate-400 dark:text-slate-550 uppercase tracking-widest italic">Total investido em Arrematação, Custos de Aquisição, Reformas e Holding</p>
             </div>
           </div>
 
-          <div className="relative z-10 flex items-center justify-between mt-8 pt-8 border-t border-white/10 dark:border-black/5">
+          <div className="relative z-10 flex items-center justify-between mt-8 pt-8 border-t border-slate-100 dark:border-slate-800">
             <div className="flex flex-wrap items-center gap-8">
               <div>
-                <p className="text-[10px] font-black text-white/40 dark:text-black/30 uppercase tracking-widest mb-1">Faturamento Bruto</p>
-                <p className="text-xl font-bold text-white dark:text-slate-900">R$ {totalInvoiced.toLocaleString('pt-BR')}</p>
+                <p className="text-[10px] font-black text-slate-400 dark:text-slate-550 uppercase tracking-widest mb-1">Faturamento Bruto</p>
+                <p className="text-xl font-bold text-slate-800 dark:text-white">R$ {totalInvoiced.toLocaleString('pt-BR')}</p>
               </div>
               <div>
-                <p className="text-[10px] font-black text-white/40 dark:text-black/30 uppercase tracking-widest mb-1">Lucro Líquido</p>
+                <p className="text-[10px] font-black text-slate-400 dark:text-slate-550 uppercase tracking-widest mb-1">Lucro Líquido</p>
                 <p className={cn(
                   "text-xl font-bold",
-                  netProfit >= 0 ? "text-emerald-400" : "text-rose-400"
+                  netProfit >= 0 ? "text-emerald-500" : "text-rose-500"
                 )}>R$ {netProfit.toLocaleString('pt-BR')}</p>
               </div>
               <div>
-                <p className="text-[10px] font-black text-white/40 dark:text-black/30 uppercase tracking-widest mb-1">Total Ativos</p>
-                <p className="text-xl font-bold text-white dark:text-slate-900">{totalProperties}</p>
+                <p className="text-[10px] font-black text-slate-400 dark:text-slate-550 uppercase tracking-widest mb-1">Total Ativos</p>
+                <p className="text-xl font-bold text-slate-800 dark:text-white">{totalProperties}</p>
               </div>
             </div>
             <button
               onClick={() => navigate('/properties')}
-              className="px-6 py-3 bg-white/10 dark:bg-black/5 hover:bg-white/20 dark:hover:bg-black/10 rounded-2xl text-xs font-black text-white dark:text-black uppercase tracking-[0.2em] transition-all"
+              className="px-6 py-3 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 rounded-2xl text-xs font-black text-slate-700 dark:text-white uppercase tracking-[0.2em] transition-all cursor-pointer"
             >
               Ver Detalhes
             </button>
           </div>
 
           {/* Abstract background graphics */}
-          <div className="absolute top-0 right-0 w-1/2 h-full bg-gradient-to-l from-emerald-500/10 to-transparent pointer-events-none" />
-          <div className="absolute -bottom-24 -right-12 w-64 h-64 bg-emerald-500/10 rounded-full blur-[100px] pointer-events-none" />
+          <div className="absolute top-0 right-0 w-1/2 h-full bg-gradient-to-l from-emerald-500/5 to-transparent pointer-events-none" />
+          <div className="absolute -bottom-24 -right-12 w-64 h-64 bg-emerald-500/5 rounded-full blur-[100px] pointer-events-none" />
         </motion.div>
 
         {/* Mix de Ativos */}
@@ -637,7 +637,7 @@ export default function Dashboard() {
                   <p>
                     O <strong className="text-slate-900 dark:text-white font-black">ROI (Retorno sobre Investimento)</strong> consolidado do seu portfólio completo é calculado nos padrões tradicionais de avaliação corporativa:
                   </p>
-                  <div className="p-4 bg-slate-900 text-slate-100 rounded-xl font-mono text-center text-xs font-black border border-slate-800 shadow-inner">
+                  <div className="p-4 bg-slate-50 dark:bg-slate-950 text-slate-800 dark:text-slate-200 rounded-xl font-mono text-center text-xs font-black border border-slate-200 dark:border-slate-800/60 shadow-inner">
                     ROI = (Lucro Líquido Global / Capital Realizado) * 100
                   </div>
                   <p className="text-[11px] leading-relaxed">
@@ -823,7 +823,7 @@ export default function Dashboard() {
                 <div
                   key={auction.id}
                   onClick={() => navigate(`/properties/${auction.id}`)}
-                  className="group flex flex-col md:flex-row md:items-center justify-between p-5 bg-slate-50 dark:bg-slate-800/50 hover:bg-slate-900 dark:hover:bg-white hover:text-white dark:hover:text-slate-900 rounded-[1.5rem] transition-all cursor-pointer border border-transparent hover:shadow-xl hover:-translate-y-1"
+                  className="group flex flex-col md:flex-row md:items-center justify-between p-5 bg-slate-50/50 dark:bg-slate-800/30 hover:bg-slate-100/80 dark:hover:bg-slate-800/60 rounded-[1.5rem] transition-all cursor-pointer border border-slate-200/50 dark:border-slate-800/40 hover:border-slate-300 dark:hover:border-slate-700 hover:shadow-md hover:-translate-y-0.5"
                 >
                   <div className="flex items-center gap-4">
                     <div className="size-12 rounded-2xl bg-white dark:bg-slate-700 flex flex-col items-center justify-center border border-slate-200 dark:border-slate-600 group-hover:bg-emerald-500 group-hover:border-emerald-500 transition-colors">
@@ -837,16 +837,16 @@ export default function Dashboard() {
                     <div>
                       <h4 className="text-sm font-black tracking-tight mb-1">{auction.endereco}</h4>
                       <div className="flex items-center gap-2">
-                        <span className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest group-hover:text-white/40">{auction.comarca}</span>
-                        <span className="w-1 h-1 rounded-full bg-slate-300 group-hover:bg-white/20" />
-                        <span className="text-[10px] font-black text-emerald-500 dark:text-emerald-400 group-hover:text-white/70">Mín: R$ {auction.valor_minimo?.toLocaleString('pt-BR')}</span>
+                        <span className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest">{auction.comarca}</span>
+                        <span className="w-1 h-1 rounded-full bg-slate-300" />
+                        <span className="text-[10px] font-black text-emerald-500 dark:text-emerald-400">Mín: R$ {auction.valor_minimo?.toLocaleString('pt-BR')}</span>
                       </div>
                     </div>
                   </div>
                   <div className="mt-4 md:mt-0 flex items-center justify-end gap-3 font-mono text-xs font-bold">
-                    <Clock size={12} className="text-slate-400 group-hover:text-white/40" />
+                    <Clock size={12} className="text-slate-400" />
                     {new Date(auction.data_leilao!).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
-                    <ChevronRight size={14} className="opacity-0 group-hover:opacity-100 transition-opacity ml-2" />
+                    <ChevronRight size={14} className="opacity-0 group-hover:opacity-100 transition-opacity ml-2 text-slate-400" />
                   </div>
                 </div>
               ))

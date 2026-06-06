@@ -378,7 +378,7 @@ export default function App() {
   return (
     <BrowserRouter basename={import.meta.env.BASE_URL}>
       {user ? (
-        <div className="flex min-h-screen bg-white dark:bg-slate-950 transition-colors duration-300">
+        <div className="flex min-h-screen bg-slate-50 dark:bg-slate-950 transition-colors duration-300">
           <Sidebar 
             isOpen={mobileMenuOpen} 
             onClose={() => setMobileMenuOpen(false)} 
@@ -386,7 +386,7 @@ export default function App() {
             onToggleDarkMode={() => setDarkMode(!darkMode)}
           />
           <main className="flex-1 flex flex-col min-w-0">
-            <header className="h-20 px-4 md:px-8 flex items-center justify-between sticky top-0 z-30 bg-white/80 dark:bg-slate-950/80 backdrop-blur-md">
+            <header className="h-20 px-4 md:px-8 flex items-center justify-between sticky top-0 z-30 bg-slate-50/80 dark:bg-slate-950/80 backdrop-blur-md border-b border-slate-200/50 dark:border-slate-900/10">
               <div className="flex items-center gap-4">
                 <button 
                   onClick={() => setMobileMenuOpen(true)}
