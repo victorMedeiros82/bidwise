@@ -37,6 +37,7 @@ import {
   FileText, 
   LogOut,
   ChevronRight,
+  ChevronLeft,
   Plus,
   Menu,
   Moon,
@@ -64,7 +65,21 @@ import PropertyDetails from './pages/PropertyDetails';
 import AuthErrorAlert from './components/AuthErrorAlert';
 import Logo from './components/Logo';
 
-function Sidebar({ isOpen, onClose, darkMode, onToggleDarkMode }: { isOpen: boolean, onClose: () => void, darkMode: boolean, onToggleDarkMode: () => void }) {
+function Sidebar({ 
+  isOpen, 
+  onClose, 
+  darkMode, 
+  onToggleDarkMode,
+  isCollapsed,
+  onToggleCollapse
+}: { 
+  isOpen: boolean, 
+  onClose: () => void, 
+  darkMode: boolean, 
+  onToggleDarkMode: () => void,
+  isCollapsed: boolean,
+  onToggleCollapse: () => void
+}) {
   const location = useLocation();
   const navItems = [
     { icon: BarChart3, label: 'Dashboard', path: '/' },
@@ -88,50 +103,81 @@ function Sidebar({ isOpen, onClose, darkMode, onToggleDarkMode }: { isOpen: bool
       </AnimatePresence>
 
       <aside className={cn(
-        "fixed lg:sticky top-0 left-0 w-64 border-r border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 h-screen flex flex-col pt-8 transition-transform z-50 lg:translate-x-0",
+        "fixed lg:sticky top-0 left-0 border-r border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 h-screen flex flex-col pt-8 transition-all duration-300 z-50 lg:translate-x-0 overflow-hidden",
+        isCollapsed ? "w-64 lg:w-20" : "w-64",
         !isOpen && "-translate-x-full"
       )}>
-        <div className="px-6 mb-8 flex items-center justify-between">
-          <Link to="/" onClick={onClose} className="flex items-center gap-3 active:scale-95 transition-transform">
+        <div className={cn("mb-8 flex items-center justify-between transition-all duration-300", isCollapsed ? "px-6 lg:px-4 lg:flex-col lg:gap-4 lg:justify-center" : "px-6")}>
+          <Link to="/" onClick={onClose} className={cn("flex items-center gap-3 active:scale-95 transition-transform shrink-0", isCollapsed && "lg:justify-center")}>
             <Logo size={32} className="shrink-0 drop-shadow-sm" />
-            <span className="font-bold text-xl tracking-tight text-slate-800 dark:text-white">BIDWISE</span>
+            <span className={cn(
+              "font-bold text-xl tracking-tight text-slate-800 dark:text-white transition-all duration-300",
+              isCollapsed && "lg:hidden"
+            )}>
+              BIDWISE
+            </span>
           </Link>
           <button onClick={onClose} className="lg:hidden text-slate-500 hover:text-slate-700 p-2 -mr-2">
             <CloseIcon size={20} />
           </button>
+          
+          {/* Collapse/Expand Button for desktop */}
+          <button 
+            type="button"
+            onClick={onToggleCollapse} 
+            className="hidden lg:flex items-center justify-center text-slate-500 hover:text-slate-705 dark:text-slate-400 dark:hover:text-slate-200 p-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 transition-all cursor-pointer"
+            title={isCollapsed ? "Expandir Menu" : "Recolher Menu"}
+          >
+            {isCollapsed ? <ChevronRight size={18} /> : <ChevronLeft size={18} />}
+          </button>
         </div>
 
-        <nav className="flex-1 px-4 space-y-1">
+        <nav className={cn("flex-1 space-y-1 transition-all duration-300", isCollapsed ? "px-4 lg:px-2" : "px-4")}>
           {navItems.map((item) => (
             <Link
               key={item.path}
               to={item.path}
               onClick={onClose}
               className={cn(
-                "sidebar-link",
-                location.pathname === item.path && "active"
+                "sidebar-link transition-all duration-300",
+                location.pathname === item.path && "active",
+                isCollapsed && "lg:justify-center lg:px-0"
               )}
+              title={isCollapsed ? item.label : undefined}
             >
               <item.icon className="w-5 h-5 shrink-0" />
-              <span className="text-sm">{item.label}</span>
+              <span className={cn(
+                "text-sm border-none whitespace-nowrap transition-all duration-300",
+                isCollapsed && "lg:hidden"
+              )}>
+                {item.label}
+              </span>
             </Link>
           ))}
         </nav>
 
-        <div className="p-6 border-t border-slate-100 dark:border-slate-800">
+        <div className={cn("border-t border-slate-100 dark:border-slate-800 transition-all duration-300 shrink-0", isCollapsed ? "p-6 lg:p-2" : "p-6")}>
           <button 
             onClick={onToggleDarkMode}
-            className="w-full flex items-center justify-between p-3 rounded-xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 mb-6 transition-all hover:scale-[1.02] shadow-sm"
+            className={cn(
+              "flex items-center justify-between rounded-xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 transition-all hover:scale-[1.02] shadow-sm w-full mb-6",
+              isCollapsed ? "p-3 lg:p-2.5 lg:justify-center lg:mb-4" : "p-3"
+            )}
+            title={isCollapsed ? (darkMode ? 'Modo Escuro' : 'Modo Claro') : undefined}
           >
-            <div className="flex items-center gap-3">
+            <div className={cn("flex items-center", isCollapsed ? "lg:justify-center gap-3 lg:gap-0" : "gap-3")}>
               {darkMode ? <Moon size={18} className="text-[#FCA311]" /> : <Sun size={18} className="text-amber-500" />}
-              <span className="text-xs font-bold text-slate-600 dark:text-slate-300 uppercase tracking-widest">
+              <span className={cn(
+                "text-xs font-bold text-slate-600 dark:text-slate-300 uppercase tracking-widest whitespace-nowrap transition-all duration-300",
+                isCollapsed ? "lg:hidden" : ""
+              )}>
                 {darkMode ? 'Modo Escuro' : 'Modo Claro'}
               </span>
             </div>
             <div className={cn(
               "w-8 h-4 rounded-full relative transition-colors",
-              darkMode ? "bg-[#FCA311]" : "bg-slate-300"
+              darkMode ? "bg-[#FCA311]" : "bg-slate-300",
+              isCollapsed && "lg:hidden"
             )}>
               <div className={cn(
                 "absolute top-0.5 w-3 h-3 rounded-full bg-white transition-all",
@@ -140,27 +186,30 @@ function Sidebar({ isOpen, onClose, darkMode, onToggleDarkMode }: { isOpen: bool
             </div>
           </button>
 
-          <div className="flex items-center gap-3 mb-4">
-            <div className="w-10 h-10 rounded-full bg-slate-200 dark:bg-slate-700 overflow-hidden border border-white dark:border-slate-600 shadow-sm shrink-0 flex items-center justify-center">
+          <div className={cn("flex items-center transition-all duration-300", isCollapsed ? "gap-3 lg:gap-0 lg:justify-center mb-4 lg:my-4" : "gap-3 mb-4")}>
+            <div className="w-10 h-10 rounded-full bg-slate-200 dark:bg-slate-700 overflow-hidden border border-white dark:border-slate-600 shadow-sm shrink-0 flex items-center justify-center animate-pulse">
               {auth.currentUser?.photoURL ? (
                 <img src={auth.currentUser.photoURL} alt="Avatar" className="w-full h-full object-cover" />
               ) : (
                 <UserIcon className="w-5 h-5 text-slate-500 dark:text-slate-500" />
               )}
             </div>
-            <div className="overflow-hidden">
+            <div className={cn("overflow-hidden transition-all duration-300", isCollapsed && "lg:hidden")}>
               <p className="text-sm font-bold text-slate-800 dark:text-slate-100 truncate">{auth.currentUser?.displayName || 'Usuário'}</p>
-              <p className="text-[10px] text-slate-600 dark:text-slate-400 uppercase tracking-wider font-semibold">Broker Manager</p>
+              <p className="text-[10px] text-slate-600 dark:text-slate-400 uppercase tracking-wider font-semibold whitespace-nowrap">Broker Manager</p>
             </div>
           </div>
 
-
           <button
             onClick={() => auth.signOut()}
-            className="flex items-center gap-2 text-xs font-bold text-slate-500 hover:text-rose-500 transition-colors w-full justify-center pb-2"
+            className={cn(
+              "flex items-center text-xs font-bold text-slate-500 hover:text-rose-500 transition-colors cursor-pointer w-full justify-center pb-2",
+              isCollapsed ? "gap-2 lg:gap-0 lg:p-2 lg:hover:bg-slate-50 lg:dark:hover:bg-slate-800/50 lg:rounded-lg lg:pb-2" : "gap-2"
+            )}
+            title={isCollapsed ? "Sair do Sistema" : undefined}
           >
-            <LogOut className="w-4 h-4" />
-            Sair do Sistema
+            <LogOut className="w-4 h-4 shrink-0" />
+            <span className={cn("whitespace-nowrap transition-all duration-300", isCollapsed && "lg:hidden")}>Sair do Sistema</span>
           </button>
         </div>
       </aside>
@@ -354,6 +403,18 @@ export default function App() {
     return saved === 'true';
   });
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(() => {
+    const saved = localStorage.getItem('sidebarCollapsed');
+    return saved === 'true';
+  });
+
+  const handleToggleCollapse = () => {
+    setSidebarCollapsed((prev) => {
+      const nextVal = !prev;
+      localStorage.setItem('sidebarCollapsed', String(nextVal));
+      return nextVal;
+    });
+  };
 
   useEffect(() => {
     return onAuthStateChanged(auth, (user) => {
@@ -384,6 +445,8 @@ export default function App() {
             onClose={() => setMobileMenuOpen(false)} 
             darkMode={darkMode}
             onToggleDarkMode={() => setDarkMode(!darkMode)}
+            isCollapsed={sidebarCollapsed}
+            onToggleCollapse={handleToggleCollapse}
           />
           <main className="flex-1 flex flex-col min-w-0">
             <header className="h-20 px-4 md:px-8 flex items-center justify-between sticky top-0 z-30 bg-slate-50/80 dark:bg-slate-950/80 backdrop-blur-md border-b border-slate-200/50 dark:border-slate-900/10">

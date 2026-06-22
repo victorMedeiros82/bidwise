@@ -122,6 +122,8 @@ service cloud.firestore {
       return data.id_imovel is string && isValidId(data.id_imovel) &&
              data.tipo_doc is string && data.tipo_doc.size() <= 200 &&
              data.status in ['Pendente', 'Recebido', 'Protocolado', 'Registrado', 'Cancelado'] &&
+             (!('nome' in data) || (data.nome is string && data.nome.size() <= 200)) &&
+             (!('descricao' in data) || (data.descricao is string && data.descricao.size() <= 1000)) &&
              (!('fileUrl' in data) || data.fileUrl is string) &&
              (!('data_recebimento' in data) || data.data_recebimento is string) &&
              (!('data_vencimento' in data) || data.data_vencimento is string) &&

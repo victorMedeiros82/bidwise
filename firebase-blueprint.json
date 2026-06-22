@@ -108,6 +108,8 @@
       "type": "object",
       "properties": {
         "id_imovel": { "type": "string" },
+        "nome": { "type": "string", "description": "Nome do documento" },
+        "descricao": { "type": "string", "description": "Descrição / Observações" },
         "tipo_doc": { "type": "string", "description": "Tipo de Documento" },
         "status": { "type": "string", "enum": ["Pendente", "Recebido", "Protocolado", "Registrado", "Cancelado"] },
         "data_recebimento": { "type": "string", "format": "date-time" },

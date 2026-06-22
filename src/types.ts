@@ -185,6 +185,8 @@ export interface Faturamento {
 export interface Documento {
   id?: string;
   id_imovel: string;
+  nome?: string;
+  descricao?: string;
   tipo_doc: string;
   status: StatusDoc;
   data_recebimento?: string;

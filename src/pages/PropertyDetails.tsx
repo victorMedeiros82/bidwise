@@ -6,6 +6,7 @@ import {
   Plus, 
   Trash2, 
   Eye, 
+  User,
   ChevronRight, 
   Gavel, 
   Calendar, 
@@ -85,7 +86,7 @@ export default function PropertyDetails() {
 
   const { data: custosAquisicao, add: addCustoAquisicao, remove: removeCustoAquisicao, update: updateCustoAquisicao } = useFirestore<CustoAquisicao>('custos_aquisicao');
   const { data: custosReforma, add: addCustoReforma, remove: removeCustoReforma, update: updateCustoReforma } = useFirestore<CustoReforma>('custos_reforma');
-  const { data: documentos, add: addDocumento, remove: removeDocumento } = useFirestore<Documento>('documentos');
+  const { data: documentos, add: addDocumento, remove: removeDocumento, update: updateDocumento } = useFirestore<Documento>('documentos');
   const { data: holding, add: addHolding, remove: removeHolding, update: updateHolding } = useFirestore<Holding>('holding');
   const { data: faturamento, add: addFaturamento, remove: removeFaturamento, update: updateFaturamento } = useFirestore<Faturamento>('faturamento');
 
@@ -139,7 +140,7 @@ export default function PropertyDetails() {
   const [vendaSimulada, setVendaSimulada] = useState<number>(0);
   const [itemToDelete, setItemToDelete] = useState<{
     id: string;
-    type: 'custo_aquisicao' | 'custo_reforma' | 'holding' | 'faturamento';
+    type: 'custo_aquisicao' | 'custo_reforma' | 'holding' | 'faturamento' | 'documento';
     label: string;
   } | null>(null);
 
@@ -201,6 +202,73 @@ export default function PropertyDetails() {
   const [reformaFileUrl, setReformaFileUrl] = useState('');
   const [holdingFileUrl, setHoldingFileUrl] = useState('');
   const [fatDescricao, setFatDescricao] = useState('');
+
+  // States for Documents Management
+  const [showAddDocumento, setShowAddDocumento] = useState(false);
+  const [docNome, setDocNome] = useState('');
+  const [docTipoDoc, setDocTipoDoc] = useState('Edital');
+  const [docStatus, setDocStatus] = useState<StatusDoc>(StatusDoc.Recebido);
+  const [docDataRecebimento, setDocDataRecebimento] = useState('');
+  const [docDataVencimento, setDocDataVencimento] = useState('');
+  const [docResponsavel, setDocResponsavel] = useState('');
+  const [docFileUrl, setDocFileUrl] = useState('');
+  const [docDescricao, setDocDescricao] = useState('');
+
+  // Filtering / Searching states for documents
+  const [docSearchQuery, setDocSearchQuery] = useState('');
+  const [docFilterTipo, setDocFilterTipo] = useState('Todos');
+  const [docFilterStatus, setDocFilterStatus] = useState('Todos');
+
+  // Preview state
+  const [previewDocUrl, setPreviewDocUrl] = useState<string | null>(null);
+  const [previewDocName, setPreviewDocName] = useState<string | null>(null);
+
+  const handleAddDocumento = async () => {
+    if (!docNome || !docTipoDoc || !id) {
+      setFormErrors({ ...formErrors, docNome: 'Nome do documento é obrigatório' });
+      return;
+    }
+    try {
+      await addDocumento({
+        id_imovel: id,
+        nome: docNome,
+        tipo_doc: docTipoDoc,
+        status: docStatus,
+        data_recebimento: docDataRecebimento || undefined,
+        data_vencimento: docDataVencimento || undefined,
+        responsavel: docResponsavel || undefined,
+        fileUrl: docFileUrl || undefined,
+        descricao: docDescricao || undefined
+      });
+      setDocNome('');
+      setDocTipoDoc('Edital');
+      setDocStatus(StatusDoc.Recebido);
+      setDocDataRecebimento('');
+      setDocDataVencimento('');
+      setDocResponsavel('');
+      setDocFileUrl('');
+      setDocDescricao('');
+      setShowAddDocumento(false);
+      setDbError(null);
+      
+      const updatedErrors = { ...formErrors };
+      delete updatedErrors.docNome;
+      setFormErrors(updatedErrors);
+    } catch (err) {
+      console.error("Erro ao adicionar documento:", err);
+      setDbError("Erro ao salvar documento.");
+    }
+  };
+
+  const handleUpdateStatus = async (docId: string, newStatus: StatusDoc) => {
+    try {
+      await updateDocumento(docId, { status: newStatus });
+      setDbError(null);
+    } catch (err) {
+      console.error("Erro ao atualizar status do documento:", err);
+      setDbError("Erro ao atualizar status.");
+    }
+  };
 
   const handleAddAquisicao = async () => {
     if (!aquisicaoValor || !id) return;
@@ -2117,8 +2185,482 @@ export default function PropertyDetails() {
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -10 }}
             className="space-y-6"
+            id="secao-documentos"
           >
-            {/* Documentos content skeleton */}
+            {/* KPI Stats Widgets */}
+            <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+              <div className="bg-white dark:bg-slate-900 p-5 rounded-3xl border border-slate-100 dark:border-slate-800 shadow-sm flex flex-col justify-between">
+                <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest block">Total</span>
+                <div className="flex items-baseline gap-1 mt-1">
+                  <span className="text-2xl font-black text-slate-800 dark:text-white tracking-tight">{filteredDocumentos.length}</span>
+                  <span className="text-[10px] font-bold text-slate-400">docs</span>
+                </div>
+              </div>
+              <div className="bg-white dark:bg-slate-900 p-5 rounded-3xl border border-slate-100 dark:border-slate-800 shadow-sm flex flex-col justify-between">
+                <span className="text-[9px] font-black text-amber-500 uppercase tracking-widest block">Pendentes</span>
+                <div className="flex items-baseline gap-1 mt-1">
+                  <span className="text-2xl font-black text-amber-500 tracking-tight">
+                    {filteredDocumentos.filter(d => d.status === StatusDoc.Pendente).length}
+                  </span>
+                  <span className="text-[10px] font-bold text-amber-400">alerta</span>
+                </div>
+              </div>
+              <div className="bg-white dark:bg-slate-900 p-5 rounded-3xl border border-slate-100 dark:border-slate-800 shadow-sm flex flex-col justify-between">
+                <span className="text-[9px] font-black text-indigo-500 uppercase tracking-widest block">Editais</span>
+                <div className="flex items-baseline gap-1 mt-1">
+                  <span className="text-2xl font-black text-indigo-500 tracking-tight">
+                    {filteredDocumentos.filter(d => d.tipo_doc === 'Edital').length}
+                  </span>
+                  <span className="text-[10px] font-bold text-indigo-400">arqs</span>
+                </div>
+              </div>
+              <div className="bg-white dark:bg-slate-900 p-5 rounded-3xl border border-slate-100 dark:border-slate-800 shadow-sm flex flex-col justify-between">
+                <span className="text-[9px] font-black text-violet-500 uppercase tracking-widest block">Certidões</span>
+                <div className="flex items-baseline gap-1 mt-1">
+                  <span className="text-2xl font-black text-violet-500 tracking-tight">
+                    {filteredDocumentos.filter(d => d.tipo_doc === 'Certidão').length}
+                  </span>
+                  <span className="text-[10px] font-bold text-violet-400">cert</span>
+                </div>
+              </div>
+              <div className="bg-white dark:bg-slate-900 p-5 rounded-3xl border border-slate-100 dark:border-slate-800 shadow-sm flex flex-col justify-between col-span-2 md:col-span-1">
+                <span className="text-[9px] font-black text-emerald-500 uppercase tracking-widest block">Fotos</span>
+                <div className="flex items-baseline gap-1 mt-1">
+                  <span className="text-2xl font-black text-emerald-500 tracking-tight">
+                    {filteredDocumentos.filter(d => d.tipo_doc === 'Foto').length}
+                  </span>
+                  <span className="text-[10px] font-bold text-emerald-400">fotos</span>
+                </div>
+              </div>
+            </div>
+
+            {/* Toolbar for Search and Filtering */}
+            <div className="bg-white dark:bg-slate-900 p-4 rounded-3xl border border-slate-200 dark:border-slate-800 shadow-sm flex flex-col md:flex-row gap-4 items-center justify-between">
+              <div className="relative w-full md:max-w-xs">
+                <Search size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
+                <input
+                  type="text"
+                  placeholder="Pesquisar documentos..."
+                  className="w-full pl-10 pr-4 py-2.5 bg-slate-50 dark:bg-slate-800 border-none rounded-2xl text-[11px] font-black outline-none ring-2 ring-transparent focus:ring-blue-500/20 transition-all text-slate-700 dark:text-slate-300 placeholder:text-slate-400"
+                  value={docSearchQuery}
+                  onChange={(e) => setDocSearchQuery(e.target.value)}
+                />
+              </div>
+
+              <div className="flex flex-wrap md:flex-nowrap items-center gap-3 w-full md:w-auto">
+                <div className="flex items-center gap-1.5 w-full md:w-auto">
+                  <span className="text-[9px] font-black text-slate-400 uppercase tracking-wider">Tipo:</span>
+                  <select
+                    className="bg-slate-50 dark:bg-slate-800 px-3 py-2.5 border-none rounded-xl text-[11px] font-black outline-none ring-2 ring-transparent focus:ring-blue-500/20 transition-all w-full md:w-auto min-w-[120px]"
+                    value={docFilterTipo}
+                    onChange={(e) => setDocFilterTipo(e.target.value)}
+                  >
+                    <option value="Todos">Todos</option>
+                    <option value="Edital">Edital</option>
+                    <option value="Certidão">Certidão</option>
+                    <option value="Foto">Foto</option>
+                    <option value="Matrícula">Matrícula</option>
+                    <option value="Contrato">Contrato</option>
+                    <option value="Outro">Outro</option>
+                  </select>
+                </div>
+
+                <div className="flex items-center gap-1.5 w-full md:w-auto">
+                  <span className="text-[9px] font-black text-slate-400 uppercase tracking-wider">Status:</span>
+                  <select
+                    className="bg-slate-50 dark:bg-slate-800 px-3 py-2.5 border-none rounded-xl text-[11px] font-black outline-none ring-2 ring-transparent focus:ring-blue-500/20 transition-all w-full md:w-auto min-w-[120px]"
+                    value={docFilterStatus}
+                    onChange={(e) => setDocFilterStatus(e.target.value)}
+                  >
+                    <option value="Todos">Todos</option>
+                    <option value="Pendente">Pendente</option>
+                    <option value="Recebido">Recebido</option>
+                    <option value="Protocolado">Protocolado</option>
+                    <option value="Registrado">Registrado</option>
+                    <option value="Cancelado">Cancelado</option>
+                  </select>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() => setShowAddDocumento(!showAddDocumento)}
+                  className={cn(
+                    "w-full md:w-auto px-4 py-2.5 rounded-2xl flex items-center justify-center gap-2 text-[10px] font-black uppercase tracking-wider transition-all shadow-md cursor-pointer",
+                    showAddDocumento 
+                      ? "bg-rose-50 hover:bg-rose-100 text-rose-600 border border-rose-100 dark:bg-rose-950/20 dark:text-rose-400 dark:border-rose-900/30" 
+                      : "bg-blue-600 hover:bg-blue-700 text-white shadow-blue-500/20"
+                  )}
+                >
+                  <Plus size={16} className={cn("transition-transform duration-200", showAddDocumento && "rotate-45")} />
+                  {showAddDocumento ? "Fechar" : "Novo Documento"}
+                </button>
+              </div>
+            </div>
+
+            {/* Add Document Expansion Form */}
+            {showAddDocumento && (
+              <motion.div
+                initial={{ opacity: 0, height: 0 }}
+                animate={{ opacity: 1, height: 'auto' }}
+                className="bg-white dark:bg-slate-900 p-8 rounded-[2.5rem] border border-slate-200 dark:border-slate-800 shadow-xl space-y-6 overflow-hidden"
+              >
+                <div>
+                  <h4 className="text-xs font-black text-slate-900 dark:text-white uppercase tracking-widest flex items-center gap-2">
+                    <span className="w-4 h-px bg-blue-500" />
+                    Anexar Novo Documento ao Leilão
+                  </h4>
+                  <p className="text-[10px] text-slate-400 mt-1 font-bold">Preencha os metadados do documento perfeitamente antes de anexar.</p>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6 text-left">
+                  {/* Name */}
+                  <div className="space-y-2">
+                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-1">Título/Nome</label>
+                    <input
+                      type="text"
+                      className={cn(
+                        "w-full px-4 py-3 bg-slate-50 dark:bg-slate-800 border-none rounded-xl text-xs font-bold outline-none ring-2 ring-transparent focus:ring-blue-500/20 transition-all text-slate-800 dark:text-slate-100",
+                        formErrors.docNome && "ring-rose-500/20 border-rose-500 bg-rose-50/50"
+                      )}
+                      placeholder="Ex: Edital do Leilão Central, Certidão Cível..."
+                      value={docNome}
+                      onChange={(e) => setDocNome(e.target.value)}
+                    />
+                    {formErrors.docNome && <p className="text-[9px] text-rose-500 font-bold uppercase tracking-wider">{formErrors.docNome}</p>}
+                  </div>
+
+                  {/* Document Type */}
+                  <div className="space-y-2">
+                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-1">Tipo de Documento</label>
+                    <select
+                      className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-800 border-none rounded-xl text-xs font-bold outline-none ring-2 ring-transparent focus:ring-blue-500/20 transition-all text-slate-800 dark:text-slate-100"
+                      value={docTipoDoc}
+                      onChange={(e) => setDocTipoDoc(e.target.value)}
+                    >
+                      <option value="Edital">Edital (Regulamento)</option>
+                      <option value="Certidão">Certidão (Negativa/Judicial)</option>
+                      <option value="Foto">Foto do Imóvel</option>
+                      <option value="Matrícula">Matrícula (RGI)</option>
+                      <option value="Contrato">Contrato / Ata de Compra</option>
+                      <option value="Outro">Outro documento auxiliar</option>
+                    </select>
+                  </div>
+
+                  {/* Status */}
+                  <div className="space-y-2">
+                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-1">Status Atuante</label>
+                    <select
+                      className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-800 border-none rounded-xl text-xs font-bold outline-none ring-2 ring-transparent focus:ring-blue-500/20 transition-all text-slate-800 dark:text-slate-100"
+                      value={docStatus}
+                      onChange={(e: any) => setDocStatus(e.target.value)}
+                    >
+                      <option value={StatusDoc.Recebido}>Recebido</option>
+                      <option value={StatusDoc.Pendente}>Pendente / Em Espera</option>
+                      <option value={StatusDoc.Protocolado}>Protocolado</option>
+                      <option value={StatusDoc.Registrado}>Registrado</option>
+                      <option value={StatusDoc.Cancelado}>Cancelado</option>
+                    </select>
+                  </div>
+
+                  {/* Receipt Date */}
+                  <div className="space-y-2">
+                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-1">Data de Emissão/Recebimento</label>
+                    <input
+                      type="date"
+                      className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-800 border-none rounded-xl text-xs font-bold outline-none ring-2 ring-transparent focus:ring-blue-500/20 transition-all text-slate-800 dark:text-slate-100"
+                      value={docDataRecebimento}
+                      onChange={(e) => setDocDataRecebimento(e.target.value)}
+                    />
+                  </div>
+
+                  {/* Expiration Date */}
+                  <div className="space-y-2">
+                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-1">Data de Validade/Vencimento</label>
+                    <input
+                      type="date"
+                      className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-800 border-none rounded-xl text-xs font-bold outline-none ring-2 ring-transparent focus:ring-blue-500/20 transition-all text-slate-800 dark:text-slate-100"
+                      value={docDataVencimento}
+                      onChange={(e) => setDocDataVencimento(e.target.value)}
+                    />
+                  </div>
+
+                  {/* Responsible Person */}
+                  <div className="space-y-2">
+                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-1">Responsável / Advogado</label>
+                    <input
+                      type="text"
+                      className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-800 border-none rounded-xl text-xs font-bold outline-none ring-2 ring-transparent focus:ring-blue-500/20 transition-all text-slate-800 dark:text-slate-100"
+                      placeholder="Nome do analista, corretor ou assessor"
+                      value={docResponsavel}
+                      onChange={(e) => setDocResponsavel(e.target.value)}
+                    />
+                  </div>
+
+                  {/* Description / Summary Notes */}
+                  <div className="space-y-2 md:col-span-2">
+                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-1">Observações / Detalhes</label>
+                    <input
+                      type="text"
+                      className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-800 border-none rounded-xl text-xs font-bold outline-none ring-2 ring-transparent focus:ring-blue-500/20 transition-all text-slate-800 dark:text-slate-100"
+                      placeholder="Observações complementares importantes..."
+                      value={docDescricao}
+                      onChange={(e) => setDocDescricao(e.target.value)}
+                    />
+                  </div>
+
+                  {/* Attachment Picker */}
+                  <div className="space-y-2 col-span-1">
+                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-1">Anexo</label>
+                    <FilePicker
+                      onFileSelect={(url) => setDocFileUrl(url)}
+                      onClear={() => setDocFileUrl('')}
+                    />
+                  </div>
+                </div>
+
+                <div className="flex gap-3 justify-end pt-3">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setShowAddDocumento(false);
+                      const updatedErrors = { ...formErrors };
+                      delete updatedErrors.docNome;
+                      setFormErrors(updatedErrors);
+                    }}
+                    className="px-5 py-3.5 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700/85 text-slate-700 dark:text-slate-300 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all cursor-pointer font-bold"
+                  >
+                    Cancelar
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleAddDocumento}
+                    className="px-6 py-3.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-[10px] font-black uppercase tracking-widest transition-all shadow-lg shadow-blue-500/25 active:scale-[0.98] cursor-pointer font-bold"
+                  >
+                    Salvar Documento
+                  </button>
+                </div>
+              </motion.div>
+            )}
+
+            {/* Grid of Documents */}
+            {filteredDocumentos.length > 0 ? (
+              (() => {
+                const searchedDocs = filteredDocumentos.filter(doc => {
+                  const matchesSearch = docSearchQuery === '' || 
+                    (doc.nome && doc.nome.toLowerCase().includes(docSearchQuery.toLowerCase())) ||
+                    (doc.descricao && doc.descricao.toLowerCase().includes(docSearchQuery.toLowerCase())) ||
+                    (doc.tipo_doc && doc.tipo_doc.toLowerCase().includes(docSearchQuery.toLowerCase())) ||
+                    (doc.responsavel && doc.responsavel.toLowerCase().includes(docSearchQuery.toLowerCase()));
+                  
+                  const matchesTipo = docFilterTipo === 'Todos' || doc.tipo_doc === docFilterTipo;
+                  const matchesStatus = docFilterStatus === 'Todos' || doc.status === docFilterStatus;
+                  
+                  return matchesSearch && matchesTipo && matchesStatus;
+                });
+
+                if (searchedDocs.length === 0) {
+                  return (
+                    <div className="flex flex-col items-center justify-center py-16 px-6 bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 rounded-[2.5rem] shadow-sm text-center">
+                      <FolderOpen size={48} className="text-blue-500/25 mb-4 animate-pulse" />
+                      <h4 className="text-sm font-black text-slate-800 dark:text-white uppercase tracking-wider">Nenhum Documento Correspondente</h4>
+                      <p className="text-[11px] text-slate-400 dark:text-slate-500 max-w-sm mt-1 leading-relaxed font-bold">
+                        Nenhum documento atende aos termos da pesquisa ou combinatória de filtros selecionados. Redefina seus filtros acima.
+                      </p>
+                    </div>
+                  );
+                }
+
+                return (
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                    {searchedDocs.map((docItem) => {
+                      const isEdital = docItem.tipo_doc === 'Edital';
+                      const isCertidao = docItem.tipo_doc === 'Certidão';
+                      const isFoto = docItem.tipo_doc === 'Foto';
+                      const isMatricula = docItem.tipo_doc === 'Matrícula';
+                      const isContrato = docItem.tipo_doc === 'Contrato';
+
+                      const categoryColor = isEdital ? 'border-indigo-100 dark:border-indigo-900/50 hover:border-indigo-400' :
+                                 isCertidao ? 'border-violet-100 dark:border-violet-900/50 hover:border-violet-400' :
+                                 isFoto ? 'border-amber-100 dark:border-amber-900/50 hover:border-amber-400' :
+                                 isMatricula ? 'border-emerald-100 dark:border-emerald-900/50 hover:border-emerald-400' :
+                                 isContrato ? 'border-sky-100 dark:border-sky-900/50 hover:border-sky-400' :
+                                 'border-slate-100 dark:border-slate-800 hover:border-slate-300';
+
+                      const badgeBg = isEdital ? 'bg-indigo-50 text-indigo-600 dark:bg-indigo-950/20 dark:text-indigo-400' :
+                                      isCertidao ? 'bg-violet-50 text-violet-600 dark:bg-violet-950/20 dark:text-violet-400' :
+                                      isFoto ? 'bg-amber-50 text-amber-600 dark:bg-amber-950/20 dark:text-amber-400' :
+                                      isMatricula ? 'bg-emerald-50 text-emerald-600 dark:bg-emerald-950/30 dark:text-emerald-400' :
+                                      isContrato ? 'bg-sky-50 text-sky-600 dark:bg-sky-950/20 dark:text-sky-400' :
+                                      'bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-400';
+
+                      const isExpired = docItem.data_vencimento && new Date(docItem.data_vencimento) < new Date();
+
+                      return (
+                        <motion.div
+                          layout
+                          key={docItem.id}
+                          className={cn(
+                            "bg-white dark:bg-slate-900 p-6 rounded-[2rem] border-2 shadow-sm flex flex-col justify-between transition-all hover:shadow-md text-left",
+                            categoryColor
+                          )}
+                        >
+                          <div className="space-y-4">
+                            {/* Tags and badges */}
+                            <div className="flex justify-between items-center gap-2">
+                              <span className={cn("text-[9px] font-black uppercase tracking-widest px-2.5 py-1 rounded-full", badgeBg)}>
+                                {docItem.tipo_doc}
+                              </span>
+
+                              <div className="flex items-center gap-1.5">
+                                {/* Inline simple status selector */}
+                                <select
+                                  className={cn(
+                                    "text-[9px] font-black uppercase tracking-tight py-1 px-2 rounded-lg border-2 border-transparent outline-none ring-none transition-colors cursor-pointer bg-slate-50 dark:bg-slate-800",
+                                    docItem.status === StatusDoc.Recebido && "text-emerald-600 bg-emerald-50 dark:bg-emerald-900/20 dark:text-emerald-400",
+                                    docItem.status === StatusDoc.Pendente && "text-amber-600 bg-amber-50 dark:bg-amber-900/20 dark:text-amber-400",
+                                    docItem.status === StatusDoc.Protocolado && "text-blue-600 bg-blue-50 dark:bg-blue-900/20 dark:text-blue-400",
+                                    docItem.status === StatusDoc.Registrado && "text-teal-600 bg-teal-50 dark:bg-teal-900/20 dark:text-teal-400",
+                                    docItem.status === StatusDoc.Cancelado && "text-rose-600 bg-rose-50 dark:bg-rose-900/20 dark:text-rose-400"
+                                  )}
+                                  value={docItem.status}
+                                  onChange={(e) => {
+                                    if (docItem.id) {
+                                      handleUpdateStatus(docItem.id, e.target.value as StatusDoc);
+                                    }
+                                  }}
+                                >
+                                  <option value={StatusDoc.Recebido}>Recebido</option>
+                                  <option value={StatusDoc.Pendente}>Pendente</option>
+                                  <option value={StatusDoc.Protocolado}>Protocolado</option>
+                                  <option value={StatusDoc.Registrado}>Registrado</option>
+                                  <option value={StatusDoc.Cancelado}>Cancelado</option>
+                                </select>
+                              </div>
+                            </div>
+
+                            {/* Title and notes */}
+                            <div className="space-y-1">
+                              <h5 className="text-xs font-black text-slate-800 dark:text-white tracking-tight leading-tight uppercase">
+                                {docItem.nome || docItem.tipo_doc}
+                              </h5>
+                              {docItem.descricao && (
+                                <p className="text-[10px] text-slate-400 dark:text-slate-500 font-bold leading-relaxed line-clamp-2">
+                                  {docItem.descricao}
+                                </p>
+                              )}
+                            </div>
+
+                            {/* Thumbnail View of attached images inside CARD */}
+                            {docItem.fileUrl ? (
+                              <div className="relative group w-full h-36 bg-slate-50 dark:bg-slate-800/20 rounded-2xl overflow-hidden border border-slate-100 dark:border-slate-800/80">
+                                {docItem.fileUrl.startsWith('data:image/') || docItem.fileUrl.endsWith('.jpg') || docItem.fileUrl.endsWith('.png') ? (
+                                  <img 
+                                    src={docItem.fileUrl} 
+                                    alt={docItem.nome} 
+                                    className="w-full h-full object-cover transition-transform group-hover:scale-105 duration-300"
+                                    referrerPolicy="no-referrer"
+                                  />
+                                ) : (
+                                  <div className="w-full h-full flex flex-col items-center justify-center p-4">
+                                    <FileText size={36} className="text-blue-500/80 mb-1" />
+                                    <span className="text-[10px] font-black text-blue-500 dark:text-blue-400 uppercase tracking-widest">Documento Geral</span>
+                                  </div>
+                                )}
+
+                                {/* Hover overlay with action buttons */}
+                                <div className="absolute inset-0 bg-slate-950/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2.5">
+                                  <button
+                                    onClick={() => {
+                                      setPreviewDocUrl(docItem.fileUrl || null);
+                                      setPreviewDocName(docItem.nome || docItem.tipo_doc);
+                                    }}
+                                    className="p-2.5 bg-white/10 backdrop-blur-md rounded-xl text-white hover:bg-white/20 transition-all cursor-pointer"
+                                    title="Visualizar documento"
+                                  >
+                                    <Eye size={16} />
+                                  </button>
+                                  
+                                  <a
+                                    href={docItem.fileUrl}
+                                    download={docItem.nome || docItem.tipo_doc}
+                                    className="p-2.5 bg-white/10 backdrop-blur-md rounded-xl text-white hover:bg-white/20 transition-all cursor-pointer"
+                                    title="Baixar arquivo original"
+                                  >
+                                    <Download size={16} />
+                                  </a>
+                                </div>
+                              </div>
+                            ) : null}
+
+                            {/* Meta lines */}
+                            <div className="space-y-1.5 pt-1.5 border-t border-slate-100 dark:border-slate-800/60">
+                              {docItem.responsavel && (
+                                <div className="flex items-center gap-2 text-[10px] font-bold text-slate-500 dark:text-slate-400">
+                                  <User size={12} className="text-slate-400" />
+                                  <span className="truncate">Responsável: {docItem.responsavel}</span>
+                                </div>
+                              )}
+
+                              {docItem.data_recebimento && (
+                                <div className="flex items-center gap-2 text-[10px] font-bold text-slate-500 dark:text-slate-400">
+                                  <Calendar size={12} className="text-slate-400" />
+                                  <span>Recebido em: {new Date(docItem.data_recebimento).toLocaleDateString('pt-BR')}</span>
+                                </div>
+                              )}
+
+                              {docItem.data_vencimento && (
+                                <div className={cn(
+                                  "flex items-center gap-2 text-[10px] font-bold",
+                                  isExpired ? "text-rose-500" : "text-slate-500 dark:text-slate-400"
+                                )}>
+                                  <Clock size={12} className={isExpired ? "text-rose-500 animate-pulse" : "text-slate-400"} />
+                                  <span>
+                                    Validade: {new Date(docItem.data_vencimento).toLocaleDateString('pt-BR')}
+                                    {isExpired && " (VENCIDO)"}
+                                  </span>
+                                </div>
+                              )}
+                            </div>
+                          </div>
+
+                          {/* Card Footer Delete Button */}
+                          <div className="flex justify-end pt-3 mt-3 border-t border-slate-100 dark:border-slate-800/30 w-full">
+                            <button
+                              type="button"
+                              onClick={() => setItemToDelete({
+                                id: docItem.id || '',
+                                type: 'documento',
+                                label: docItem.nome || docItem.tipo_doc
+                              })}
+                              className="flex items-center gap-1.5 py-1.5 px-3 bg-slate-50 dark:bg-slate-800/40 hover:bg-rose-50 hover:text-rose-500 dark:hover:bg-rose-950/20 text-slate-400 dark:text-slate-500 rounded-xl text-[10px] font-black uppercase tracking-wider transition-colors cursor-pointer"
+                            >
+                              <Trash2 size={12} />
+                              Excluir
+                            </button>
+                          </div>
+                        </motion.div>
+                      );
+                    })}
+                  </div>
+                );
+              })()
+            ) : (
+              <div className="flex flex-col items-center justify-center py-16 px-6 bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 rounded-[2.5rem] shadow-sm text-center">
+                <FolderOpen size={48} className="text-blue-500/25 mb-4" />
+                <h4 className="text-sm font-black text-slate-800 dark:text-white uppercase tracking-wider">Nenhum Documento Anexado</h4>
+                <p className="text-[11px] text-slate-400 dark:text-slate-500 max-w-sm mt-1 leading-relaxed font-bold">
+                  Nenhum documento ou fotos foram anexados a este leilão ainda. Use o formulário acima para registrar regulamentos, editais, certidões negativas ou fotos de inspeção do imóvel.
+                </p>
+                {!showAddDocumento && (
+                  <button
+                    onClick={() => setShowAddDocumento(true)}
+                    className="mt-4 px-4 py-2.5 bg-blue-50 hover:bg-blue-100 text-blue-600 dark:bg-blue-950/30 dark:text-blue-400 font-black text-[10px] uppercase tracking-wider rounded-xl transition-all cursor-pointer"
+                  >
+                    Anexar Primeiro Documento
+                  </button>
+                )}
+              </div>
+            )}
           </motion.div>
         )}
       </AnimatePresence>
@@ -2147,7 +2689,7 @@ export default function PropertyDetails() {
                 
                 <h3 className="text-xl font-black text-slate-900 dark:text-white tracking-tight">Excluir Registro?</h3>
                 <p className="text-sm text-slate-500 dark:text-slate-400 mt-2 font-medium">
-                  Tem certeza que deseja apagar o seguinte registro financeiro?
+                  Tem certeza que deseja apagar o seguinte registro?
                 </p>
 
                 {/* Info Card inside modal */}
@@ -2155,13 +2697,14 @@ export default function PropertyDetails() {
                   <p className="text-xs font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest mb-1">
                     {itemToDelete.type === 'custo_aquisicao' ? 'Custo de Aquisição' :
                      itemToDelete.type === 'custo_reforma' ? 'Reforma / Benfeitoria' :
-                     itemToDelete.type === 'holding' ? 'Despesa de Holding' : 'Lançamento de Faturamento'}
+                     itemToDelete.type === 'holding' ? 'Despesa de Holding' :
+                     itemToDelete.type === 'documento' ? 'Documento Anexado' : 'Lançamento de Faturamento'}
                   </p>
                   <p className="text-sm font-bold text-slate-800 dark:text-slate-200 truncate">{itemToDelete.label}</p>
                 </div>
 
                 <p className="text-[11px] text-rose-500 font-bold uppercase tracking-wider mt-4">
-                  Esta ação é irreversível e atualizará os cálculos em tempo real.
+                  Esta ação é irreversível e atualizará as informações em tempo real.
                 </p>
 
                 <div className="mt-6 flex gap-3">
@@ -2185,6 +2728,8 @@ export default function PropertyDetails() {
                             await removeHolding(itemToDelete.id);
                           } else if (itemToDelete.type === 'faturamento') {
                             await removeFaturamento(itemToDelete.id);
+                          } else if (itemToDelete.type === 'documento') {
+                            await removeDocumento(itemToDelete.id);
                           }
                         } catch (err) {
                           console.error("Erro ao deletar item:", err);
@@ -2198,6 +2743,73 @@ export default function PropertyDetails() {
                     Confirmar
                   </button>
                 </div>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+
+        {previewDocUrl && (
+          <motion.div
+            key="preview-documento-modal-backdrop"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            onClick={() => {
+              setPreviewDocUrl(null);
+              setPreviewDocName(null);
+            }}
+            className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm cursor-pointer"
+          >
+            <motion.div
+              initial={{ scale: 0.9, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.9, opacity: 0 }}
+              className="bg-white dark:bg-slate-900 rounded-[2.5rem] shadow-2xl w-full max-w-4xl relative z-10 overflow-hidden border border-slate-200 dark:border-slate-800 p-6 flex flex-col max-h-[90vh]"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="flex justify-between items-center pb-4 border-b border-slate-100 dark:border-slate-800 mb-4">
+                <div className="space-y-0.5 text-left">
+                  <span className="text-[10px] font-black text-blue-500 uppercase tracking-widest block">Visualização de Documento</span>
+                  <h3 className="text-sm font-black text-slate-900 dark:text-white tracking-tight">{previewDocName || 'Sem título'}</h3>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setPreviewDocUrl(null);
+                    setPreviewDocName(null);
+                  }}
+                  className="p-2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 bg-slate-50 dark:bg-slate-800 rounded-xl transition-all cursor-pointer font-bold text-[10px] uppercase tracking-wider"
+                >
+                  Fechar
+                </button>
+              </div>
+
+              <div className="flex-1 overflow-auto flex items-center justify-center bg-slate-50 dark:bg-slate-950/20 rounded-2xl p-4 min-h-[300px]">
+                {previewDocUrl.startsWith('data:image/') || previewDocUrl.endsWith('.jpg') || previewDocUrl.endsWith('.png') ? (
+                  <img
+                    src={previewDocUrl}
+                    alt={previewDocName || 'Preview Documento'}
+                    className="max-w-full max-h-[60vh] object-contain rounded-xl shadow-md"
+                  />
+                ) : (
+                  <div className="text-center p-12 space-y-3">
+                    <FileText size={64} className="text-blue-500 mx-auto opacity-70 animate-bounce" />
+                    <div>
+                      <p className="text-xs font-black text-slate-700 dark:text-slate-300 uppercase tracking-wider">Conteúdo PDF / Arquivo de Texto</p>
+                      <p className="text-[10px] text-slate-400 dark:text-slate-500 mt-1 font-bold">Este formato de arquivo não pode ser renderizado diretamente na tela.</p>
+                    </div>
+                    <div className="pt-3">
+                      <a
+                        href={previewDocUrl}
+                        download={previewDocName || 'documento'}
+                        className="inline-flex items-center gap-2 px-5 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-bold uppercase tracking-wider transition-all shadow-md active:scale-95 cursor-pointer"
+                      >
+                        <Download size={14} />
+                        Baixar Arquivo Original
+                      </a>
+                    </div>
+                  </div>
+                )}
               </div>
             </motion.div>
           </motion.div>

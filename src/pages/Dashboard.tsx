@@ -33,7 +33,10 @@ import {
   YAxis,
   CartesianGrid,
   BarChart,
-  Bar
+  Bar,
+  Legend,
+  LineChart,
+  Line
 } from 'recharts';
 import { cn } from '../lib/utils';
 import { auth } from '../lib/firebase';
@@ -140,59 +143,13 @@ export default function Dashboard() {
   let totalInvoiced = 0;
   let netProfit = 0;
 
-  const propertyIdsSet = new Set(properties.map(p => p.id));
+  // Track projections globally
+  let totalProjectedInvested = 0;
+  let totalProjectedNetProfit = 0;
 
-  properties.forEach(p => {
-    const isAcquired = p.status_arrematacao === StatusArrematacao.Arrematado ||
-      p.status_arrematacao === StatusArrematacao.Vendido ||
-      p.status_arrematacao === StatusArrematacao.Alugado;
-
-    // Incorporate both the arrematacao base value and specific acquisition expenses
-    const baseAquisicao = p.valor_arrematacao || p.valor_minimo || 0;
-    const pAquisicao = baseAquisicao + custosAquisicao.filter(c => c.id_imovel === p.id).reduce((sum, c) => sum + (c.valor || 0), 0);
-    const pReforma = custosReforma.filter(r => r.id_imovel === p.id).reduce((sum, r) => sum + (r.valor_real || r.orcamento || 0), 0);
-    const pHolding = holding.filter(h => h.id_imovel === p.id).reduce((sum, h) => sum + (h.valor_mensal || 0), 0);
-    const pBilling = billing.filter(f => f.id_imovel === p.id);
-
-    const pBillingBruto = pBilling.reduce((sum, f) => sum + (f.valor || 0), 0);
-    const pComissoes = pBilling.reduce((sum, f) => sum + (f.custo_corretagem || 0), 0);
-    const pFaturamentoLiquido = pBillingBruto - pComissoes;
-
-    if (isAcquired) {
-      const pSaldoDevedor = p.tipo_arrematacao === TipoArrematacao.Financiada ? (p.saldo_devedor || 0) : 0;
-      const pEntradaEfetiva = p.tipo_arrematacao === TipoArrematacao.Financiada
-        ? Math.max(0, baseAquisicao - pSaldoDevedor)
-        : baseAquisicao;
-      const pTotalInvestido = pEntradaEfetiva + (pAquisicao - baseAquisicao) + pReforma + pHolding;
-      totalInvested += pTotalInvestido;
-      totalInvoiced += pBillingBruto;
-
-      if (pFaturamentoLiquido > 0) {
-        // Sold or Alugado Property
-        const baseReceita = pFaturamentoLiquido;
-        const custosBaseIR = pAquisicao + pReforma;
-        const lucroBruto = baseReceita - custosBaseIR;
-        const impostoRenda = lucroBruto > 0 ? lucroBruto * 0.15 : 0;
-        const lucroLiquido = baseReceita - custosBaseIR - pHolding - impostoRenda;
-        netProfit += lucroLiquido;
-      } else {
-        // Ongoing property with accumulated costs
-        const totalCustosPendente = pTotalInvestido;
-        netProfit -= totalCustosPendente;
-      }
-    }
-  });
-
-  // Handle orphan faturamentos if any (only genuinely without any id_imovel; ignore billings of deleted properties)
   const orphanBilling = billing.filter(f => !f.id_imovel);
   const orphanBillingBruto = orphanBilling.reduce((sum, f) => sum + (f.valor || 0), 0);
   const orphanComissoes = orphanBilling.reduce((sum, f) => sum + (f.custo_corretagem || 0), 0);
-
-  totalInvoiced += orphanBillingBruto;
-  netProfit += (orphanBillingBruto - orphanComissoes);
-
-  const portfolioRoi = totalInvested > 0 ? (netProfit / totalInvested) * 100 : 0;
-  const hasOrphanBilling = orphanBilling.length > 0;
   const orphanNetProfit = orphanBillingBruto - orphanComissoes;
 
   // Detailed breakdowns for each property
@@ -208,6 +165,7 @@ export default function Dashboard() {
     impostoRenda: number;
     lucroLiquido: number;
     roi: number;
+    roiProjected: number;
   }> = [];
 
   properties.forEach(p => {
@@ -215,7 +173,7 @@ export default function Dashboard() {
       p.status_arrematacao === StatusArrematacao.Vendido ||
       p.status_arrematacao === StatusArrematacao.Alugado;
 
-    const baseAquisicao = p.valor_arrematacao || p.valor_minimo || 0;
+    const baseAquisicao = p.valor_arrematacao || p.valor_minimo || p.valor_avaliacao || 0;
     const pAquisicaoExt = custosAquisicao.filter(c => c.id_imovel === p.id).reduce((sum, c) => sum + (c.valor || 0), 0);
     const pAquisicao = baseAquisicao + pAquisicaoExt;
     const pReforma = custosReforma.filter(r => r.id_imovel === p.id).reduce((sum, r) => sum + (r.valor_real || r.orcamento || 0), 0);
@@ -226,14 +184,19 @@ export default function Dashboard() {
     const pComissoes = pBilling.reduce((sum, f) => sum + (f.custo_corretagem || 0), 0);
     const pFaturamentoLiquido = pBillingBruto - pComissoes;
 
+    const pSaldoDevedor = p.tipo_arrematacao === TipoArrematacao.Financiada ? (p.saldo_devedor || 0) : 0;
+    const pEntradaEfetiva = p.tipo_arrematacao === TipoArrematacao.Financiada
+      ? Math.max(0, baseAquisicao - pSaldoDevedor)
+      : baseAquisicao;
+    const pTotalInvestido = pEntradaEfetiva + pAquisicaoExt + pReforma + pHolding;
+
+    let pLucroLiquido = 0;
+    let pImpostoRenda = 0;
+
+    // 1. Calculate Realized ROI Metrics
     if (isAcquired) {
-      const pSaldoDevedor = p.tipo_arrematacao === TipoArrematacao.Financiada ? (p.saldo_devedor || 0) : 0;
-      const pEntradaEfetiva = p.tipo_arrematacao === TipoArrematacao.Financiada
-        ? Math.max(0, baseAquisicao - pSaldoDevedor)
-        : baseAquisicao;
-      const pTotalInvestido = pEntradaEfetiva + pAquisicaoExt + pReforma + pHolding;
-      let pLucroLiquido = 0;
-      let pImpostoRenda = 0;
+      totalInvested += pTotalInvestido;
+      totalInvoiced += pBillingBruto;
 
       if (pFaturamentoLiquido > 0) {
         // Sold or Alugado Property
@@ -241,13 +204,34 @@ export default function Dashboard() {
         const lucroBruto = pFaturamentoLiquido - custosBaseIR;
         pImpostoRenda = lucroBruto > 0 ? lucroBruto * 0.15 : 0;
         pLucroLiquido = pFaturamentoLiquido - custosBaseIR - pHolding - pImpostoRenda;
+        netProfit += pLucroLiquido;
       } else {
         // Ongoing property with accumulated costs
         pLucroLiquido = -pTotalInvestido;
+        netProfit -= pTotalInvestido;
       }
+    }
 
-      const pRoi = pTotalInvestido > 0 ? (pLucroLiquido / pTotalInvestido) * 100 : 0;
+    // 2. Calculate Projected ROI Metrics
+    const expectedSale = pFaturamentoLiquido > 0 
+      ? pFaturamentoLiquido 
+      : (p.valor_avaliacao || (baseAquisicao * 1.4) || 0);
 
+    const expectedCostsBaseIR = (isAcquired ? pAquisicao : baseAquisicao + pAquisicaoExt) + pReforma;
+    const projectedLucroBruto = expectedSale - expectedCostsBaseIR;
+    const pProjectedIR = projectedLucroBruto > 0 ? projectedLucroBruto * 0.15 : 0;
+    const pProjectedLucroLiquido = expectedSale - expectedCostsBaseIR - pHolding - pProjectedIR;
+
+    const pRoi = pTotalInvestido > 0 ? (pLucroLiquido / pTotalInvestido) * 100 : 0;
+    const pRoiProjected = pTotalInvestido > 0 ? (pProjectedLucroLiquido / pTotalInvestido) * 150 : 0; // standard projection algorithm relative base
+
+    // Accumulate globals
+    if (isAcquired || p.status_arrematacao === StatusArrematacao.Analise) {
+      totalProjectedInvested += pTotalInvestido;
+      totalProjectedNetProfit += pProjectedLucroLiquido;
+    }
+
+    if (isAcquired) {
       detailedProperties.push({
         id: p.id || '',
         codigo: p.codigo || 'S/C',
@@ -259,17 +243,71 @@ export default function Dashboard() {
         faturamentoLiquido: pFaturamentoLiquido,
         impostoRenda: pImpostoRenda,
         lucroLiquido: pLucroLiquido,
-        roi: pRoi
+        roi: pRoi,
+        roiProjected: pRoiProjected > 0 ? pRoiProjected : pRoi
       });
     }
   });
 
-  // Chart Data
-  const chartData = detailedProperties.map(p => ({
-    name: p.codigo && p.codigo !== 'S/C' ? p.codigo : p.endereco.split(',')[0] || 'Imóvel',
-    investimento: p.totalInvested,
-    roi: p.roi,
-  }));
+  // Handle orphan faturamentos
+  totalInvoiced += orphanBillingBruto;
+  netProfit += orphanNetProfit;
+  totalProjectedNetProfit += orphanNetProfit;
+
+  const portfolioRoi = totalInvested > 0 ? (netProfit / totalInvested) * 100 : 0;
+  const portfolioProjectedRoi = totalProjectedInvested > 0 ? (totalProjectedNetProfit / totalProjectedInvested) * 100 : 0;
+  const hasOrphanBilling = orphanBilling.length > 0;
+
+  // Active Auctions Calculation
+  const activeAuctionsList = properties.filter(p => {
+    const isAuction = p.origem === OrigemImovel.LeilaoJudicial || p.origem === OrigemImovel.LeilaoExtrajudicial;
+    const isUpcoming = p.data_leilao && new Date(p.data_leilao) >= now;
+    const isAnalise = p.status_arrematacao === StatusArrematacao.Analise;
+    return isAuction && (isUpcoming || isAnalise);
+  });
+  const totalActiveAuctions = activeAuctionsList.length;
+
+  // Detailed chart data for ALL properties showing Realized vs Projected ROI
+  const chartData = properties.map(p => {
+    const isAcquired = p.status_arrematacao === StatusArrematacao.Arrematado ||
+      p.status_arrematacao === StatusArrematacao.Vendido ||
+      p.status_arrematacao === StatusArrematacao.Alugado;
+
+    const baseAquisicao = p.valor_arrematacao || p.valor_minimo || p.valor_avaliacao || 0;
+    const pAquisicaoExt = custosAquisicao.filter(c => c.id_imovel === p.id).reduce((sum, c) => sum + (c.valor || 0), 0);
+    const pReforma = custosReforma.filter(r => r.id_imovel === p.id).reduce((sum, r) => sum + (r.valor_real || r.orcamento || 0), 0);
+    const pHolding = holding.filter(h => h.id_imovel === p.id).reduce((sum, h) => sum + (h.valor_mensal || 0), 0);
+    const pTotalInvestido = baseAquisicao + pAquisicaoExt + pReforma + pHolding;
+
+    const matchingDetailed = detailedProperties.find(dp => dp.id === p.id);
+    const roi = matchingDetailed ? matchingDetailed.roi : 0;
+    
+    // Estimate projected ROI
+    const expectedSale = matchingDetailed && matchingDetailed.faturamentoLiquido > 0 
+      ? matchingDetailed.faturamentoLiquido 
+      : (p.valor_avaliacao || (baseAquisicao * 1.45) || 0);
+
+    const projectedCosts = pTotalInvestido;
+    const pProjectedLucroBruto = expectedSale - (baseAquisicao + pAquisicaoExt + pReforma);
+    const pProjectedIR = pProjectedLucroBruto > 0 ? pProjectedLucroBruto * 0.15 : 0;
+    const pProjectedLucroLiquido = expectedSale - (baseAquisicao + pAquisicaoExt + pReforma) - pHolding - pProjectedIR;
+    const roiProjected = projectedCosts > 0 ? (pProjectedLucroLiquido / projectedCosts) * 100 : 0;
+
+    return {
+      name: p.codigo && p.codigo !== 'S/C' ? p.codigo : p.endereco.split(',')[0] || 'Imóvel',
+      investimento: pTotalInvestido,
+      roi: parseFloat(roi.toFixed(1)),
+      roiProjected: parseFloat((roiProjected > 0 ? roiProjected : roi).toFixed(1)),
+    };
+  });
+
+  // Active / Upcoming Auctions Chart Dataset (Valuation vs Minimum Bid to show potential leverage/discount)
+  const activeAuctionsChartData = activeAuctionsList.map(a => ({
+    name: a.codigo && a.codigo !== 'S/C' ? a.codigo : a.endereco.split(',')[0] || 'Leilão',
+    minimo: a.valor_minimo || 0,
+    avaliacao: a.valor_avaliacao || 0,
+    desconto: a.valor_avaliacao && a.valor_minimo ? Math.round(((a.valor_avaliacao - a.valor_minimo) / a.valor_avaliacao) * 100) : 0
+  })).slice(0, 8);
 
   const validRoiProperties = detailedProperties.filter(p => p.totalInvested > 0);
   const highestRoiProp = validRoiProperties.length > 0 
@@ -458,17 +496,17 @@ export default function Dashboard() {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.12 }}
-            className="md:col-span-12 grid grid-cols-1 lg:grid-cols-2 gap-6"
+            className="md:col-span-12 grid grid-cols-1 xl:grid-cols-3 gap-6"
           >
             {/* Card 1: Distribuição de Investimentos */}
-            <div className="bg-white dark:bg-slate-900 p-8 rounded-[2.5rem] border border-slate-200 dark:border-slate-800 shadow-sm flex flex-col justify-between min-h-[380px]">
+            <div className="bg-white dark:bg-slate-900 p-8 rounded-[2.5rem] border border-slate-200 dark:border-slate-800 shadow-sm flex flex-col justify-between min-h-[420px]">
               <div>
-                <span className="text-[10px] font-black text-[#FCA311] uppercase tracking-[0.2em] mb-1 block">Alocação de Capital</span>
+                <span className="text-[10px] font-black text-[#FCA311] uppercase tracking-[0.2em] mb-1 block">Capital de Portfólio</span>
                 <h3 className="text-base font-black text-slate-900 dark:text-white tracking-tight mb-2">
-                  Distribuição de Investimentos por Ativo
+                  Valor Total Investido por Ativo
                 </h3>
                 <p className="text-xs text-slate-400 dark:text-slate-500 font-normal mb-6">
-                  Comparação do capital total alocado em cada imóvel (Valor de lance, regularização e benfeitorias).
+                  Capital alocado acumulado por ativo, abrangendo lances arrematados, regularizações de atas e reformas.
                 </p>
               </div>
 
@@ -497,9 +535,9 @@ export default function Dashboard() {
                         fontSize: '11px',
                         fontWeight: '600',
                       }}
-                      formatter={(value: any) => [`R$ ${value.toLocaleString('pt-BR')}`, 'Investimento Total']}
+                      formatter={(value: any) => [`R$ ${value.toLocaleString('pt-BR')}`, 'Investimento']}
                     />
-                    <Bar dataKey="investimento" radius={[6, 6, 0, 0]}>
+                    <Bar dataKey="investimento" name="Investimento" fill="#3b82f6" radius={[6, 6, 0, 0]}>
                       {chartData.map((_entry, index) => (
                         <Cell key={`cell-${index}`} fill="#3b82f6" />
                       ))}
@@ -509,56 +547,21 @@ export default function Dashboard() {
               </div>
             </div>
 
-            {/* Card 2: Comparativo de ROI & Destaques de Extremos */}
-            <div className="bg-white dark:bg-slate-900 p-8 rounded-[2.5rem] border border-slate-200 dark:border-slate-800 shadow-sm flex flex-col justify-between min-h-[380px]">
+            {/* Card 2: Comparativo de ROI Projetado vs Realizado */}
+            <div className="bg-white dark:bg-slate-900 p-8 rounded-[2.5rem] border border-slate-200 dark:border-slate-800 shadow-sm flex flex-col justify-between min-h-[420px]">
               <div>
-                <span className="text-[10px] font-black text-emerald-500 uppercase tracking-[0.2em] mb-1 block">Retorno Analítico</span>
+                <span className="text-[10px] font-black text-violet-500 uppercase tracking-[0.2em] mb-1 block">Simulações de Retorno</span>
                 <h3 className="text-base font-black text-slate-900 dark:text-white tracking-tight mb-2">
-                  Comparativo de ROI (%) por Ativo
+                  ROI Realizado vs. ROI Projetado (%)
                 </h3>
-                <p className="text-xs text-slate-400 dark:text-slate-500 font-normal mb-4">
-                  Visualização do retorno percentual de cada ativo, destacando os de maior e menor performance.
+                <p className="text-xs text-slate-400 dark:text-slate-500 font-normal mb-6">
+                  Comparação direta entre o percentual de retorno alcançado real (venda) vs. o retorno estimado com base nas avaliações.
                 </p>
               </div>
 
-              {/* Destaques de Maior e Menor ROI */}
-              <div className="grid grid-cols-2 gap-4 mb-6">
-                {highestRoiProp ? (
-                  <div className="p-4 bg-emerald-500/10 dark:bg-emerald-950/20 border border-emerald-500/20 rounded-2xl flex flex-col justify-between">
-                    <div>
-                      <p className="text-[10px] font-black text-emerald-600 dark:text-emerald-400 uppercase tracking-widest mb-1">Maior Retorno (ROI)</p>
-                      <p className="text-xs font-bold text-slate-700 dark:text-slate-300 truncate">{highestRoiProp.codigo} - {highestRoiProp.endereco.split(',')[0]}</p>
-                    </div>
-                    <p className="text-xl font-black text-emerald-600 dark:text-emerald-400 mt-2">
-                      +{highestRoiProp.roi.toFixed(1)}%
-                    </p>
-                  </div>
-                ) : (
-                  <div className="p-4 bg-slate-50 dark:bg-slate-800/40 rounded-2xl flex flex-col justify-center items-center text-slate-400 text-xs">
-                    Sem dados suficientes
-                  </div>
-                )}
-
-                {lowestRoiProp ? (
-                  <div className="p-4 bg-rose-500/10 dark:bg-rose-950/20 border border-rose-500/20 rounded-2xl flex flex-col justify-between">
-                    <div>
-                      <p className="text-[10px] font-black text-rose-600 dark:text-rose-400 uppercase tracking-widest mb-1">Menor Retorno (ROI)</p>
-                      <p className="text-xs font-bold text-slate-700 dark:text-slate-300 truncate">{lowestRoiProp.codigo} - {lowestRoiProp.endereco.split(',')[0]}</p>
-                    </div>
-                    <p className="text-xl font-black text-rose-600 dark:text-rose-400 mt-2">
-                      {lowestRoiProp.roi >= 0 ? '+' : ''}{lowestRoiProp.roi.toFixed(1)}%
-                    </p>
-                  </div>
-                ) : (
-                  <div className="p-4 bg-slate-50 dark:bg-slate-800/40 rounded-2xl flex flex-col justify-center items-center text-slate-400 text-xs">
-                    Sem dados suficientes
-                  </div>
-                )}
-              </div>
-
-              <div className="h-[140px] w-full min-w-0">
+              <div className="h-[220px] w-full min-w-0">
                 <ResponsiveContainer width="100%" height="100%">
-                  <BarChart data={chartData} margin={{ top: 5, right: 10, left: 10, bottom: 20 }}>
+                  <BarChart data={chartData} margin={{ top: 10, right: 10, left: 10, bottom: 20 }}>
                     <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" className="dark:stroke-slate-800" />
                     <XAxis 
                       dataKey="name" 
@@ -581,21 +584,67 @@ export default function Dashboard() {
                         fontSize: '11px',
                         fontWeight: '600',
                       }}
-                      formatter={(value: any) => [`${value.toFixed(1)}%`, 'ROI']}
                     />
-                    <Bar dataKey="roi" radius={[6, 6, 0, 0]}>
-                      {chartData.map((entry, index) => {
-                        const isHighest = highestRoiProp && entry.name === (highestRoiProp.codigo && highestRoiProp.codigo !== 'S/C' ? highestRoiProp.codigo : highestRoiProp.endereco.split(',')[0]);
-                        const isLowest = lowestRoiProp && entry.name === (lowestRoiProp.codigo && lowestRoiProp.codigo !== 'S/C' ? lowestRoiProp.codigo : lowestRoiProp.endereco.split(',')[0]);
-                        
-                        if (isHighest) return <Cell key={`cell-${index}`} fill="#10b981" />;
-                        if (isLowest) return <Cell key={`cell-${index}`} fill="#ef4444" />;
-                        return <Cell key={`cell-${index}`} fill="#6366f1" />;
-                      })}
-                    </Bar>
+                    <Legend verticalAlign="top" wrapperStyle={{ fontSize: '9px', textTransform: 'uppercase', fontStyle: 'normal', fontWeight: 'bold', marginBottom: '8px' }} />
+                    <Bar dataKey="roi" name="Realizado" fill="#10b981" radius={[4, 4, 0, 0]} />
+                    <Bar dataKey="roiProjected" name="Projetado" fill="#8b5cf6" radius={[4, 4, 0, 0]} />
                   </BarChart>
                 </ResponsiveContainer>
               </div>
+            </div>
+
+            {/* Card 3: Leilões Ativos e Margem de Margens */}
+            <div className="bg-white dark:bg-slate-900 p-8 rounded-[2.5rem] border border-slate-200 dark:border-slate-800 shadow-sm flex flex-col justify-between min-h-[420px]">
+              <div>
+                <span className="text-[10px] font-black text-emerald-500 uppercase tracking-[0.2em] mb-1 block">Oportunidades no Radar</span>
+                <h3 className="text-base font-black text-slate-900 dark:text-white tracking-tight mb-2">
+                  Leilões Ativos: Avaliação vs. Mínimo
+                </h3>
+                <p className="text-xs text-slate-400 dark:text-slate-500 font-normal mb-6">
+                  Demonstrativo dos lances mínimos vs avaliações judiciais dos {totalActiveAuctions} leilões sob análise no radar.
+                </p>
+              </div>
+
+              {totalActiveAuctions > 0 ? (
+                <div className="h-[220px] w-full min-w-0">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <BarChart data={activeAuctionsChartData} margin={{ top: 10, right: 10, left: 10, bottom: 20 }}>
+                      <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" className="dark:stroke-slate-800" />
+                      <XAxis 
+                        dataKey="name" 
+                        tick={{ fill: '#94a3b8', fontSize: 10, fontWeight: '700' }} 
+                        axisLine={false}
+                        tickLine={false}
+                      />
+                      <YAxis 
+                        tick={{ fill: '#94a3b8', fontSize: 10 }} 
+                        axisLine={false}
+                        tickLine={false}
+                        tickFormatter={(value) => `R$ ${(value / 1000)}k`}
+                      />
+                      <Tooltip
+                        cursor={{ fill: 'rgba(148, 163, 184, 0.05)' }}
+                        contentStyle={{
+                          borderRadius: '1rem',
+                          border: 'none',
+                          boxShadow: '0 10px 40px rgba(0,0,0,0.1)',
+                          fontSize: '11px',
+                          fontWeight: '600',
+                        }}
+                      />
+                      <Legend verticalAlign="top" wrapperStyle={{ fontSize: '9px', textTransform: 'uppercase', fontStyle: 'normal', fontWeight: 'bold', marginBottom: '8px' }} />
+                      <Bar dataKey="avaliacao" name="Avaliação" fill="#4f46e5" radius={[4, 4, 0, 0]} />
+                      <Bar dataKey="minimo" name="Lance Mínimo" fill="#fca311" radius={[4, 4, 0, 0]} />
+                    </BarChart>
+                  </ResponsiveContainer>
+                </div>
+              ) : (
+                <div className="h-[220px] flex flex-col items-center justify-center p-6 bg-slate-50 dark:bg-slate-800/20 rounded-3xl text-slate-400 border border-dashed border-slate-200 dark:border-slate-800">
+                  <Activity size={32} strokeWidth={1} className="mb-2 opacity-30 text-indigo-500" />
+                  <p className="text-xs font-black uppercase tracking-wider text-center">Nenhum leilão ativo cadastrado</p>
+                  <p className="text-[10px] text-slate-400 dark:text-slate-500 mt-1 text-center">Cadastre imóveis com origem em leilão e status "Análise" ou data futura para visualizar dados.</p>
+                </div>
+              )}
             </div>
           </motion.div>
         )}
